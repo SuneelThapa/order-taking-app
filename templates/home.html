@@ -6,6 +6,19 @@
 {% block content %}
 
     <h1>This is our home page.</h1>
+
+    {% if user.is_authenticated %}
+        <p>Hi {{ user.email }}</p>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit">Logout</button>
+        </form>
+        
+    {% else %}
+        <p>Your are not logged in</p>
+        <a href="{% url 'login' %}">Log In</a>
+        <a href="{% url 'signup' %}">Sign Up</a>
+    {% endif %}
     
 
 {% endblock content %}
