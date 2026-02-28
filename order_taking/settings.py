@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     "accounts.apps.AccountsConfig",
+    "orders.apps.OrdersConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.CustomUser"
@@ -58,7 +59,7 @@ ROOT_URLCONF = "order_taking.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [ BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
