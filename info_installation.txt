@@ -1,0 +1,10 @@
+# Run docker build
+docker-compose up -d --build
+
+docker compose down -v
+docker compose up --build
+
+#admin 
+username - sunny
+email - 
+password - ****
