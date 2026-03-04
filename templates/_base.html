@@ -1,14 +1,149 @@
+{% load static %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>{% block title %}Emporium Armani Tailor Bangkok{% endblock title %}</title>
-</head>
-<body>
+    <meta charset="UTF-8">
+    <title>{% block title %}Order System{% endblock %}</title>
 
-    <div class="container">
-        {% block content %}
-        {% endblock content %}
-    </div>
+    <!-- AdminLTE CSS -->
+    <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/adminlte.min.css' %}">
+
+    <!-- bootstrap icon -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+      <!-- jsGrid -->
+    <link rel="stylesheet" href="{% static 'plugins/jsgrid/jsgrid.min.css' %}">
+    <link rel="stylesheet" href="{% static 'plugins/jsgrid/jsgrid-theme.min.css' %}">
+
+</head>
+<body class="hold-transition sidebar-mini layout-fixed">
+
+<div class="wrapper"> <!-- start wrapper -->
+
+ {% include "includes/navbar.html" %}
+
+ {% include "includes/sidebar.html" %}
+
+  <!-- Content Wrapper. Contains page content -->
+  <div class="content-wrapper">
+
+    {% block content %}
+    {% endblock %}
+   
+  </div>
+  <!-- /.content-wrapper -->
+
+
+{% include "includes/footer.html" %}
+    
+</div> <!-- end wrapper-->
+
+<!-- Scripts -->
+<script src="{% static 'plugins/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/adminlte.min.js' %}"></script>
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+<!-- htmx csrf included -->
+<script>
+document.body.addEventListener('htmx:configRequest', function (event) {
+    event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+});
+</script>
+
+
+
+
+
+<script>
+document.addEventListener("change", function(e) {
+
+    // ===============================
+    // LOAD MEASUREMENT FORM
+    // ===============================
+    if (e.target.name.includes("product_type")) {
+
+        let select = e.target;
+        let productTypeId = select.value;
+
+        if (!productTypeId) return;
+
+        let itemPrefix = select.name.replace("-product_type", "");
+
+        let container = select.closest(".border")
+            .querySelector("[id^='measurement-container-']");
+
+        fetch(`/load-measurement-form/?product_type=${productTypeId}&prefix=${itemPrefix}`)
+            .then(response => response.text())
+            .then(html => {
+                container.innerHTML = html;
+            });
+    }
+
+    // ===============================
+    // 🔥 LIVE IMAGE PREVIEW
+    // ===============================
+    if (e.target.type === "file" && e.target.name.includes("image")) {
+
+        const fileInput = e.target;
+        const file = fileInput.files[0];
+
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function(event) {
+
+            const formContainer = fileInput.closest(".photo-form");
+            const previewImage = formContainer.querySelector(".image-preview");
+
+            previewImage.src = event.target.result;
+            previewImage.classList.remove("d-none");
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+
+
+// ===============================
+// ADD NEW PHOTO FORM
+// ===============================
+document.addEventListener("click", function(e) {
+
+    if (e.target.classList.contains("add-photo-btn")) {
+
+        let prefix = e.target.dataset.prefix;
+
+        let totalFormsInput = document.querySelector(
+            `#id_${prefix}-TOTAL_FORMS`
+        );
+
+        let currentCount = parseInt(totalFormsInput.value);
+
+        let emptyFormTemplate = document.querySelector(
+            `#empty-form-${prefix}`
+        ).innerHTML;
+
+        let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, currentCount);
+
+        let formsContainer = document.querySelector(
+            `#photo-forms-${prefix}`
+        );
+
+        formsContainer.insertAdjacentHTML("beforeend", newFormHtml);
+
+        totalFormsInput.value = currentCount + 1;
+    }
+
+});
+</script>
+
+
+
+
+
 
 </body>
 </html>

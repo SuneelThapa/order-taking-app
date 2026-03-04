@@ -1,0 +1,228 @@
+{% load custom_tags %}
+
+<div class="content-header">
+  <div class="container-fluid">
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between">
+        <h3>Order #{{ selected_order.order_number }}</h3>
+
+        <a href="{% url 'orders:dashboard' %}" class="btn btn-secondary">
+          Back to Orders
+        </a>
+      </div>
+
+      <div class="card-body">
+
+        <!-- ============================= -->
+        <!-- CUSTOMER INFO -->
+        <!-- ============================= -->
+
+        <h5>Customer Information</h5>
+        <hr>
+
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <strong>Order Date:</strong><br>
+            {{ selected_order.created_at|date:"M d, Y H:i" }}
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-4">
+            <strong>Name:</strong><br>
+            {{ selected_order.first_name }} {{ selected_order.last_name }}
+          </div>
+
+          <div class="col-md-4">
+            <strong>Email:</strong><br>
+            {{ selected_order.email }}
+          </div>
+
+          <div class="col-md-4">
+            <strong>Phone:</strong><br>
+            {{ selected_order.phone }}
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <strong>Contact Method:</strong><br>
+            {{ selected_order.get_contact_method_display }}
+          </div>
+        </div>
+
+        <!-- ============================= -->
+        <!-- SHIPPING ADDRESS -->
+        <!-- ============================= -->
+
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <strong>Shipping Address:</strong><br>
+            {{ selected_order.street_address }}<br>
+            {{ selected_order.city }}
+            {% if selected_order.state %}, {{ selected_order.state }}{% endif %}
+            {{ selected_order.postcode }}<br>
+            {{ selected_order.country }}
+          </div>
+        </div>
+
+        <!-- ============================= -->
+        <!-- ORDER NOTE -->
+        <!-- ============================= -->
+
+        {% if selected_order.note %}
+          <div class="row mb-3">
+            <div class="col-md-12">
+              <strong>Order Note:</strong>
+              <div class="p-3 bg-light rounded mt-2">
+                {{ selected_order.note }}
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- ============================= -->
+        <!-- URGENT / READY DATE -->
+        <!-- ============================= -->
+
+        <div class="row mb-3">
+          {% if selected_order.is_urgent %}
+            <div class="col-md-6">
+              <span class="badge bg-danger">URGENT ORDER</span>
+            </div>
+          {% endif %}
+
+          {% if selected_order.ready_date %}
+            <div class="col-md-6">
+              <strong>Ready Date:</strong>
+              {{ selected_order.ready_date|date:"M d, Y" }}
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- ============================= -->
+        <!-- CLIENT PHOTOS -->
+        <!-- ============================= -->
+
+        {% if selected_order.client_photos.exists %}
+          <hr>
+          <h5>Client Photos</h5>
+
+          <div class="d-flex flex-wrap gap-4 mt-3">
+            {% for photo in selected_order.client_photos.all %}
+              <div class="text-center">
+                <strong>{{ photo.get_photo_type_display }}</strong><br>
+                <img src="{{ photo.image.url }}"
+                     style="width:150px;height:150px;object-fit:cover"
+                     class="rounded border mt-2">
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <hr>
+
+        <!-- ============================= -->
+        <!-- ORDER ITEMS -->
+        <!-- ============================= -->
+
+        <h5>Order Items</h5>
+
+        <table class="table table-bordered mt-3">
+          <thead style="background-color:#2c3e50; color:white;">
+            <tr>
+              <th class="py-3">Product</th>
+              <th class="py-3 text-center">Qty</th>
+              <th class="py-3 text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {% for item in selected_order.items.all %}
+
+            <tr class="bg-secondary text-white">
+              <td class="py-3">
+                <div class="fw-bold">{{ item.product_name }}</div>
+                <div class="small text-light">{{ item.product_type }}</div>
+              </td>
+              <td class="py-3 text-center">
+                {{ item.quantity }}
+              </td>
+              <td class="py-3 text-end">
+                ${{ item.total_price|floatformat:2 }}
+              </td>
+            </tr>
+              
+
+              <tr>
+                <td colspan="3">
+
+                  <!-- ============================= -->
+                  <!-- MEASUREMENTS -->
+                  <!-- ============================= -->
+
+                  {% if item.measurement %}
+                    {% for measurement in item.measurement.get_all_measurements %}
+                      <div class="p-3 bg-light rounded mt-3">
+
+                        <h6 class="mb-3">
+                          {{ measurement.name }} Measurement
+                        </h6>
+
+                        <div class="row">
+                          {% for field in measurement.fields %}
+                            <div class="col-md-3 mb-2">
+                              <strong>{{ field.label }}:</strong>
+                              {{ field.value }}
+                            </div>
+                          {% endfor %}
+                        </div>
+
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+
+                  <!-- ============================= -->
+                  <!-- GARMENT PHOTOS -->
+                  <!-- ============================= -->
+
+                  {% if item.photos.exists %}
+                    <div class="mt-3">
+                      <h6>Garment Photos</h6>
+
+                      <div class="d-flex flex-wrap gap-2">
+                        {% for photo in item.photos.all %}
+                          <img src="{{ photo.image.url }}"
+                               style="width:120px;height:120px;object-fit:cover"
+                               class="rounded border">
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endif %}
+
+                </td>
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+        </table>
+
+        <hr>
+
+        <h5>Status</h5>
+        <span class="badge bg-info">
+          {{ selected_order.get_status_display }}
+        </span>
+
+        <hr>
+
+        <h5>Total Amount</h5>
+        <h4>${{ selected_order.total_amount }}</h4>
+
+      </div>
+    </div>
+
+  </div>
+</div>

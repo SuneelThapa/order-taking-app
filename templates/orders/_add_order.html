@@ -1,0 +1,340 @@
+<!-- ================= ADD ORDER PAGE ================= -->
+
+<section class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1>Add New Order</h1>
+      </div>
+      <div class="col-sm-6 text-right">
+        <a href="{% url 'orders:dashboard' %}" class="btn btn-secondary">
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- ================= ORDER INFO ================= -->
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Order Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Order Number</label>
+              {{ order_form.order_number }}
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Status</label>
+              {{ order_form.status }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= CUSTOMER INFO ================= -->
+      <div class="card card-info">
+        <div class="card-header">
+          <h3 class="card-title">Customer Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>First Name</label>
+              {{ order_form.first_name }}
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Last Name</label>
+              {{ order_form.last_name }}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Email</label>
+              {{ order_form.email }}
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Phone</label>
+              {{ order_form.phone }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Contact Method</label>
+            {{ order_form.contact_method }}
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= ADDRESS ================= -->
+      <div class="card card-warning">
+        <div class="card-header">
+          <h3 class="card-title">Shipping Address</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Street Address</label>
+            {{ order_form.street_address }}
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>City</label>
+              {{ order_form.city }}
+            </div>
+            <div class="col-md-4 form-group">
+              <label>State</label>
+              {{ order_form.state }}
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Postcode</label>
+              {{ order_form.postcode }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Country</label>
+            {{ order_form.country }}
+          </div>
+        </div>
+      </div>
+
+
+
+      <!-- ================= ORDER ITEMS ================= -->
+      <div class="card card-dark">
+        <div class="card-header">
+          <h3 class="card-title">Order Items</h3>
+        </div>
+
+        <div class="card-body">
+
+          <!-- 🔥 REQUIRED FOR FORMSET -->
+          {{ item_formset.management_form }}
+
+          {% if item_formset.non_form_errors %}
+            <div class="alert alert-danger">
+              {{ item_formset.non_form_errors }}
+            </div>
+          {% endif %}
+
+          {% for item_form, photo_formset in item_forms_with_photos %}
+            <div class="border rounded p-3 mb-4 bg-light">
+
+              {{ item_form.id }}
+
+              {% if item_form.errors %}
+                <div class="alert alert-danger">
+                  {{ item_form.errors }}
+                </div>
+              {% endif %}
+
+              <div class="row">
+                <div class="col-md-4 form-group">
+                  <label>Product Type</label>
+                  {{ item_form.product_type }}
+                </div>
+                <div class="col-md-4 form-group">
+                  <label>Product Name</label>
+                  {{ item_form.product_name }}
+                </div>
+                <div class="col-md-2 form-group">
+                  <label>Quantity</label>
+                  {{ item_form.quantity }}
+                </div>
+                <div class="col-md-2 form-group">
+                  <label>Price</label>
+                  {{ item_form.price }}
+                </div>
+              </div>
+
+              <!-- ================= MEASUREMENTS ================= -->
+              <!-- ================= MEASUREMENTS ================= -->
+              <div class="card card-outline card-info mt-3">
+                <div class="card-header">
+                  <h5 class="card-title mb-0">Measurements</h5>
+                </div>
+                <div class="card-body">
+
+                  <!-- 🔥 IMPORTANT: prefix must match measure-{{ item_form.prefix }} -->
+                  <div id="measurement-container-{{ item_form.prefix }}"></div>
+
+                </div>
+              </div>
+
+             
+
+
+
+              <!-- ================= ITEM PHOTOS ================= -->
+<div class="card card-outline card-secondary mt-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Item Images</h5>
+  </div>
+  <div class="card-body">
+
+    {{ photo_formset.management_form }}
+
+    {% if photo_formset.non_form_errors %}
+      <div class="alert alert-danger">
+        {{ photo_formset.non_form_errors }}
+      </div>
+    {% endif %}
+
+    <!-- Existing Forms -->
+    <div id="photo-forms-{{ photo_formset.prefix }}">
+      {% for photo_form in photo_formset %}
+        <div class="border p-3 mb-3 rounded bg-white photo-form">
+
+          {{ photo_form.id }}
+
+          {% if photo_form.errors %}
+            <div class="text-danger mb-2">
+              {{ photo_form.errors }}
+            </div>
+          {% endif %}
+
+          <div class="form-group">
+            <label>Upload Image</label>
+            {{ photo_form.image }}
+          </div>
+
+          <!-- 🔥 LIVE PREVIEW CONTAINER -->
+          <div class="mt-2">
+            {% if photo_form.instance.image %}
+              <img src="{{ photo_form.instance.image.url }}"
+                   class="img-thumbnail image-preview"
+                   style="max-height:120px;">
+            {% else %}
+              <img class="img-thumbnail image-preview d-none"
+                   style="max-height:120px;">
+            {% endif %}
+          </div>
+
+          {% if 'DELETE' in photo_form.fields %}
+            <div class="form-check mt-2">
+              {{ photo_form.DELETE }}
+              <label for="{{ photo_form.DELETE.id_for_label }}"
+                     class="form-check-label text-danger">
+                Delete Image
+              </label>
+            </div>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Hidden Empty Form Template -->
+    <div id="empty-form-{{ photo_formset.prefix }}" class="d-none">
+      <div class="border p-3 mb-3 rounded bg-white photo-form">
+
+        {{ photo_formset.empty_form.id }}
+
+        <div class="form-group">
+          <label>Upload Image</label>
+          {{ photo_formset.empty_form.image }}
+        </div>
+
+        <!-- 🔥 PREVIEW FOR NEW FORMS -->
+        <div class="mt-2">
+          <img class="img-thumbnail image-preview d-none"
+               style="max-height:120px;">
+        </div>
+
+        {% if 'DELETE' in photo_formset.empty_form.fields %}
+          <div class="form-check mt-2">
+            {{ photo_formset.empty_form.DELETE }}
+            <label for="{{ photo_formset.empty_form.DELETE.id_for_label }}"
+                   class="form-check-label text-danger">
+              Delete Image
+            </label>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <button type="button"
+            class="btn btn-sm btn-outline-primary add-photo-btn"
+            data-prefix="{{ photo_formset.prefix }}">
+      + Add Another Image
+    </button>
+
+  </div>
+</div>
+<!-- ================= End ITEM PHOTOS ================= -->
+
+
+
+              
+
+              {% if item_form.DELETE %}
+                <div class="form-check mt-3">
+                  {{ item_form.DELETE }}
+                  <label class="form-check-label">
+                    Delete This Item
+                  </label>
+                </div>
+              {% endif %}
+
+            </div>
+          {% endfor %}
+
+        </div>
+      </div>
+
+       <!-- =================End ORDER ITEMS ================= -->
+
+       
+
+      <!-- ================= ADDITIONAL ================= -->
+      <div class="card card-success">
+        <div class="card-header">
+          <h3 class="card-title">Additional Information</h3>
+        </div>
+        <div class="card-body">
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Ready Date</label>
+              {{ order_form.ready_date }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Order Note</label>
+            {{ order_form.note }}
+          </div>
+
+          <div class="form-group clearfix">
+            <div class="icheck-danger d-inline">
+              {{ order_form.is_urgent }}
+              <label for="{{ order_form.is_urgent.id_for_label }}">
+                Urgent Order
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="card-footer text-right">
+          <button type="submit" class="btn btn-primary">
+            Save Order
+          </button>
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+</section>

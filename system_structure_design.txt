@@ -1,0 +1,161 @@
+# The relationship chain is:
+Order
+   ↓
+OrderItem
+   ↓
+BaseMeasurement
+   ↓
+ProductSpecificMeasurement (Shirt / Jacket / Pants / etc)
+
+# Photos can attach at 3 levels:
+Order → ClientPhoto
+OrderItem → OrderItemPhoto
+BaseMeasurement → MeasurementPhoto
+
+
+
+Order
+   └── has many → OrderItem (related_name='items')
+   └── has many → ClientPhoto (related_name='client_photos')
+
+   # example
+    order.items.all()
+    order.client_photos.all()
+
+
+OrderItem
+   └── belongs to → Order
+   └── has one → BaseMeasurement (reverse via related_name='measurement')
+   └── has many → OrderItemPhoto (related_name='photos')
+
+   #example
+   item.measurement
+   item.photos.all()
+
+
+#BaseMeasurement
+#Every order item can have exactly one measurement container.
+#Then inside it, you attach the correct product-specific measurement.
+OrderItem ← OneToOne → BaseMeasurement
+
+BaseMeasurement
+   └── belongs to → OrderItem
+   └── has many → MeasurementPhoto
+   └── has one → ShirtMeasurement (if shirt)
+   └── has one → JacketMeasurement (if jacket)
+   └── has one → PantsMeasurement (if pants)
+   etc...
+
+   #example
+   item.measurement
+   item.measurement.photos.all()
+
+
+#Product-Specific Measurement Layer
+OneToOne → BaseMeasurement
+
+#ShirtMeasurement
+BaseMeasurement
+   └── shirt (related_name='shirt')
+
+   #example
+   item.measurement.shirt.chest
+
+
+#JacketMeasurement
+item.measurement.jacket.length
+
+# PantsMeasurement
+item.measurement.pants.waist
+
+
+#Abstract Measurement Mixins
+#UpperBodyMeasurement (abstract)
+
+Used by:
+
+Shirt
+
+Jacket
+
+Vest
+
+Blouse
+
+Dress
+
+Fields:
+
+shoulder
+
+sleeve
+
+biceps
+
+chest
+
+hips
+
+front
+
+back
+
+#WomenUpperExtra (abstract)
+
+Used by:
+
+Blouse
+
+Dress
+
+Adds:
+
+high_chest
+
+waist
+
+upper_hips
+
+breast measurements
+
+#LowerBodyMeasurement (abstract)
+
+Used by:
+
+Pants
+
+Shorts
+
+Skirt
+
+
+#PantsExtra (abstract)
+
+Used by:
+
+Pants
+
+Shorts
+
+
+#Photo System
+
+You have 3 levels of photos:
+
+
+# ClientPhoto (Order level)
+Order → ClientPhoto
+
+#OrderItemPhoto (Item level)
+OrderItem → OrderItemPhoto
+
+#MeasurementPhoto (Measurement level)
+BaseMeasurement → MeasurementPhoto
+
+
+#How To Detect Measurement Type
+#You must use product_type to decide which measurement to create.
+if item.product_type.name == "Shirt":
+    ShirtMeasurement.objects.create(base=base)
+elif item.product_type.name == "Pants":
+    PantsMeasurement.objects.create(base=base)

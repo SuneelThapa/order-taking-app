@@ -5,6 +5,6 @@ docker compose down -v
 docker compose up --build
 
 #admin 
-username - sunny
+username - min
 email - 
 password - ****
