@@ -110,6 +110,9 @@
 
 
 
+
+
+
       <!-- ================= ORDER ITEMS ================= -->
       <div class="card card-dark">
         <div class="card-header">
@@ -117,6 +120,8 @@
         </div>
 
         <div class="card-body">
+
+          <div id="order-items-container">
 
           <!-- 🔥 REQUIRED FOR FORMSET -->
           {{ item_formset.management_form }}
@@ -127,6 +132,8 @@
             </div>
           {% endif %}
 
+          
+           <!-- start item form loop -->
           {% for item_form, photo_formset in item_forms_with_photos %}
             <div class="border rounded p-3 mb-4 bg-light">
 
@@ -158,7 +165,7 @@
               </div>
 
               <!-- ================= MEASUREMENTS ================= -->
-              <!-- ================= MEASUREMENTS ================= -->
+              
               <div class="card card-outline card-info mt-3">
                 <div class="card-header">
                   <h5 class="card-title mb-0">Measurements</h5>
@@ -290,10 +297,180 @@
             </div>
           {% endfor %}
 
-        </div>
+          <!-- end item form loop -->
+
+
+
+
+          <!-- ================= EMPTY ORDER ITEM TEMPLATE ================= -->
+
+<div id="empty-item-form" class="d-none">
+
+  <div class="border rounded p-3 mb-4 bg-light order-item-form">
+
+    {{ item_formset.empty_form.id }}
+
+    <div class="row">
+      <div class="col-md-4 form-group">
+        <label>Product Type</label>
+        {{ item_formset.empty_form.product_type }}
       </div>
 
+      <div class="col-md-4 form-group">
+        <label>Product Name</label>
+        {{ item_formset.empty_form.product_name }}
+      </div>
+
+      <div class="col-md-2 form-group">
+        <label>Quantity</label>
+        {{ item_formset.empty_form.quantity }}
+      </div>
+
+      <div class="col-md-2 form-group">
+        <label>Price</label>
+        {{ item_formset.empty_form.price }}
+      </div>
+    </div>
+
+    <!-- ================= MEASUREMENTS ================= -->
+
+    <div class="card card-outline card-info mt-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Measurements</h5>
+      </div>
+
+      <div class="card-body">
+        <div id="measurement-container-__prefix__"></div>
+      </div>
+    </div>
+
+  
+
+
+    <!-- ================= ITEM PHOTOS ================= -->
+
+<div class="card card-outline card-secondary mt-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Item Images</h5>
+  </div>
+
+  <div class="card-body">
+
+    <!-- 🔥 MANAGEMENT FORM -->
+    <input type="hidden"
+       name="photos-items-__prefix__-TOTAL_FORMS"
+       id="id_photos-items-__prefix__-TOTAL_FORMS"
+       value="0">
+
+<input type="hidden"
+       name="photos-items-__prefix__-INITIAL_FORMS"
+       id="id_photos-items-__prefix__-INITIAL_FORMS"
+       value="0">
+
+<input type="hidden"
+       name="photos-items-__prefix__-MIN_NUM_FORMS"
+       id="id_photos-items-__prefix__-MIN_NUM_FORMS"
+       value="0">
+
+<input type="hidden"
+       name="photos-items-__prefix__-MAX_NUM_FORMS"
+       id="id_photos-items-__prefix__-MAX_NUM_FORMS"
+       value="1000">
+
+    <!-- PHOTO FORMS CONTAINER -->
+    <div id="photo-forms-items-__prefix__"></div>
+
+
+    <!-- EMPTY PHOTO TEMPLATE -->
+    <div id="empty-form-items-__prefix__" class="d-none">
+      
+      <div class="border p-3 mb-3 rounded bg-white photo-form">
+
+        <input type="hidden"
+               name="photos-items-__prefix__-__photo_prefix__-id">
+
+        <div class="form-group">
+          <label>Upload Image</label>
+
+          <input type="file"
+                 name="photos-items-__prefix__-__photo_prefix__-image"
+                 class="form-control">
+        </div>
+
+        <div class="mt-2">
+          <img class="img-thumbnail image-preview d-none"
+               style="max-height:120px;">
+        </div>
+
+        <div class="form-check mt-2">
+          <input type="checkbox"
+                 name="photos-items-__prefix__-__photo_prefix__-DELETE"
+                 class="form-check-input">
+
+          <label class="form-check-label text-danger">
+            Delete Image
+          </label>
+        </div>
+
+      </div>
+
+    </div>
+
+    <button type="button"
+            class="btn btn-sm btn-outline-primary add-photo-btn"
+            data-prefix="photos-items-__prefix__">
+      + Add Another Image
+    </button>
+
+  </div>
+</div>
+
+<!-- ================= END ITEM PHOTOS ================= -->
+
+
+
+
+<div class="form-check mt-3">
+  {{ item_formset.empty_form.DELETE }}
+  <label class="form-check-label text-danger">
+    Delete This Item
+  </label>
+</div>
+
+    
+
+<!-- ================= END EMPTY ORDER ITEM TEMPLATE ================= -->
+
+
+ 
+</div> <!-- END EMPTY ORDER ITEM TEMPLATE -->
+
+</div> <!-- END empty-item-form -->
+
+</div> <!--order items container -->
+
+        </div> <!--end card body-->
+
+
+      </div> <!-- end card card dark-->
+
+      <div class="card card-footer">
+        <button type="button" id="add-item-btn" class="btn btn-info mt-3">
+        + Add Another Order Item
+      </button>
+      </div>
+   
+
+
+     
+
        <!-- =================End ORDER ITEMS ================= -->
+
+
+
+
+
+
 
        
 

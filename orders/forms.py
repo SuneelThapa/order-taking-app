@@ -89,7 +89,7 @@ OrderItemPhotoFormSet = inlineformset_factory(
     OrderItem,
     OrderItemPhoto,
     form=OrderItemPhotoForm,
-    extra=1,
+    extra=0,
     can_delete=True
 )
 

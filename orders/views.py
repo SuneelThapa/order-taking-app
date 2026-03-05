@@ -91,6 +91,7 @@ def dashboard(request):
                 # ===============================
                 # SAVE PHOTOS
                 # ===============================
+
                 photo_formset = OrderItemPhotoFormSet(
                     request.POST,
                     request.FILES,
@@ -103,7 +104,15 @@ def dashboard(request):
                 print("PHOTO ERRORS:", photo_formset.errors)
 
                 if photo_formset.is_valid():
-                    photo_formset.save()
+
+                    photos = photo_formset.save(commit=False)
+
+                    for photo in photos:
+                        photo.order_item = item
+                        photo.save()
+
+                    for obj in photo_formset.deleted_objects:
+                        obj.delete()
 
                 # ===============================
                 # SAVE MEASUREMENTS

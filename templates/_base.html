@@ -107,37 +107,123 @@ document.addEventListener("change", function(e) {
 });
 
 
+
+
 // ===============================
-// ADD NEW PHOTO FORM
+// ADD PHOTO
 // ===============================
-document.addEventListener("click", function(e) {
+document.addEventListener("click", function(e){
 
-    if (e.target.classList.contains("add-photo-btn")) {
+    if(!e.target.classList.contains("add-photo-btn")) return;
 
-        let prefix = e.target.dataset.prefix;
+    let prefix = e.target.dataset.prefix;
 
-        let totalFormsInput = document.querySelector(
-            `#id_${prefix}-TOTAL_FORMS`
-        );
+    let totalForms = document.querySelector(`#id_${prefix}-TOTAL_FORMS`);
 
-        let currentCount = parseInt(totalFormsInput.value);
+    if(!totalForms){
+        console.error("TOTAL_FORMS not found:", prefix);
+        return;
+    }
 
-        let emptyFormTemplate = document.querySelector(
-            `#empty-form-${prefix}`
-        ).innerHTML;
+    let count = parseInt(totalForms.value);
 
-        let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, currentCount);
+    // Detect item index (for cloned items)
+    let itemIndex = null;
+    if(prefix.includes("items")){
+        itemIndex = prefix.split("-")[2];
+    }
 
-        let formsContainer = document.querySelector(
-            `#photo-forms-${prefix}`
-        );
+    // ===============================
+    // FIND EMPTY TEMPLATE
+    // ===============================
+    let emptyTemplate =
+        document.querySelector(`#empty-form-${prefix}`) ||
+        document.querySelector(`#empty-form-items-${itemIndex}`);
 
-        formsContainer.insertAdjacentHTML("beforeend", newFormHtml);
+    if(!emptyTemplate){
+        console.error("Empty form template not found:", prefix);
+        return;
+    }
 
-        totalFormsInput.value = currentCount + 1;
+    let templateHTML = emptyTemplate.innerHTML;
+
+    let newForm;
+
+    // ===============================
+    // HANDLE CLONED ORDER ITEM
+    // ===============================
+    if(templateHTML.includes("__photo_prefix__")){
+
+        newForm = templateHTML
+            .replace(/__photo_prefix__/g, count)
+            .replace(/__prefix__/g, itemIndex);
+
+    }
+
+    // ===============================
+    // HANDLE ORIGINAL ORDER ITEM
+    // ===============================
+    else{
+
+        newForm = templateHTML.replace(/__prefix__/g, count);
+
+    }
+
+    // ===============================
+    // FIND TARGET CONTAINER
+    // ===============================
+    let container =
+        document.querySelector(`#photo-forms-${prefix}`) ||
+        document.querySelector(`#photo-forms-items-${itemIndex}`);
+
+    if(!container){
+        console.error("Photo container not found:", prefix);
+        return;
+    }
+
+    container.insertAdjacentHTML("beforeend", newForm);
+
+    totalForms.value = count + 1;
+
+});
+
+
+
+
+
+
+// ===============================
+// ADD ORDER ITEM
+// ===============================
+
+document.addEventListener("click", function(e){
+
+    if(e.target.id === "add-item-btn"){
+
+        let totalForms = document.querySelector('#id_items-TOTAL_FORMS');
+
+        if(!totalForms){
+            console.error("TOTAL_FORMS not found");
+            return;
+        }
+
+        let count = parseInt(totalForms.value);
+
+        let template = document.querySelector("#empty-item-form").innerHTML;
+
+        let newItem = template.replace(/__prefix__/g, count);
+
+        document.querySelector("#order-items-container")
+            .insertAdjacentHTML("beforeend", newItem);
+
+        totalForms.value = count + 1;
+
     }
 
 });
+
+
+
 </script>
 
 
