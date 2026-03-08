@@ -136,7 +136,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # django_project/settings.py
 LOGIN_REDIRECT_URL = "orders:dashboard"
-LOGOUT_REDIRECT_URL = "orders:dashboard"
+LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
 MEDIA_URL = '/media/'
