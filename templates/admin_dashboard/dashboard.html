@@ -14,8 +14,15 @@
     {% include "orders/_order_detail.html" %}
 
 {% elif show_add_form %}
-
+     
+    <!-- ================= Add Order ================= -->
     {% include "orders/_add_order.html" %}
+
+
+{% elif show_edit_form %}
+
+    <!-- ================= EDIT ORDER ================= -->
+    {% include "orders/_edit_order.html" %}
 
 
 {% else %}

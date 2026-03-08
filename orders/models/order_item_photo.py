@@ -1,8 +1,10 @@
 from django.db import models
 from .order_item import OrderItem
+from PIL import Image, ExifTags
 
 
 class OrderItemPhoto(models.Model):
+
     order_item = models.ForeignKey(
         OrderItem,
         on_delete=models.CASCADE,
@@ -14,3 +16,32 @@ class OrderItemPhoto(models.Model):
 
     def __str__(self):
         return f"{self.order_item.product_name} photo"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        img = Image.open(self.image.path)
+
+        # Fix phone rotation
+        try:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation':
+                    break
+
+            exif = getattr(img, "_getexif", lambda: None)()
+
+            if exif is not None:
+                if exif.get(orientation) == 3:
+                    img = img.rotate(180, expand=True)
+                elif exif.get(orientation) == 6:
+                    img = img.rotate(270, expand=True)
+                elif exif.get(orientation) == 8:
+                    img = img.rotate(90, expand=True)
+        except:
+            pass
+
+        # Resize large phone images
+        img.thumbnail((1200, 1200))
+
+        # Compress image
+        img.save(self.image.path, optimize=True, quality=70)

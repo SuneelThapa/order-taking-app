@@ -14,6 +14,8 @@
 
       <div class="card-body">
 
+
+
         <!-- ============================= -->
         <!-- CUSTOMER INFO -->
         <!-- ============================= -->
@@ -51,6 +53,11 @@
             {{ selected_order.get_contact_method_display }}
           </div>
         </div>
+
+
+
+
+
 
         <!-- ============================= -->
         <!-- SHIPPING ADDRESS -->
@@ -106,19 +113,21 @@
         <!-- ============================= -->
 
         {% if selected_order.client_photos.exists %}
-          <hr>
-          <h5>Client Photos</h5>
+        <hr>
+        <h5>Client Photos</h5>
 
-          <div class="d-flex flex-wrap gap-4 mt-3">
-            {% for photo in selected_order.client_photos.all %}
+        <div class="d-flex flex-wrap gap-4 mt-3">
+          {% for photo in selected_order.client_photos.all %}
+            {% if photo.image %}
               <div class="text-center">
                 <strong>{{ photo.get_photo_type_display }}</strong><br>
                 <img src="{{ photo.image.url }}"
-                     style="width:150px;height:150px;object-fit:cover"
-                     class="rounded border mt-2">
+                    style="width:150px;height:150px;object-fit:cover"
+                    class="rounded border mt-2">
               </div>
-            {% endfor %}
-          </div>
+            {% endif %}
+          {% endfor %}
+        </div>
         {% endif %}
 
         <hr>

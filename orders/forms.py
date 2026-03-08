@@ -1,9 +1,13 @@
 from django import forms
-from .models import Order, OrderItem, OrderItemPhoto
+from .models import Order, OrderItem, OrderItemPhoto, ClientPhoto
 from django.forms import inlineformset_factory
 
 from django.apps import apps
 from django.forms import modelform_factory
+
+from django.forms import modelformset_factory
+
+
 
 
 
@@ -26,8 +30,25 @@ class OrderForm(forms.ModelForm):
             "ready_date",
             "is_urgent",
             "status",
-            
         ]
+
+        labels = {
+            "order_number": "Order Number",
+            "first_name": "First Name",
+            "last_name": "Last Name",
+            "email": "Email Address",
+            "phone": "Phone Number",
+            "contact_method": "Preferred Contact Method",
+            "street_address": "Street Address",
+            "city": "City",
+            "state": "State / Province",
+            "postcode": "Postal Code",
+            "country": "Country",
+            "note": "Notes",
+            "ready_date": "Ready Date",
+            "is_urgent": "Urgent Order",
+            "status": "Order Status",
+        }
 
         widgets = {
             "ready_date": forms.DateInput(attrs={"type": "date"}),
@@ -81,7 +102,9 @@ class OrderItemPhotoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["image"].widget.attrs.update({
-            "class": "form-control"
+            "class": "form-control",
+            "accept": "image/*",          # only images
+            "capture": "environment"      # open back camera on mobile
         })
 
 
@@ -122,3 +145,40 @@ def get_measurement_form(product_type):
                 })
 
     return StyledMeasurementForm
+
+
+
+
+
+class ClientPhotoForm(forms.ModelForm):
+
+    photo_type = forms.ChoiceField(
+        choices=ClientPhoto.PHOTO_TYPES,
+        required=False,
+        label="Photo Type"
+    )
+
+    image = forms.ImageField(
+        required=False,
+        label="Upload Photo",
+        widget=forms.ClearableFileInput(attrs={
+            "class": "form-control",
+            "accept": "image/*",
+            "capture": "environment"
+        })
+    )
+
+    class Meta:
+        model = ClientPhoto
+        fields = ["photo_type", "image"]
+        
+
+
+ClientPhotoFormSet = inlineformset_factory(
+    Order,                # parent model
+    ClientPhoto,          # child model
+    form=ClientPhotoForm,
+    extra=3,
+    max_num=3,
+    can_delete=False
+)

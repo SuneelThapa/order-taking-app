@@ -3,4 +3,4 @@ Django==5.2.11
 sqlparse==0.5.5
 tzdata==2025.3
 psycopg2-binary==2.9.3
-Pillow
+Pillow==10.4.0

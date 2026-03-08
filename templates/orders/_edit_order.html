@@ -1,0 +1,665 @@
+<!-- ================= ADD ORDER PAGE ================= -->
+
+<section class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1>Edit Order</h1>
+      </div>
+      <div class="col-sm-6 text-right">
+        <a href="{% url 'orders:dashboard' %}" class="btn btn-secondary">
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="content">
+  <div class="container-fluid">
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <!-- ================= ORDER INFO ================= -->
+      <div class="card card-primary">
+        <div class="card-header">
+          <h3 class="card-title">Order Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Order Number</label>
+              {{ order_form.order_number }}
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Status</label>
+              {{ order_form.status }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================End ORDER INFO ================= -->
+
+
+
+
+
+      <!-- ================= CUSTOMER INFO ================= -->
+      <div class="card card-info">
+        <div class="card-header">
+          <h3 class="card-title">Customer Information</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>First Name</label>
+              {{ order_form.first_name }}
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Last Name</label>
+              {{ order_form.last_name }}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Email</label>
+              {{ order_form.email }}
+            </div>
+            <div class="col-md-6 form-group">
+              <label>Phone</label>
+              {{ order_form.phone }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Contact Method</label>
+            {{ order_form.contact_method }}
+          </div>
+        </div>
+
+
+      </div><!-- end card card-info-->
+
+      
+
+   
+
+
+<!-- ================= CUSTOMER PHOTOS ================= -->
+
+<div class="card card-secondary mt-3">
+
+  <div class="card-header">
+    <h3 class="card-title">Customer Photos</h3>
+  </div>
+
+  <div class="card-body">
+
+    {{ client_photo_formset.management_form }}
+
+    <div class="row">
+
+      {% for form in client_photo_formset %}
+
+      <div class="col-md-4">
+
+        <div class="card card-outline card-info">
+
+          <div class="card-header text-center">
+
+            <strong>
+              {% if forloop.counter == 1 %}
+                Front
+              {% elif forloop.counter == 2 %}
+                Side
+              {% elif forloop.counter == 3 %}
+                Back
+              {% endif %}
+            </strong>
+
+          </div>
+
+          <div class="card-body text-center">
+
+            <!-- IMPORTANT hidden id for edit -->
+            {{ form.id }}
+
+            <!-- hidden photo type -->
+            {% if forloop.counter == 1 %}
+              <input type="hidden" name="{{ form.photo_type.html_name }}" value="front">
+            {% elif forloop.counter == 2 %}
+              <input type="hidden" name="{{ form.photo_type.html_name }}" value="side">
+            {% elif forloop.counter == 3 %}
+              <input type="hidden" name="{{ form.photo_type.html_name }}" value="back">
+            {% endif %}
+
+            <div class="mb-2">
+              {{ form.image }}
+            </div>
+
+            {% if form.errors %}
+              <div class="text-danger mb-2">
+                {{ form.errors }}
+              </div>
+            {% endif %}
+
+            <!-- Existing image preview -->
+            <div class="photo-preview mt-2">
+
+              {% if form.instance.image %}
+                <img 
+                  src="{{ form.instance.image.url }}"
+                  class="img-fluid img-thumbnail preview-img"
+                  style="max-height:180px;"
+                >
+              {% else %}
+                <img 
+                  src=""
+                  class="img-fluid img-thumbnail d-none preview-img"
+                  style="max-height:180px;"
+                >
+              {% endif %}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {% endfor %}
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ================= END CUSTOMER PHOTOS ================= -->
+
+
+
+
+      <!-- ================= ADDRESS ================= -->
+      <div class="card card-warning">
+        <div class="card-header">
+          <h3 class="card-title">Shipping Address</h3>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Street Address</label>
+            {{ order_form.street_address }}
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 form-group">
+              <label>City</label>
+              {{ order_form.city }}
+            </div>
+            <div class="col-md-4 form-group">
+              <label>State</label>
+              {{ order_form.state }}
+            </div>
+            <div class="col-md-4 form-group">
+              <label>Postcode</label>
+              {{ order_form.postcode }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Country</label>
+            {{ order_form.country }}
+          </div>
+        </div>
+      </div>
+
+
+
+
+
+
+      <!-- ================= ORDER ITEMS ================= -->
+      <div class="card card-dark">
+        <div class="card-header">
+          <h3 class="card-title">Order Items</h3>
+        </div>
+
+        <div class="card-body">
+
+          <div id="order-items-container">
+
+          <!-- 🔥 REQUIRED FOR FORMSET -->
+          {{ item_formset.management_form }}
+
+          {% if item_formset.non_form_errors %}
+            <div class="alert alert-danger">
+              {{ item_formset.non_form_errors }}
+            </div>
+          {% endif %}
+
+          
+           <!-- start item form loop -->
+          {% for item_form, photo_formset, measurement_form in item_forms_with_photos %}
+            <div class="border rounded p-3 mb-4 bg-light">
+
+              {{ item_form.id }}
+
+              {% if item_form.errors %}
+                <div class="alert alert-danger">
+                  {{ item_form.errors }}
+                </div>
+              {% endif %}
+
+              <div class="row">
+                <div class="col-md-4 form-group">
+                  <label>Product Type</label>
+                  {{ item_form.product_type }}
+                </div>
+                <div class="col-md-4 form-group">
+                  <label>Product Name</label>
+                  {{ item_form.product_name }}
+                </div>
+                <div class="col-md-2 form-group">
+                  <label>Quantity</label>
+                  {{ item_form.quantity }}
+                </div>
+                <div class="col-md-2 form-group">
+                  <label>Price</label>
+                  {{ item_form.price }}
+                </div>
+              </div>
+
+              <!-- ================= MEASUREMENTS ================= -->
+              
+              <div class="card card-outline card-info mt-3">
+                <div class="card-header">
+                  <h5 class="card-title mb-0">Measurements</h5>
+                </div>
+                <div class="card-body">
+
+                  <!-- 🔥 IMPORTANT: prefix must match measure-{{ item_form.prefix }} -->
+                  <div id="measurement-container-{{ item_form.prefix }}">
+
+                    {% if measurement_form %}
+
+                      <div class="row">
+
+                        {% for field in measurement_form %}
+                          <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+
+                            <label style="display:block;font-weight:500;font-size:14px;">
+                              {{ field.label }}
+                            </label>
+
+                            <div style="width:100%;">
+                              {{ field }}
+                            </div>
+
+                            {% if field.errors %}
+                              <div style="color:#dc3545;font-size:12px;">
+                                {{ field.errors }}
+                              </div>
+                            {% endif %}
+
+                          </div>
+                        {% endfor %}
+
+                      </div>
+
+                    {% endif %}
+
+                  </div>
+                  
+
+                </div>
+                
+              </div>
+
+             
+
+
+
+              <!-- ================= ITEM PHOTOS ================= -->
+<div class="card card-outline card-secondary mt-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Item Images</h5>
+  </div>
+  <div class="card-body">
+
+    {{ photo_formset.management_form }}
+
+    {% if photo_formset.non_form_errors %}
+      <div class="alert alert-danger">
+        {{ photo_formset.non_form_errors }}
+      </div>
+    {% endif %}
+
+    <!-- Existing Forms -->
+    <div id="photo-forms-{{ photo_formset.prefix }}">
+      {% for photo_form in photo_formset %}
+        <div class="border p-3 mb-3 rounded bg-white photo-form">
+
+          {{ photo_form.id }}
+
+          {% if photo_form.errors %}
+            <div class="text-danger mb-2">
+              {{ photo_form.errors }}
+            </div>
+          {% endif %}
+
+          <div class="form-group">
+            <label>Upload Image</label>
+            {{ photo_form.image }}
+          </div>
+
+          <!-- 🔥 LIVE PREVIEW CONTAINER -->
+          <div class="mt-2">
+            {% if photo_form.instance.image %}
+              <img src="{{ photo_form.instance.image.url }}"
+                   class="img-thumbnail image-preview"
+                   style="max-height:120px;">
+            {% else %}
+              <img class="img-thumbnail image-preview d-none"
+                   style="max-height:120px;">
+            {% endif %}
+          </div>
+
+          {% if 'DELETE' in photo_form.fields %}
+            <div class="form-check mt-2">
+              {{ photo_form.DELETE }}
+              <label for="{{ photo_form.DELETE.id_for_label }}"
+                     class="form-check-label text-danger">
+                Delete Image
+              </label>
+            </div>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Hidden Empty Form Template -->
+    <div id="empty-form-{{ photo_formset.prefix }}" class="d-none">
+      <div class="border p-3 mb-3 rounded bg-white photo-form">
+
+        {{ photo_formset.empty_form.id }}
+
+        <div class="form-group">
+          <label>Upload Image</label>
+          {{ photo_formset.empty_form.image }}
+        </div>
+
+        <!-- 🔥 PREVIEW FOR NEW FORMS -->
+        <div class="mt-2">
+          <img class="img-thumbnail image-preview d-none"
+               style="max-height:120px;">
+        </div>
+
+        {% if 'DELETE' in photo_formset.empty_form.fields %}
+          <div class="form-check mt-2">
+            {{ photo_formset.empty_form.DELETE }}
+            <label for="{{ photo_formset.empty_form.DELETE.id_for_label }}"
+                   class="form-check-label text-danger">
+              Delete Image
+            </label>
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <button type="button"
+            class="btn btn-sm btn-outline-primary add-photo-btn"
+            data-prefix="{{ photo_formset.prefix }}">
+      + Add Another Image
+    </button>
+
+  </div>
+</div>
+<!-- ================= End ITEM PHOTOS ================= -->
+
+
+
+              
+
+              {% if item_form.DELETE %}
+                <div class="form-check mt-3">
+                  {{ item_form.DELETE }}
+                  <label class="form-check-label">
+                    Delete This Item
+                  </label>
+                </div>
+              {% endif %}
+
+            </div>
+          {% endfor %}
+
+          <!-- end item form loop -->
+
+
+
+
+          <!-- ================= EMPTY ORDER ITEM TEMPLATE ================= -->
+
+<div id="empty-item-form" class="d-none">
+
+  <div class="border rounded p-3 mb-4 bg-light order-item-form">
+
+    {{ item_formset.empty_form.id }}
+
+    <div class="row">
+      <div class="col-md-4 form-group">
+        <label>Product Type</label>
+        {{ item_formset.empty_form.product_type }}
+      </div>
+
+      <div class="col-md-4 form-group">
+        <label>Product Name</label>
+        {{ item_formset.empty_form.product_name }}
+      </div>
+
+      <div class="col-md-2 form-group">
+        <label>Quantity</label>
+        {{ item_formset.empty_form.quantity }}
+      </div>
+
+      <div class="col-md-2 form-group">
+        <label>Price</label>
+        {{ item_formset.empty_form.price }}
+      </div>
+    </div>
+
+    <!-- ================= MEASUREMENTS ================= -->
+
+    <div class="card card-outline card-info mt-3">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Measurements</h5>
+      </div>
+
+      <div class="card-body">
+        <div id="measurement-container-__prefix__"></div>
+      </div>
+    </div>
+
+  
+
+
+    <!-- ================= ITEM PHOTOS ================= -->
+
+<div class="card card-outline card-secondary mt-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Item Images</h5>
+  </div>
+
+  <div class="card-body">
+
+    <!-- 🔥 MANAGEMENT FORM -->
+    <input type="hidden"
+       name="photos-items-__prefix__-TOTAL_FORMS"
+       id="id_photos-items-__prefix__-TOTAL_FORMS"
+       value="0">
+
+<input type="hidden"
+       name="photos-items-__prefix__-INITIAL_FORMS"
+       id="id_photos-items-__prefix__-INITIAL_FORMS"
+       value="0">
+
+<input type="hidden"
+       name="photos-items-__prefix__-MIN_NUM_FORMS"
+       id="id_photos-items-__prefix__-MIN_NUM_FORMS"
+       value="0">
+
+<input type="hidden"
+       name="photos-items-__prefix__-MAX_NUM_FORMS"
+       id="id_photos-items-__prefix__-MAX_NUM_FORMS"
+       value="1000">
+
+    <!-- PHOTO FORMS CONTAINER -->
+    <div id="photo-forms-items-__prefix__"></div>
+
+
+    <!-- EMPTY PHOTO TEMPLATE -->
+    <div id="empty-form-items-__prefix__" class="d-none">
+
+      <div class="border p-3 mb-3 rounded bg-white photo-form">
+
+        <input type="hidden"
+               name="photos-items-__prefix__-__photo_prefix__-id">
+
+        <div class="form-group">
+          <label>Upload Image</label>
+
+          <input type="file"
+                 name="photos-items-__prefix__-__photo_prefix__-image"
+                 class="form-control">
+        </div>
+
+        <div class="mt-2">
+          <img class="img-thumbnail image-preview d-none"
+               style="max-height:120px;">
+        </div>
+
+        <div class="form-check mt-2">
+          <input type="checkbox"
+                 name="photos-items-__prefix__-__photo_prefix__-DELETE"
+                 class="form-check-input">
+
+          <label class="form-check-label text-danger">
+            Delete Image
+          </label>
+        </div>
+
+      </div>
+
+    </div>
+
+    <button type="button"
+            class="btn btn-sm btn-outline-primary add-photo-btn"
+            data-prefix="photos-items-__prefix__">
+      + Add Another Image
+    </button>
+
+  </div>
+</div>
+
+<!-- ================= END ITEM PHOTOS ================= -->
+
+
+
+
+<div class="form-check mt-3">
+  {{ item_formset.empty_form.DELETE }}
+  <label class="form-check-label text-danger">
+    Delete This Item
+  </label>
+</div>
+
+    
+
+<!-- ================= END EMPTY ORDER ITEM TEMPLATE ================= -->
+
+
+ 
+</div> <!-- END EMPTY ORDER ITEM TEMPLATE -->
+
+</div> <!-- END empty-item-form -->
+
+</div> <!--order items container -->
+
+        </div> <!--end card body-->
+
+
+      </div> <!-- end card card dark-->
+
+      <div class="card card-footer">
+        <button type="button" id="add-item-btn" class="btn btn-info mt-3">
+        + Add Another Order Item
+      </button>
+      </div>
+   
+
+
+     
+
+       <!-- =================End ORDER ITEMS ================= -->
+
+
+
+
+
+
+
+       
+
+      <!-- ================= ADDITIONAL ================= -->
+      <div class="card card-success">
+        <div class="card-header">
+          <h3 class="card-title">Additional Information</h3>
+        </div>
+        <div class="card-body">
+
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label>Ready Date</label>
+              {{ order_form.ready_date }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Order Note</label>
+            {{ order_form.note }}
+          </div>
+
+          <div class="form-group clearfix">
+            <div class="icheck-danger d-inline">
+              {{ order_form.is_urgent }}
+              <label for="{{ order_form.is_urgent.id_for_label }}">
+                Urgent Order
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="card-footer text-right">
+            
+          <button type="submit" class="btn btn-primary">
+            Update Order
+          </button>
+
+          <a href="{% url 'orders:dashboard' %}" class="btn btn-secondary">
+            Cancel
+          </a>
+
+          
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+</section>

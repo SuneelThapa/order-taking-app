@@ -1,3 +1,5 @@
+{% include "includes/form_errors.html" with formset=item_formset %}
+
 <!-- ================= ADD ORDER PAGE ================= -->
 
 <section class="content-header">
@@ -18,7 +20,7 @@
 <section class="content">
   <div class="container-fluid">
 
-    <form method="POST" enctype="multipart/form-data">
+    <form id="orderForm" method="POST" enctype="multipart/form-data">
       {% csrf_token %}
 
       <!-- ================= ORDER INFO ================= -->
@@ -39,6 +41,12 @@
           </div>
         </div>
       </div>
+
+      <!-- =================End ORDER INFO ================= -->
+
+
+
+
 
       <!-- ================= CUSTOMER INFO ================= -->
       <div class="card card-info">
@@ -73,7 +81,214 @@
             {{ order_form.contact_method }}
           </div>
         </div>
+
+
+      </div><!-- end card card-info-->
+
+      
+
+      <!-- ================= End CUSTOMER INFO ================= -->
+
+
+
+<!-- ================= CUSTOMER PHOTOS ================= -->
+
+<div class="card card-secondary mt-3">
+
+  <div class="card-header">
+    <h3 class="card-title">Customer Photos</h3>
+  </div>
+
+  <div class="card-body">
+
+    {{ client_photo_formset.management_form }}
+
+    <div class="row">
+
+      {% for form in client_photo_formset %}
+
+      <div class="col-md-4">
+
+        <div class="card card-outline card-info">
+
+          <div class="card-header text-center">
+
+            <strong>
+              {% if forloop.counter == 1 %}
+                Front
+              {% elif forloop.counter == 2 %}
+                Side
+              {% elif forloop.counter == 3 %}
+                Back
+              {% endif %}
+            </strong>
+
+          </div>
+
+          <div class="card-body text-center">
+
+            <!-- hidden photo type -->
+            {% if forloop.counter == 1 %}
+              <input type="hidden" name="{{ form.photo_type.html_name }}" value="front">
+            {% elif forloop.counter == 2 %}
+              <input type="hidden" name="{{ form.photo_type.html_name }}" value="side">
+            {% elif forloop.counter == 3 %}
+              <input type="hidden" name="{{ form.photo_type.html_name }}" value="back">
+            {% endif %}
+
+            <div class="mb-2">
+              {{ form.image }}
+            </div>
+
+            <!-- Image preview -->
+            <div class="photo-preview mt-2">
+              <img 
+                src="" 
+                class="img-fluid img-thumbnail d-none preview-img"
+                style="max-height:180px;"
+              >
+            </div>
+
+          </div>
+
+        </div>
+
       </div>
+
+      {% endfor %}
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ================= END CUSTOMER PHOTOS ================= -->
+
+
+
+
+<!-- ================= SCRATCH NOTES ================= -->
+
+<div class="card card-outline card-danger mt-3">
+
+  <div class="card-header">
+    <h3 class="card-title">Scratch Notes</h3>
+  </div>
+
+  <div class="card-body">
+
+    <!-- ===== Drawing Toolbar ===== -->
+    <div class="d-flex flex-wrap align-items-center p-2 bg-light border rounded shadow-sm mb-3">
+
+      <!-- Pen Size -->
+      <div class="mr-3 d-flex align-items-center">
+        <label class="small font-weight-bold mr-2 mb-0">Pen</label>
+        <select id="penSize"
+                class="form-control form-control-sm"
+                style="width:auto;">
+          <option value="2">Thin</option>
+          <option value="4" selected>Medium</option>
+          <option value="8">Thick</option>
+        </select>
+      </div>
+
+      <!-- Color Picker -->
+      <div class="mr-3 d-flex align-items-center">
+        <label class="small font-weight-bold mr-2 mb-0">Color</label>
+        <input type="color"
+               id="penColor"
+               value="#000000"
+               class="border rounded"
+               style="width:40px;height:32px;padding:2px;">
+      </div>
+
+      <!-- Tool Buttons -->
+      <div class="btn-group mr-3">
+
+        <button type="button"
+                id="eraserTool"
+                class="btn btn-sm btn-outline-danger">
+          🧽 Eraser
+        </button>
+
+        <button type="button"
+                id="undoCanvas"
+                class="btn btn-sm btn-outline-warning">
+          ↶ Undo
+        </button>
+
+      </div>
+
+    </div>
+    <!-- ===== End Toolbar ===== -->
+
+
+    <!-- ===== Canvas Container ===== -->
+    <div style="
+        overflow:auto;
+        border:1px solid #dee2e6;
+        border-radius:6px;
+        max-width:100%;
+        max-height:420px;
+        background:#f8f9fa;
+        padding:10px;
+    ">
+
+      <canvas id="scratchCanvas"
+              width="1200"
+              height="800"
+              style="
+                background:white;
+                border-radius:5px;
+                box-shadow:0 2px 6px rgba(0,0,0,0.1);
+                display:block;
+                margin:auto;
+              ">
+      </canvas>
+
+    </div>
+    <!-- ===== End Canvas ===== -->
+
+
+    <!-- ===== Bottom Action Buttons ===== -->
+    <div class="mt-3 d-flex justify-content-center">
+
+      <div class="btn-group">
+
+        <button type="button"
+                id="clearCanvas"
+                class="btn btn-sm btn-outline-secondary">
+          🗑 Clear
+        </button>
+
+        <button type="button"
+                id="fullscreenCanvas"
+                class="btn btn-sm btn-primary">
+          ⛶ Full Screen
+        </button>
+
+      </div>
+
+    </div>
+    <!-- ===== End Buttons ===== -->
+
+
+    <input type="hidden"
+           name="scratch_canvas_image"
+           id="scratchCanvasImage">
+
+  </div>
+
+</div>
+
+<!-- ================= END SCRATCH NOTES ================= -->
+
+
+
+
+
+
 
       <!-- ================= ADDRESS ================= -->
       <div class="card card-warning">
@@ -126,25 +341,27 @@
           <!-- 🔥 REQUIRED FOR FORMSET -->
           {{ item_formset.management_form }}
 
-          {% if item_formset.non_form_errors %}
-            <div class="alert alert-danger">
-              {{ item_formset.non_form_errors }}
-            </div>
-          {% endif %}
+          <!-- Error form messsage -->
 
+          <!-- 
+          {% for form in item_formset %}
+            {% for field in form %}
+              {% if field.errors %}
+                <div class="alert alert-danger">
+                  <strong>{{ field.label }}:</strong> {{ field.errors|striptags }}
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+          -->
           
            <!-- start item form loop -->
-          {% for item_form, photo_formset in item_forms_with_photos %}
+          {% for item_form, photo_formset, measurement_form in item_forms_with_photos %}
             <div class="border rounded p-3 mb-4 bg-light">
 
               {{ item_form.id }}
 
-              {% if item_form.errors %}
-                <div class="alert alert-danger">
-                  {{ item_form.errors }}
-                </div>
-              {% endif %}
-
+              
               <div class="row">
                 <div class="col-md-4 form-group">
                   <label>Product Type</label>
@@ -212,6 +429,7 @@
 
           <div class="form-group">
             <label>Upload Image</label>
+            📷 Take Photo
             {{ photo_form.image }}
           </div>
 
@@ -383,7 +601,7 @@
 
     <!-- EMPTY PHOTO TEMPLATE -->
     <div id="empty-form-items-__prefix__" class="d-none">
-      
+
       <div class="border p-3 mb-3 rounded bg-white photo-form">
 
         <input type="hidden"

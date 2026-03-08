@@ -8,6 +8,7 @@
     <!-- AdminLTE CSS -->
     <link rel="stylesheet" href="{% static 'plugins/fontawesome-free/css/all.min.css' %}">
     <link rel="stylesheet" href="{% static 'css/adminlte.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
 
     <!-- bootstrap icon -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -44,6 +45,8 @@
 <script src="{% static 'plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
 <script src="{% static 'js/adminlte.min.js' %}"></script>
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- htmx csrf included -->
 <script>
@@ -224,8 +227,325 @@ document.addEventListener("click", function(e){
 
 
 
+
+
+
+
+// ===============================
+// customer photo preview Upload
+// ===============================
+
+document.addEventListener("change", function(e){
+
+    if(e.target.type === "file"){
+
+        const fileInput = e.target;
+        const card = fileInput.closest(".card");
+
+        if(!card) return;
+
+        const preview = card.querySelector(".preview-img");
+
+        if(!preview) return;
+
+        const file = fileInput.files[0];
+
+        if(file){
+
+            const reader = new FileReader();
+
+            reader.onload = function(event){
+                preview.src = event.target.result;
+                preview.classList.remove("d-none");
+            };
+
+            reader.readAsDataURL(file);
+
+        }
+
+    }
+
+});
+
+
+
 </script>
 
+
+
+
+
+<!-- Scratch note writing script-->
+<script>
+
+const canvas = document.getElementById("scratchCanvas");
+
+if (canvas) {
+
+    const ctx = canvas.getContext("2d");
+
+    let drawing = false;
+    let history = [];
+    let erasing = false;
+
+    const NORMAL_WIDTH = 1200;
+    const NORMAL_HEIGHT = 800;
+
+    const penSizeSelector = document.getElementById("penSize");
+    const penColorPicker = document.getElementById("penColor");
+    const eraserBtn = document.getElementById("eraserTool");
+
+    function fillWhite(){
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+    }
+
+    fillWhite();
+
+    // =============================
+    // SAVE HISTORY (FOR UNDO)
+    // =============================
+
+    function saveState(){
+
+        history.push(canvas.toDataURL());
+
+        if(history.length > 30){
+            history.shift();
+        }
+
+    }
+
+    // save initial blank canvas
+    saveState();
+
+    // =============================
+    // ERASER TOOL
+    // =============================
+
+    // =============================
+    // ERASER TOOL
+    // =============================
+
+    if (eraserBtn) {
+
+        eraserBtn.onclick = function () {
+
+            erasing = !erasing;
+
+            if (erasing) {
+
+                eraserBtn.classList.remove("btn-outline-danger");
+                eraserBtn.classList.add("btn-danger");
+                canvas.style.cursor = "crosshair";
+
+            } else {
+
+                eraserBtn.classList.remove("btn-danger");
+                eraserBtn.classList.add("btn-outline-danger");
+                canvas.style.cursor = "default";
+
+            }
+
+        }
+
+    }
+
+    // =============================
+    // DRAW EVENTS
+    // =============================
+
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mouseup", stopDraw);
+    canvas.addEventListener("mouseleave", stopDraw);
+    canvas.addEventListener("mousemove", draw);
+
+    function startDraw(e){
+
+        drawing = true;
+
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+    }
+
+    function stopDraw(){
+
+        if(drawing){
+            saveState();
+        }
+
+        drawing = false;
+        ctx.beginPath();
+    }
+
+    function draw(e){
+
+        if(!drawing) return;
+
+        ctx.lineWidth = penSizeSelector.value;
+        ctx.lineCap = "round";
+
+        if(erasing){
+
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.strokeStyle = "rgba(0,0,0,1)";
+
+        }else{
+
+            ctx.globalCompositeOperation = "source-over";
+            ctx.strokeStyle = penColorPicker.value;
+
+        }
+
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+    }
+
+    // =============================
+    // UNDO
+    // =============================
+
+    const undoBtn = document.getElementById("undoCanvas");
+
+    if(undoBtn){
+        undoBtn.onclick = function(){
+
+            if(history.length <= 1) return;
+
+            history.pop(); // remove current state
+
+            const previous = history[history.length - 1];
+
+            const img = new Image();
+
+            img.onload = function(){
+
+                ctx.globalCompositeOperation = "source-over";
+
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.drawImage(img,0,0);
+
+            };
+
+            img.src = previous;
+
+        }
+    }
+
+    // =============================
+    // CLEAR CANVAS
+    // =============================
+
+    const clearBtn = document.getElementById("clearCanvas");
+
+    if(clearBtn){
+        clearBtn.onclick = function(){
+
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            fillWhite();
+
+            saveState();
+
+        }
+    }
+
+    // =============================
+    // EXPORT CANVAS
+    // =============================
+
+    function exportCanvas(){
+
+        const tempCanvas = document.createElement("canvas");
+
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+
+        const tempCtx = tempCanvas.getContext("2d");
+
+        tempCtx.fillStyle = "#ffffff";
+        tempCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
+
+        tempCtx.drawImage(canvas,0,0);
+
+        return tempCanvas.toDataURL("image/png");
+    }
+
+    // =============================
+    // AUTO SAVE TO FORM
+    // =============================
+
+    const form = document.getElementById("orderForm");
+
+    if(form){
+
+        form.addEventListener("submit", function(){
+
+            const dataURL = exportCanvas();
+
+            document.getElementById("scratchCanvasImage").value = dataURL;
+
+        });
+
+    }
+
+    // =============================
+    // FULLSCREEN BUTTON
+    // =============================
+
+    const fullscreenBtn = document.getElementById("fullscreenCanvas");
+
+    if(fullscreenBtn){
+
+        fullscreenBtn.onclick = function(){
+
+            if(!document.fullscreenElement){
+                canvas.requestFullscreen();
+            }else{
+                document.exitFullscreen();
+            }
+
+        }
+
+    }
+
+    // =============================
+    // HANDLE FULLSCREEN CHANGE
+    // =============================
+
+    document.addEventListener("fullscreenchange", function(){
+
+        const imageData = canvas.toDataURL();
+
+        if(document.fullscreenElement){
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+        }else{
+
+            canvas.width = NORMAL_WIDTH;
+            canvas.height = NORMAL_HEIGHT;
+
+        }
+
+        fillWhite();
+
+        const img = new Image();
+
+        img.onload = function(){
+            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        };
+
+        img.src = imageData;
+
+    });
+
+}
+
+</script>
 
 
 

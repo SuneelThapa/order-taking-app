@@ -4,6 +4,8 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 from orders.models.coat import CoatMeasurement
 from .models import *
 
+from django.utils.html import format_html
+
 
 # ------------------------------
 # PRODUCT TYPE
@@ -21,6 +23,21 @@ class ClientPhotoInline(admin.TabularInline):
     model = ClientPhoto
     extra = 3
     max_num = 3
+
+
+# Scratch note 
+class ScratchNoteInline(admin.TabularInline):
+    model = ScratchNote
+    extra = 1
+    readonly_fields = ["preview"]
+
+    def preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="200"/>',
+                obj.image.url
+            )
+        return "-"
 
 
 # ------------------------------
@@ -122,7 +139,11 @@ class OrderAdmin(admin.ModelAdmin):
         }),
     )
 
-    inlines = [OrderItemInline, ClientPhotoInline]
+    inlines = [
+        OrderItemInline,
+        ClientPhotoInline,
+        ScratchNoteInline,
+    ]
 
     def urgent_status(self, obj):
         return "🚨 URGENT" if obj.is_urgent else "Normal"

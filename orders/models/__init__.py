@@ -16,3 +16,4 @@ from .order_item_photo import *
 from .vest import *
 from .coat import *
 from .suit import *
+from .scratch_note import *

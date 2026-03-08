@@ -119,7 +119,7 @@
 
                         <!-- EDIT -->
                         <a class="btn btn-info btn-sm"
-                        href="{% url 'orders:order_edit' order.id %}">
+                        href="{% url 'orders:dashboard' %}?edit={{ order.id }}">
                             <i class="fas fa-pencil-alt"></i>
                             Edit
                         </a>
