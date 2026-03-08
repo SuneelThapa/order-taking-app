@@ -18,7 +18,7 @@
 <section class="content">
   <div class="container-fluid">
 
-    <form method="POST" enctype="multipart/form-data">
+    <form method="POST" enctype="multipart/form-data" id="orderForm">
       {% csrf_token %}
 
       <!-- ================= ORDER INFO ================= -->
@@ -180,6 +180,204 @@
 </div>
 
 <!-- ================= END CUSTOMER PHOTOS ================= -->
+
+
+
+
+
+
+
+
+
+
+<!-- ================= SCRATCH NOTES ================= -->
+
+<div class="card card-outline card-danger mt-3">
+
+  <div class="card-header">
+    <h3 class="card-title">Scratch Notes</h3>
+  </div>
+
+  <div class="card-body">
+
+    <!-- ===== Existing Scratch Notes ===== -->
+
+    {% if edit_order.scratch_notes.count %}
+
+    <div class="mb-3">
+
+      <label class="font-weight-bold">Previous Notes</label>
+
+      <div class="d-flex flex-wrap">
+
+        {% for note in edit_order.scratch_notes.all %}
+
+        <img src="{{ note.image.url }}"
+             style="max-width:200px; cursor:pointer;"
+             class="border rounded mr-2 mb-2 shadow-sm"
+             data-toggle="modal"
+             data-target="#scratchModal"
+             onclick="showScratchImage('{{ note.image.url }}')">
+
+        {% endfor %}
+
+      </div>
+
+    </div>
+
+    {% endif %}
+
+    <!-- ===== Drawing Toolbar ===== -->
+
+    <div class="d-flex flex-wrap align-items-center p-2 bg-light border rounded shadow-sm mb-3">
+
+      <div class="mr-3 d-flex align-items-center">
+        <label class="small font-weight-bold mr-2 mb-0">Pen</label>
+
+        <select id="penSize"
+                class="form-control form-control-sm"
+                style="width:auto;">
+          <option value="2">Thin</option>
+          <option value="4" selected>Medium</option>
+          <option value="8">Thick</option>
+        </select>
+      </div>
+
+      <div class="mr-3 d-flex align-items-center">
+        <label class="small font-weight-bold mr-2 mb-0">Color</label>
+
+        <input type="color"
+               id="penColor"
+               value="#000000"
+               class="border rounded"
+               style="width:40px;height:32px;padding:2px;">
+      </div>
+
+      <div class="btn-group mr-3">
+
+        <button type="button"
+                id="eraserTool"
+                class="btn btn-sm btn-outline-danger">
+          🧽 Eraser
+        </button>
+
+        <button type="button"
+                id="undoCanvas"
+                class="btn btn-sm btn-outline-warning">
+          ↶ Undo
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- ===== Canvas ===== -->
+
+    <div style="
+        overflow:auto;
+        border:1px solid #dee2e6;
+        border-radius:6px;
+        max-width:100%;
+        max-height:420px;
+        background:#f8f9fa;
+        padding:10px;
+    ">
+
+      <canvas id="scratchCanvas"
+              width="1200"
+              height="800"
+              style="
+                background:white;
+                border-radius:5px;
+                box-shadow:0 2px 6px rgba(0,0,0,0.1);
+                display:block;
+                margin:auto;
+              ">
+      </canvas>
+
+    </div>
+
+    <div class="mt-3 d-flex justify-content-center">
+
+      <div class="btn-group">
+
+        <button type="button"
+                id="clearCanvas"
+                class="btn btn-sm btn-outline-secondary">
+          🗑 Clear
+        </button>
+
+        <button type="button"
+                id="fullscreenCanvas"
+                class="btn btn-sm btn-primary">
+          ⛶ Full Screen
+        </button>
+
+      </div>
+
+    </div>
+
+    <input type="hidden"
+           name="scratch_canvas_image"
+           id="scratchCanvasImage">
+
+  </div>
+
+</div>
+
+<!-- ================= END SCRATCH NOTES ================= -->
+
+
+<!-- ================= SCRATCH MODAL ================= -->
+
+<div class="modal fade" id="scratchModal">
+
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+
+        <h5 class="modal-title">Scratch Note</h5>
+
+        <button type="button"
+                class="close"
+                data-dismiss="modal">
+          <span>&times;</span>
+        </button>
+
+      </div>
+
+      <div class="modal-body text-center">
+
+        <img id="scratchZoomImage"
+             style="max-width:100%; max-height:80vh;">
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+function showScratchImage(url) {
+  document.getElementById("scratchZoomImage").src = url;
+}
+
+</script>
+
+
+
+
+
+
+
+
+
 
 
 

@@ -400,6 +400,7 @@ def dashboard(request):
                 "client_photos",
                 "items__photos",
                 "items__measurement",
+                "scratch_notes"
             ),
             pk=order_id
         )
@@ -409,6 +410,7 @@ def dashboard(request):
     # ===============================
 
     context = {
+        "edit_order": edit_order,
         "new_orders": new_orders,
         "pending_orders": pending_orders,
         "in_progress": in_progress,

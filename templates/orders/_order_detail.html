@@ -3,16 +3,44 @@
 <div class="content-header">
   <div class="container-fluid">
 
+
+
+    
+
+
+
+
+
+
+
     <div class="card">
-      <div class="card-header d-flex justify-content-between">
-        <h3>Order #{{ selected_order.order_number }}</h3>
 
-        <a href="{% url 'orders:dashboard' %}" class="btn btn-secondary">
-          Back to Orders
-        </a>
-      </div>
 
+
+
+      <!-- Content Header (Page header) -->
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h3>Order #{{ selected_order.order_number }}</h3>
+          </div><!-- /.col -->
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+              
+              <li class="breadcrumb-item"><a href="{% url 'orders:dashboard' %}" class="btn btn-secondary">Back to Orders</a></li>
+            
+            </ol>
+          </div><!-- /.col -->
+        </div><!-- /.row -->
+      </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.content-header -->
+   <hr/>
       <div class="card-body">
+
+
+     
 
 
 
@@ -131,6 +159,78 @@
         {% endif %}
 
         <hr>
+
+
+
+
+<!-- Scratch Notes -->
+
+{% if selected_order.scratch_notes.exists %}
+<div class="card mt-4">
+
+  <div class="card-header">
+    <strong>Scratch Notes</strong>
+  </div>
+
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-3">
+
+      {% for scratch in selected_order.scratch_notes.all %}
+
+        <div class="text-center">
+
+          <img src="{{ scratch.image.url }}"
+               style="max-width:350px; border-radius:6px; cursor:pointer;"
+               class="border shadow-sm"
+               data-bs-toggle="modal"
+               data-bs-target="#scratchModal"
+               onclick="showScratchImage('{{ scratch.image.url }}')">
+
+          <div class="small text-muted mt-1">
+            {{ scratch.created_at|date:"M d, Y H:i" }}
+          </div>
+
+        </div>
+
+      {% endfor %}
+
+    </div>
+  </div>
+
+</div>
+{% endif %}
+
+
+
+<!-- Zoom Modal -->
+
+<div class="modal fade" id="scratchModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Scratch Note</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal">X</button>
+      </div>
+
+      <div class="modal-body text-center">
+
+        <img id="scratchZoomImage"
+             src=""
+             style="max-width:100%; max-height:80vh; border-radius:6px;">
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+
+
 
         <!-- ============================= -->
         <!-- ORDER ITEMS -->
