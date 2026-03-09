@@ -70,6 +70,9 @@ function showScratchImage(url) {
 
 
 
+
+
+
 <script>
 document.addEventListener("change", function(e) {
 
@@ -289,8 +292,6 @@ document.addEventListener("change", function(e){
 
 
 
-
-
 <!-- Scratch note writing script-->
 <script>
 
@@ -298,311 +299,352 @@ const canvas = document.getElementById("scratchCanvas");
 
 if (canvas) {
 
-    const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 
-    let drawing = false;
-    let history = [];
-    let erasing = false;
+let drawing = false;
+let history = [];
+let erasing = false;
 
-    const NORMAL_WIDTH = 1200;
-    const NORMAL_HEIGHT = 800;
+const NORMAL_WIDTH = 1200;
+const NORMAL_HEIGHT = 800;
 
-    const penSizeSelector = document.getElementById("penSize");
-    const penColorPicker = document.getElementById("penColor");
-    const eraserBtn = document.getElementById("eraserTool");
+const penSizeSelector = document.getElementById("penSize");
+const penColorPicker = document.getElementById("penColor");
+const eraserBtn = document.getElementById("eraserTool");
+const fullscreenBtn = document.getElementById("fullscreenCanvas");
+const exitFullscreenBtn = document.getElementById("exitFullscreenCanvas");
 
-    canvas.style.touchAction = "none"; // prevent page scroll while drawing
+canvas.style.touchAction = "none"; // prevent page scroll while drawing
 
-    function fillWhite(){
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+function fillWhite(){
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+fillWhite();
+
+
+/* =============================
+   SAVE HISTORY (UNDO)
+============================= */
+
+function saveState(){
+
+    history.push(canvas.toDataURL());
+
+    if(history.length > 30){
+        history.shift();
     }
 
-    fillWhite();
+}
 
-    // =============================
-    // SAVE HISTORY (FOR UNDO)
-    // =============================
+saveState();
 
-    function saveState(){
 
-        history.push(canvas.toDataURL());
+/* =============================
+   ERASER TOOL
+============================= */
 
-        if(history.length > 30){
-            history.shift();
-        }
+if (eraserBtn){
 
-    }
+eraserBtn.onclick = function(){
 
-    saveState();
+    erasing = !erasing;
 
-    // =============================
-    // ERASER TOOL
-    // =============================
+    if(erasing){
 
-    if (eraserBtn) {
+        eraserBtn.classList.remove("btn-outline-danger");
+        eraserBtn.classList.add("btn-danger");
+        canvas.style.cursor = "crosshair";
 
-        eraserBtn.onclick = function () {
+    }else{
 
-            erasing = !erasing;
-
-            if (erasing) {
-
-                eraserBtn.classList.remove("btn-outline-danger");
-                eraserBtn.classList.add("btn-danger");
-                canvas.style.cursor = "crosshair";
-
-            } else {
-
-                eraserBtn.classList.remove("btn-danger");
-                eraserBtn.classList.add("btn-outline-danger");
-                canvas.style.cursor = "default";
-
-            }
-
-        }
-
-    }
-
-    // =============================
-    // GET POINTER POSITION
-    // =============================
-
-    function getPosition(e){
-
-        const rect = canvas.getBoundingClientRect();
-
-        if(e.touches){
-            return {
-                x: e.touches[0].clientX - rect.left,
-                y: e.touches[0].clientY - rect.top
-            }
-        }
-
-        return {
-            x: e.offsetX,
-            y: e.offsetY
-        }
+        eraserBtn.classList.remove("btn-danger");
+        eraserBtn.classList.add("btn-outline-danger");
+        canvas.style.cursor = "default";
 
     }
 
-    // =============================
-    // DRAW EVENTS (MOUSE)
-    // =============================
+}
 
-    canvas.addEventListener("mousedown", startDraw);
-    canvas.addEventListener("mouseup", stopDraw);
-    canvas.addEventListener("mouseleave", stopDraw);
-    canvas.addEventListener("mousemove", draw);
+}
 
-    // =============================
-    // DRAW EVENTS (TOUCH)
-    // =============================
 
-    canvas.addEventListener("touchstart", startDraw);
-    canvas.addEventListener("touchend", stopDraw);
-    canvas.addEventListener("touchcancel", stopDraw);
-    canvas.addEventListener("touchmove", draw);
+/* =============================
+   POINTER POSITION
+============================= */
 
-    function startDraw(e){
+function getPosition(e){
 
-        e.preventDefault();
+const rect = canvas.getBoundingClientRect();
 
-        drawing = true;
+if(e.touches){
 
-        const pos = getPosition(e);
+return {
+x: e.touches[0].clientX - rect.left,
+y: e.touches[0].clientY - rect.top
+}
 
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
+}
 
-    }
+return {
+x: e.offsetX,
+y: e.offsetY
+}
 
-    function stopDraw(){
+}
 
-        if(drawing){
-            saveState();
-        }
 
-        drawing = false;
-        ctx.beginPath();
+/* =============================
+   DRAW EVENTS
+============================= */
 
-    }
+canvas.addEventListener("mousedown", startDraw);
+canvas.addEventListener("mouseup", stopDraw);
+canvas.addEventListener("mouseleave", stopDraw);
+canvas.addEventListener("mousemove", draw);
 
-    function draw(e){
+canvas.addEventListener("touchstart", startDraw);
+canvas.addEventListener("touchend", stopDraw);
+canvas.addEventListener("touchcancel", stopDraw);
+canvas.addEventListener("touchmove", draw);
 
-        if(!drawing) return;
 
-        e.preventDefault();
+function startDraw(e){
 
-        const pos = getPosition(e);
+e.preventDefault();
 
-        ctx.lineWidth = penSizeSelector.value;
-        ctx.lineCap = "round";
+drawing = true;
 
-        if(erasing){
+const pos = getPosition(e);
 
-            ctx.globalCompositeOperation = "destination-out";
-            ctx.strokeStyle = "rgba(0,0,0,1)";
+ctx.beginPath();
+ctx.moveTo(pos.x,pos.y);
 
-        }else{
+}
 
-            ctx.globalCompositeOperation = "source-over";
-            ctx.strokeStyle = penColorPicker.value;
 
-        }
+function stopDraw(){
 
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+if(drawing){
+saveState();
+}
 
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
+drawing = false;
+ctx.beginPath();
 
-    }
+}
 
-    // =============================
-    // UNDO
-    // =============================
 
-    const undoBtn = document.getElementById("undoCanvas");
+function draw(e){
 
-    if(undoBtn){
-        undoBtn.onclick = function(){
+if(!drawing) return;
 
-            if(history.length <= 1) return;
+e.preventDefault();
 
-            history.pop();
+const pos = getPosition(e);
 
-            const previous = history[history.length - 1];
+ctx.lineWidth = penSizeSelector.value;
+ctx.lineCap = "round";
 
-            const img = new Image();
+if(erasing){
 
-            img.onload = function(){
+ctx.globalCompositeOperation = "destination-out";
+ctx.strokeStyle = "rgba(0,0,0,1)";
 
-                ctx.globalCompositeOperation = "source-over";
+}else{
 
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                ctx.drawImage(img,0,0);
+ctx.globalCompositeOperation = "source-over";
+ctx.strokeStyle = penColorPicker.value;
 
-            };
+}
 
-            img.src = previous;
+ctx.lineTo(pos.x,pos.y);
+ctx.stroke();
 
-        }
-    }
+ctx.beginPath();
+ctx.moveTo(pos.x,pos.y);
 
-    // =============================
-    // CLEAR CANVAS
-    // =============================
+}
 
-    const clearBtn = document.getElementById("clearCanvas");
 
-    if(clearBtn){
-        clearBtn.onclick = function(){
+/* =============================
+   UNDO
+============================= */
 
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            fillWhite();
+const undoBtn = document.getElementById("undoCanvas");
 
-            saveState();
+if(undoBtn){
 
-        }
-    }
+undoBtn.onclick = function(){
 
-    // =============================
-    // EXPORT CANVAS
-    // =============================
+if(history.length <= 1) return;
 
-    function exportCanvas(){
+history.pop();
 
-        const tempCanvas = document.createElement("canvas");
+const previous = history[history.length-1];
 
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+const img = new Image();
 
-        const tempCtx = tempCanvas.getContext("2d");
+img.onload = function(){
 
-        tempCtx.fillStyle = "#ffffff";
-        tempCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
+ctx.globalCompositeOperation="source-over";
 
-        tempCtx.drawImage(canvas,0,0);
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(img,0,0);
 
-        return tempCanvas.toDataURL("image/png");
-    }
+};
 
-    // =============================
-    // AUTO SAVE TO FORM
-    // =============================
+img.src = previous;
 
-    const form = document.getElementById("orderForm");
+}
 
-    if(form){
+}
 
-        form.addEventListener("submit", function(){
 
-            const dataURL = exportCanvas();
+/* =============================
+   CLEAR CANVAS
+============================= */
 
-            document.getElementById("scratchCanvasImage").value = dataURL;
+const clearBtn = document.getElementById("clearCanvas");
 
-        });
+if(clearBtn){
 
-    }
+clearBtn.onclick = function(){
 
-    // =============================
-    // FULLSCREEN BUTTON
-    // =============================
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    const fullscreenBtn = document.getElementById("fullscreenCanvas");
+fillWhite();
 
-    if(fullscreenBtn){
+saveState();
 
-        fullscreenBtn.onclick = function(){
+}
 
-            if(!document.fullscreenElement){
-                canvas.requestFullscreen();
-            }else{
-                document.exitFullscreen();
-            }
+}
 
-        }
 
-    }
+/* =============================
+   EXPORT CANVAS
+============================= */
 
-    // =============================
-    // HANDLE FULLSCREEN CHANGE
-    // =============================
+function exportCanvas(){
 
-    document.addEventListener("fullscreenchange", function(){
+const tempCanvas = document.createElement("canvas");
 
-        const imageData = canvas.toDataURL();
+tempCanvas.width = canvas.width;
+tempCanvas.height = canvas.height;
 
-        if(document.fullscreenElement){
+const tempCtx = tempCanvas.getContext("2d");
 
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+tempCtx.fillStyle="#ffffff";
+tempCtx.fillRect(0,0,tempCanvas.width,tempCanvas.height);
 
-        }else{
+tempCtx.drawImage(canvas,0,0);
 
-            canvas.width = NORMAL_WIDTH;
-            canvas.height = NORMAL_HEIGHT;
+return tempCanvas.toDataURL("image/png");
 
-        }
+}
 
-        fillWhite();
 
-        const img = new Image();
+/* =============================
+   SAVE IMAGE TO FORM
+============================= */
 
-        img.onload = function(){
-            ctx.drawImage(img,0,0,canvas.width,canvas.height);
-        };
+const form = document.getElementById("orderForm");
 
-        img.src = imageData;
+if(form){
 
-    });
+form.addEventListener("submit",function(){
+
+const dataURL = exportCanvas();
+
+document.getElementById("scratchCanvasImage").value = dataURL;
+
+});
+
+}
+
+
+/* =============================
+   FULLSCREEN BUTTON
+============================= */
+
+if(fullscreenBtn){
+
+fullscreenBtn.onclick = function(){
+
+if(!document.fullscreenElement){
+
+canvas.requestFullscreen().catch(err=>console.log(err));
+
+}else{
+
+document.exitFullscreen();
+
+}
+
+}
+
+}
+
+
+/* =============================
+   EXIT FULLSCREEN BUTTON
+============================= */
+
+if(exitFullscreenBtn){
+
+exitFullscreenBtn.onclick = function(){
+document.exitFullscreen();
+}
+
+}
+
+
+/* =============================
+   HANDLE FULLSCREEN CHANGE
+============================= */
+
+document.addEventListener("fullscreenchange",function(){
+
+const imageData = canvas.toDataURL();
+
+if(document.fullscreenElement){
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+if(exitFullscreenBtn){
+exitFullscreenBtn.style.display="block";
+}
+
+}else{
+
+canvas.width = NORMAL_WIDTH;
+canvas.height = NORMAL_HEIGHT;
+
+if(exitFullscreenBtn){
+exitFullscreenBtn.style.display="none";
+}
+
+}
+
+fillWhite();
+
+const img = new Image();
+
+img.onload = function(){
+ctx.drawImage(img,0,0,canvas.width,canvas.height);
+};
+
+img.src = imageData;
+
+});
 
 }
 
 </script>
-
-
 
 
 
