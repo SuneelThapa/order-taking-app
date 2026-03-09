@@ -170,7 +170,7 @@
 
 <!-- ================= SCRATCH NOTES ================= -->
 
-<div class="card card-outline card-danger mt-3">
+<div class="card card-outline card-danger mt-3" style="position:relative;">
 
   <div class="card-header">
     <h3 class="card-title">Scratch Notes</h3>
@@ -224,8 +224,12 @@
     <!-- ===== End Toolbar ===== -->
 
 
+
+
     <!-- ===== Canvas Container ===== -->
-    <div style="
+<div id="canvasFullscreenContainer"
+     style="
+        position:relative;
         overflow:auto;
         border:1px solid #dee2e6;
         border-radius:6px;
@@ -233,41 +237,41 @@
         max-height:420px;
         background:#f8f9fa;
         padding:10px;
-    ">
+">
 
-      <canvas id="scratchCanvas"
-              width="1200"
-              height="800"
-              style="
-                background:white;
-                border-radius:5px;
-                box-shadow:0 2px 6px rgba(0,0,0,0.1);
-                display:block;
-                margin:auto;
-              "></canvas>
+<canvas id="scratchCanvas"
+        width="1200"
+        height="800"
+        style="
+            background:white;
+            border-radius:5px;
+            box-shadow:0 2px 6px rgba(0,0,0,0.1);
+            display:block;
+            margin:auto;
+        ">
+</canvas>
 
-    </div>
-    <!-- ===== End Canvas ===== -->
-
-    <!-- Fullscreen Exit Button -->
 <button type="button"
         id="exitFullscreenCanvas"
         style="
             display:none;
-            position:fixed;
+            position:absolute;
             top:15px;
             right:15px;
-            z-index:9999;
+            z-index:100000;
             background:#dc3545;
             color:white;
             border:none;
             padding:10px 14px;
             border-radius:6px;
             font-size:16px;
-            box-shadow:0 2px 8px rgba(0,0,0,0.3);
         ">
-    ✕ Close
+✕ Close
 </button>
+
+</div>
+
+    
 
 
     <!-- ===== Bottom Action Buttons ===== -->

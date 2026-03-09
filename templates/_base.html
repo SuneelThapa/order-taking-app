@@ -292,7 +292,9 @@ document.addEventListener("change", function(e){
 
 
 
-<!-- Scratch note writing script-->
+
+
+
 <script>
 
 const canvas = document.getElementById("scratchCanvas");
@@ -305,6 +307,16 @@ let drawing = false;
 let history = [];
 let erasing = false;
 
+let lastTap = 0;
+
+/* =============================
+   PINCH ZOOM VARIABLES
+============================= */
+
+let scale = 1;
+let startDistance = 0;
+let isPinching = false;
+
 const NORMAL_WIDTH = 1200;
 const NORMAL_HEIGHT = 800;
 
@@ -314,7 +326,9 @@ const eraserBtn = document.getElementById("eraserTool");
 const fullscreenBtn = document.getElementById("fullscreenCanvas");
 const exitFullscreenBtn = document.getElementById("exitFullscreenCanvas");
 
-canvas.style.touchAction = "none"; // prevent page scroll while drawing
+const canvasContainer = document.getElementById("canvasFullscreenContainer");
+
+canvas.style.touchAction = "none";
 
 
 function fillWhite(){
@@ -324,9 +338,8 @@ function fillWhite(){
 
 fillWhite();
 
-
 /* =============================
-   SAVE HISTORY (UNDO)
+   SAVE HISTORY
 ============================= */
 
 function saveState(){
@@ -382,16 +395,30 @@ const rect = canvas.getBoundingClientRect();
 if(e.touches){
 
 return {
-x: e.touches[0].clientX - rect.left,
-y: e.touches[0].clientY - rect.top
+x: (e.touches[0].clientX - rect.left) / scale,
+y: (e.touches[0].clientY - rect.top) / scale
 }
 
 }
 
 return {
-x: e.offsetX,
-y: e.offsetY
+x: e.offsetX / scale,
+y: e.offsetY / scale
 }
+
+}
+
+
+/* =============================
+   PINCH DISTANCE
+============================= */
+
+function getDistance(touches){
+
+const dx = touches[0].clientX - touches[1].clientX;
+const dy = touches[0].clientY - touches[1].clientY;
+
+return Math.sqrt(dx*dx + dy*dy);
 
 }
 
@@ -405,13 +432,83 @@ canvas.addEventListener("mouseup", stopDraw);
 canvas.addEventListener("mouseleave", stopDraw);
 canvas.addEventListener("mousemove", draw);
 
-canvas.addEventListener("touchstart", startDraw);
+canvas.addEventListener("touchstart", handleTouchStart);
 canvas.addEventListener("touchend", stopDraw);
 canvas.addEventListener("touchcancel", stopDraw);
-canvas.addEventListener("touchmove", draw);
+canvas.addEventListener("touchmove", handleTouchMove);
 
+
+/* =============================
+   TOUCH START
+============================= */
+
+function handleTouchStart(e){
+
+if(e.touches.length === 2){
+
+isPinching = true;
+startDistance = getDistance(e.touches);
+return;
+
+}
+
+const now = new Date().getTime();
+const tapLength = now - lastTap;
+
+if(tapLength < 300 && tapLength > 0){
+
+handleUndo();
+lastTap = 0;
+return;
+
+}
+
+lastTap = now;
+
+startDraw(e);
+
+}
+
+
+/* =============================
+   TOUCH MOVE
+============================= */
+
+function handleTouchMove(e){
+
+if(isPinching && e.touches.length === 2){
+
+e.preventDefault();
+
+let newDistance = getDistance(e.touches);
+
+let zoom = newDistance / startDistance;
+
+scale *= zoom;
+
+if(scale < 1) scale = 1;
+if(scale > 5) scale = 5;
+
+canvas.style.transform = `scale(${scale})`;
+
+startDistance = newDistance;
+
+return;
+
+}
+
+draw(e);
+
+}
+
+
+/* =============================
+   START DRAW
+============================= */
 
 function startDraw(e){
+
+if(isPinching) return;
 
 e.preventDefault();
 
@@ -425,7 +522,18 @@ ctx.moveTo(pos.x,pos.y);
 }
 
 
+/* =============================
+   STOP DRAW
+============================= */
+
 function stopDraw(){
+
+if(isPinching){
+
+isPinching = false;
+return;
+
+}
 
 if(drawing){
 saveState();
@@ -437,9 +545,13 @@ ctx.beginPath();
 }
 
 
+/* =============================
+   DRAW
+============================= */
+
 function draw(e){
 
-if(!drawing) return;
+if(!drawing || isPinching) return;
 
 e.preventDefault();
 
@@ -473,11 +585,7 @@ ctx.moveTo(pos.x,pos.y);
    UNDO
 ============================= */
 
-const undoBtn = document.getElementById("undoCanvas");
-
-if(undoBtn){
-
-undoBtn.onclick = function(){
+function handleUndo(){
 
 if(history.length <= 1) return;
 
@@ -490,7 +598,6 @@ const img = new Image();
 img.onload = function(){
 
 ctx.globalCompositeOperation="source-over";
-
 ctx.clearRect(0,0,canvas.width,canvas.height);
 ctx.drawImage(img,0,0);
 
@@ -499,6 +606,12 @@ ctx.drawImage(img,0,0);
 img.src = previous;
 
 }
+
+const undoBtn = document.getElementById("undoCanvas");
+
+if(undoBtn){
+
+undoBtn.onclick = handleUndo;
 
 }
 
@@ -567,7 +680,7 @@ document.getElementById("scratchCanvasImage").value = dataURL;
 
 
 /* =============================
-   FULLSCREEN BUTTON
+   FULLSCREEN
 ============================= */
 
 if(fullscreenBtn){
@@ -576,11 +689,7 @@ fullscreenBtn.onclick = function(){
 
 if(!document.fullscreenElement){
 
-canvas.requestFullscreen().catch(err=>console.log(err));
-
-}else{
-
-document.exitFullscreen();
+canvasContainer.requestFullscreen();
 
 }
 
@@ -588,22 +697,20 @@ document.exitFullscreen();
 
 }
 
-
-/* =============================
-   EXIT FULLSCREEN BUTTON
-============================= */
 
 if(exitFullscreenBtn){
 
 exitFullscreenBtn.onclick = function(){
+
 document.exitFullscreen();
+
 }
 
 }
 
 
 /* =============================
-   HANDLE FULLSCREEN CHANGE
+   FULLSCREEN CHANGE
 ============================= */
 
 document.addEventListener("fullscreenchange",function(){
@@ -645,6 +752,9 @@ img.src = imageData;
 }
 
 </script>
+
+
+
 
 
 

@@ -1,3 +1,18 @@
 #eraserTool.btn-danger{
     color:white;
 }
+
+#canvasFullscreenContainer:fullscreen{
+    padding:0;
+    border:none;
+    background:white;
+}
+
+#canvasFullscreenContainer:fullscreen canvas{
+    width:100vw;
+    height:100vh;
+}
+
+#canvasFullscreenContainer:fullscreen #exitFullscreenCanvas{
+    display:block !important;
+}
