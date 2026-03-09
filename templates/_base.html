@@ -286,6 +286,11 @@ document.addEventListener("change", function(e){
 
 
 
+
+
+
+
+
 <!-- Scratch note writing script-->
 <script>
 
@@ -305,6 +310,8 @@ if (canvas) {
     const penSizeSelector = document.getElementById("penSize");
     const penColorPicker = document.getElementById("penColor");
     const eraserBtn = document.getElementById("eraserTool");
+
+    canvas.style.touchAction = "none"; // prevent page scroll while drawing
 
     function fillWhite(){
         ctx.fillStyle = "#ffffff";
@@ -327,12 +334,7 @@ if (canvas) {
 
     }
 
-    // save initial blank canvas
     saveState();
-
-    // =============================
-    // ERASER TOOL
-    // =============================
 
     // =============================
     // ERASER TOOL
@@ -363,7 +365,29 @@ if (canvas) {
     }
 
     // =============================
-    // DRAW EVENTS
+    // GET POINTER POSITION
+    // =============================
+
+    function getPosition(e){
+
+        const rect = canvas.getBoundingClientRect();
+
+        if(e.touches){
+            return {
+                x: e.touches[0].clientX - rect.left,
+                y: e.touches[0].clientY - rect.top
+            }
+        }
+
+        return {
+            x: e.offsetX,
+            y: e.offsetY
+        }
+
+    }
+
+    // =============================
+    // DRAW EVENTS (MOUSE)
     // =============================
 
     canvas.addEventListener("mousedown", startDraw);
@@ -371,12 +395,26 @@ if (canvas) {
     canvas.addEventListener("mouseleave", stopDraw);
     canvas.addEventListener("mousemove", draw);
 
+    // =============================
+    // DRAW EVENTS (TOUCH)
+    // =============================
+
+    canvas.addEventListener("touchstart", startDraw);
+    canvas.addEventListener("touchend", stopDraw);
+    canvas.addEventListener("touchcancel", stopDraw);
+    canvas.addEventListener("touchmove", draw);
+
     function startDraw(e){
+
+        e.preventDefault();
 
         drawing = true;
 
+        const pos = getPosition(e);
+
         ctx.beginPath();
-        ctx.moveTo(e.offsetX, e.offsetY);
+        ctx.moveTo(pos.x, pos.y);
+
     }
 
     function stopDraw(){
@@ -387,11 +425,16 @@ if (canvas) {
 
         drawing = false;
         ctx.beginPath();
+
     }
 
     function draw(e){
 
         if(!drawing) return;
+
+        e.preventDefault();
+
+        const pos = getPosition(e);
 
         ctx.lineWidth = penSizeSelector.value;
         ctx.lineCap = "round";
@@ -408,11 +451,12 @@ if (canvas) {
 
         }
 
-        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.lineTo(pos.x, pos.y);
         ctx.stroke();
 
         ctx.beginPath();
-        ctx.moveTo(e.offsetX, e.offsetY);
+        ctx.moveTo(pos.x, pos.y);
+
     }
 
     // =============================
@@ -426,7 +470,7 @@ if (canvas) {
 
             if(history.length <= 1) return;
 
-            history.pop(); // remove current state
+            history.pop();
 
             const previous = history[history.length - 1];
 
@@ -557,6 +601,11 @@ if (canvas) {
 }
 
 </script>
+
+
+
+
+
 
 
 

@@ -9,7 +9,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     # Django admin
-    path("admin/", admin.site.urls),
+    path("ea-management/", admin.site.urls),
 
     # User management
     path("accounts/", include("django.contrib.auth.urls")),
