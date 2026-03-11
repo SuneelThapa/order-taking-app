@@ -162,8 +162,8 @@ LOGIN_REDIRECT_URL = "orders:dashboard"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+#MEDIA_URL = '/media/'
+#MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
