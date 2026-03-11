@@ -205,7 +205,6 @@ WHITENOISE_MANIFEST_STRICT = False
 
 
 
-
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/1")
 
 CACHES = {
@@ -216,10 +215,12 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "SOCKET_CONNECT_TIMEOUT": 5,
             "SOCKET_TIMEOUT": 5,
+            "CONNECTION_POOL_KWARGS": {
+                "ssl_cert_reqs": None
+            }
         }
     }
 }
-
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
