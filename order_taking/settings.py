@@ -9,14 +9,18 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-from email.policy import default
+
 import os
 from pathlib import Path
-from xmlrpc.client import FastMarshaller
 from environs import Env
+
+import cloudinary
 
 env = Env()
 env.read_env()
+
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,6 +52,9 @@ INSTALLED_APPS = [
 
     "accounts.apps.AccountsConfig",
     "orders.apps.OrdersConfig",
+
+    "cloudinary",
+    "cloudinary_storage",
 ]
 
 AUTH_USER_MODEL = "accounts.CustomUser"
@@ -170,3 +177,16 @@ CSRF_COOKIE_SECURE = env.bool("DJANGO_CSRF_COOKIE_SECURE", default=True)
 
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+
+
+
+cloudinary.config(
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key = os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET"),
+)
+
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
