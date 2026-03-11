@@ -13,7 +13,7 @@ from .models import Order, OrderItem, OrderItemPhoto, ClientPhoto
 class StyledModelForm(forms.ModelForm):
     """
     Automatically apply Bootstrap form-control class
-    to all fields except checkboxes.
+    to all fields except checkboxes and hidden fields.
     """
 
     def __init__(self, *args, **kwargs):
@@ -21,7 +21,8 @@ class StyledModelForm(forms.ModelForm):
 
         for field in self.fields.values():
 
-            if isinstance(field.widget, forms.CheckboxInput):
+            # Skip checkboxes and hidden fields
+            if isinstance(field.widget, (forms.CheckboxInput, forms.HiddenInput)):
                 continue
 
             existing_class = field.widget.attrs.get("class", "")
@@ -110,7 +111,8 @@ class OrderItemPhotoForm(forms.ModelForm):
         widgets = {
             "image": forms.ClearableFileInput(attrs={
                 "class": "form-control",
-                "accept": "image/*"
+                "accept": "image/*",
+                "capture": "environment"
             })
         }
 
@@ -200,7 +202,8 @@ class ClientPhotoForm(StyledModelForm):
         required=False,
         label="Upload Photo",
         widget=forms.ClearableFileInput(attrs={
-            "accept": "image/*"
+            "accept": "image/*",
+            "capture": "environment"
         })
     )
 
