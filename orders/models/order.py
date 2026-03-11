@@ -1,8 +1,8 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Order(models.Model):
-
 
     STATUS_CHOICES = [
         ('new', 'new'),
@@ -17,16 +17,13 @@ class Order(models.Model):
         ('viber', 'Viber'),
     ]
 
-    order_number = models.CharField(max_length=20, unique=True, db_index=True)
+    order_number = models.CharField(max_length=20, unique=True, db_index=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
 
-    # ------------------------------
-    # SHIPPING ADDRESS
-    # ------------------------------
     street_address = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=100, blank=True, null=True)
@@ -44,7 +41,6 @@ class Order(models.Model):
 
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
 
-    # ✅ NEW FIELDS
     note = models.TextField(blank=True, null=True)
 
     ready_date = models.DateField(blank=True, null=True)
@@ -60,7 +56,29 @@ class Order(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        
+
+    def save(self, *args, **kwargs):
+
+        if not self.order_number:
+
+            year_prefix = timezone.now().strftime("%y")
+
+            last_order = (
+                Order.objects
+                .filter(order_number__startswith=year_prefix)
+                .order_by("-order_number")
+                .first()
+            )
+
+            if last_order:
+                last_number = int(last_order.order_number[2:])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+
+            self.order_number = f"{year_prefix}{new_number:04d}"
+
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.order_number

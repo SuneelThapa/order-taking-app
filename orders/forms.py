@@ -15,7 +15,7 @@ class OrderForm(forms.ModelForm):
     class Meta:
         model = Order
         fields = [
-            "order_number",
+            #"order_number",
             "first_name",
             "last_name",
             "email",
@@ -104,7 +104,7 @@ class OrderItemPhotoForm(forms.ModelForm):
         self.fields["image"].widget.attrs.update({
             "class": "form-control",
             "accept": "image/*",          # only images
-            "capture": "environment"      # open back camera on mobile
+            
         })
 
 
@@ -164,7 +164,7 @@ class ClientPhotoForm(forms.ModelForm):
         widget=forms.ClearableFileInput(attrs={
             "class": "form-control",
             "accept": "image/*",
-            "capture": "environment"
+            
         })
     )
 

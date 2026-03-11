@@ -295,6 +295,10 @@ document.addEventListener("change", function(e){
 
 
 
+
+
+
+
 <script>
 
 const canvas = document.getElementById("scratchCanvas");
@@ -308,6 +312,12 @@ let history = [];
 let erasing = false;
 
 let lastTap = 0;
+
+/* =============================
+   DETECT IF USER DREW ANYTHING
+============================= */
+
+let hasDrawing = false;
 
 /* =============================
    PINCH ZOOM VARIABLES
@@ -560,6 +570,9 @@ const pos = getPosition(e);
 ctx.lineWidth = penSizeSelector.value;
 ctx.lineCap = "round";
 
+/* 👇 mark drawing exists */
+hasDrawing = true;
+
 if(erasing){
 
 ctx.globalCompositeOperation = "destination-out";
@@ -630,6 +643,9 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 
 fillWhite();
 
+/* reset drawing flag */
+hasDrawing = false;
+
 saveState();
 
 }
@@ -669,6 +685,11 @@ const form = document.getElementById("orderForm");
 if(form){
 
 form.addEventListener("submit",function(){
+
+if(!hasDrawing){
+document.getElementById("scratchCanvasImage").value = "";
+return;
+}
 
 const dataURL = exportCanvas();
 
@@ -752,7 +773,6 @@ img.src = imageData;
 }
 
 </script>
-
 
 
 
