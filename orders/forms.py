@@ -1,21 +1,21 @@
 from django import forms
 from .models import Order, OrderItem, OrderItemPhoto, ClientPhoto
 from django.forms import inlineformset_factory
-
 from django.apps import apps
 from django.forms import modelform_factory
-
-from django.forms import modelformset_factory
-
+from functools import lru_cache
 
 
 
+# =========================
+# ORDER FORM
+# =========================
 
 class OrderForm(forms.ModelForm):
+
     class Meta:
         model = Order
         fields = [
-            #"order_number",
             "first_name",
             "last_name",
             "email",
@@ -61,15 +61,16 @@ class OrderForm(forms.ModelForm):
         for field in self.fields.values():
             field.widget.attrs.update({"class": "form-control"})
 
-        # Remove form-control from checkbox
-        self.fields["is_urgent"].widget.attrs.update({
-            "class": ""
-        })
+        self.fields["is_urgent"].widget.attrs.update({"class": ""})
 
 
 
+# =========================
+# ORDER ITEM FORM
+# =========================
 
 class OrderItemForm(forms.ModelForm):
+
     class Meta:
         model = OrderItem
         exclude = ("order",)
@@ -81,30 +82,32 @@ class OrderItemForm(forms.ModelForm):
             field.widget.attrs.update({"class": "form-control"})
 
 
-
 OrderItemFormSet = inlineformset_factory(
     Order,
     OrderItem,
     form=OrderItemForm,
-    #fields=("image",),
     extra=1,
     can_delete=True
 )
 
 
 
+# =========================
+# ORDER ITEM PHOTO
+# =========================
 
 class OrderItemPhotoForm(forms.ModelForm):
+
     class Meta:
         model = OrderItemPhoto
         fields = ("image",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.fields["image"].widget.attrs.update({
             "class": "form-control",
-            "accept": "image/*",          # only images
-            
+            "accept": "image/*",
         })
 
 
@@ -118,24 +121,39 @@ OrderItemPhotoFormSet = inlineformset_factory(
 
 
 
+# =========================
+# FAST MODEL CACHE
+# =========================
 
-#Create Dynamic Measurement Form Loader
-
-def get_measurement_form(product_type):
-    model_name = product_type.measurement_model
-
+@lru_cache(maxsize=32)
+def get_measurement_model(model_name):
+    """
+    Cache measurement model lookup.
+    """
     try:
-        model = apps.get_model("orders", model_name)
+        return apps.get_model("orders", model_name)
     except LookupError:
         return None
+
+
+
+# =========================
+# FAST FORM FACTORY CACHE
+# =========================
+
+@lru_cache(maxsize=32)
+def get_measurement_modelform(model):
+    """
+    Cache modelform creation (expensive operation).
+    """
 
     BaseForm = modelform_factory(
         model,
         exclude=("base",)
     )
 
-    # 🔥 Create styled version of the form
     class StyledMeasurementForm(BaseForm):
+
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
@@ -148,7 +166,26 @@ def get_measurement_form(product_type):
 
 
 
+# =========================
+# MAIN DYNAMIC FORM LOADER
+# =========================
 
+def get_measurement_form(product_type):
+
+    model_name = product_type.measurement_model
+
+    model = get_measurement_model(model_name)
+
+    if not model:
+        return None
+
+    return get_measurement_modelform(model)
+
+
+
+# =========================
+# CLIENT PHOTO FORM
+# =========================
 
 class ClientPhotoForm(forms.ModelForm):
 
@@ -164,19 +201,18 @@ class ClientPhotoForm(forms.ModelForm):
         widget=forms.ClearableFileInput(attrs={
             "class": "form-control",
             "accept": "image/*",
-            
         })
     )
 
     class Meta:
         model = ClientPhoto
         fields = ["photo_type", "image"]
-        
+
 
 
 ClientPhotoFormSet = inlineformset_factory(
-    Order,                # parent model
-    ClientPhoto,          # child model
+    Order,
+    ClientPhoto,
     form=ClientPhotoForm,
     extra=3,
     max_num=3,
