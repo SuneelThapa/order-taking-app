@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.core.cache import cache
 from django.apps import apps
 from django.forms import modelform_factory
+from django.template.loader import render_to_string
 
 import base64
 import uuid
@@ -47,7 +48,6 @@ def dashboard(request):
             "ready": Order.objects.filter(status="ready").count(),
             "delivered": Order.objects.filter(status="delivered").count(),
         }
-
         cache.set("dashboard_order_counts", counts, 60)
 
     new_orders = counts["new"]
@@ -102,7 +102,6 @@ def dashboard(request):
             canvas_data = request.POST.get("scratch_canvas_image")
 
             if canvas_data and canvas_data.startswith("data:image"):
-
                 try:
                     header, imgstr = canvas_data.split(";base64,")
                     ext = header.split("/")[-1]
@@ -116,7 +115,6 @@ def dashboard(request):
                         order=order,
                         image=image_file
                     )
-
                 except Exception:
                     pass
 
@@ -228,7 +226,6 @@ def dashboard(request):
 
             order_form = OrderForm()
             item_formset = OrderItemFormSet()
-
             client_photo_formset = ClientPhotoFormSet(prefix="client_photos")
 
     # =====================================================
@@ -247,6 +244,7 @@ def dashboard(request):
 
             selected_order = get_object_or_404(
                 Order.objects
+                .select_related()
                 .prefetch_related(
                     "client_photos",
                     "items",
@@ -276,42 +274,38 @@ def dashboard(request):
 
 
 # =====================================================
-# ORDERS TABLE (HTMX + REDIS CACHE)
+# ORDERS TABLE (HTMX + CACHE)
 # =====================================================
 
 @user_passes_test(staff_check)
 def orders_table(request):
 
-    cache_key = "orders_table_cache"
+    status = request.GET.get("status", "all")
+    page_number = request.GET.get("page", 1)
+
+    cache_key = f"orders_table_{status}_{page_number}"
+
     cached = cache.get(cache_key)
-
     if cached:
-        orders = cached
-    else:
-        orders = list(
-            Order.objects.only(
-                "id",
-                "order_number",
-                "status",
-                "total_amount",
-                "created_at",
-                "first_name",
-                "last_name",
-            ).order_by("-created_at")[:200]
-        )
+        return cached
 
-        cache.set(cache_key, orders, 60)
+    orders = Order.objects.only(
+        "id",
+        "order_number",
+        "status",
+        "total_amount",
+        "created_at",
+        "first_name",
+        "last_name",
+    ).order_by("-created_at")
 
-    status = request.GET.get("status")
-
-    if status:
-        orders = [o for o in orders if o.status == status]
+    if status != "all":
+        orders = orders.filter(status=status)
 
     paginator = Paginator(orders, 10)
-    page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    return render(
+    response = render(
         request,
         "admin_dashboard/partials/orders_table.html",
         {
@@ -319,6 +313,10 @@ def orders_table(request):
             "current_status": status,
         },
     )
+
+    cache.set(cache_key, response, 30)
+
+    return response
 
 
 # =====================================================
@@ -344,7 +342,7 @@ def order_delete(request, pk):
 
 
 # =====================================================
-# DYNAMIC MEASUREMENT FORM
+# DYNAMIC MEASUREMENT FORM (CACHED)
 # =====================================================
 
 def load_measurement_form(request):
@@ -355,6 +353,10 @@ def load_measurement_form(request):
     if not product_type_id or not prefix:
         return render(request, "admin_dashboard/partials/_empty.html")
 
+    cache_key = f"measurement_form_template_{product_type_id}"
+
+    cached_html = cache.get(cache_key)
+
     product_type = get_object_or_404(ProductType, id=product_type_id)
 
     MeasurementForm = get_measurement_form(product_type)
@@ -364,11 +366,16 @@ def load_measurement_form(request):
 
     form = MeasurementForm(prefix=f"measure-{prefix}")
 
-    return render(
-        request,
+    html = render_to_string(
         "admin_dashboard/partials/_dynamic_measurement.html",
         {
             "form": form,
             "product_type": product_type,
         },
+        request=request
     )
+
+    if not cached_html:
+        cache.set(cache_key, html, 600)
+
+    return HttpResponse(html)
