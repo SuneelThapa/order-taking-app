@@ -1,17 +1,38 @@
 from django import forms
-from .models import Order, OrderItem, OrderItemPhoto, ClientPhoto
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, modelform_factory
 from django.apps import apps
-from django.forms import modelform_factory
 from functools import lru_cache
 
+from .models import Order, OrderItem, OrderItemPhoto, ClientPhoto
 
 
-# =========================
+# =====================================================
+# BASE STYLED FORM (Avoid repeating widget styling)
+# =====================================================
+
+class StyledModelForm(forms.ModelForm):
+    """
+    Automatically apply Bootstrap form-control class
+    to all fields except checkboxes.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field in self.fields.values():
+
+            if isinstance(field.widget, forms.CheckboxInput):
+                continue
+
+            existing_class = field.widget.attrs.get("class", "")
+            field.widget.attrs["class"] = f"{existing_class} form-control".strip()
+
+
+# =====================================================
 # ORDER FORM
-# =========================
+# =====================================================
 
-class OrderForm(forms.ModelForm):
+class OrderForm(StyledModelForm):
 
     class Meta:
         model = Order
@@ -55,31 +76,16 @@ class OrderForm(forms.ModelForm):
             "note": forms.Textarea(attrs={"rows": 3}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
-        for field in self.fields.values():
-            field.widget.attrs.update({"class": "form-control"})
-
-        self.fields["is_urgent"].widget.attrs.update({"class": ""})
-
-
-
-# =========================
+# =====================================================
 # ORDER ITEM FORM
-# =========================
+# =====================================================
 
-class OrderItemForm(forms.ModelForm):
+class OrderItemForm(StyledModelForm):
 
     class Meta:
         model = OrderItem
         exclude = ("order",)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        for field in self.fields.values():
-            field.widget.attrs.update({"class": "form-control"})
 
 
 OrderItemFormSet = inlineformset_factory(
@@ -91,10 +97,9 @@ OrderItemFormSet = inlineformset_factory(
 )
 
 
-
-# =========================
-# ORDER ITEM PHOTO
-# =========================
+# =====================================================
+# ORDER ITEM PHOTO FORM
+# =====================================================
 
 class OrderItemPhotoForm(forms.ModelForm):
 
@@ -102,13 +107,12 @@ class OrderItemPhotoForm(forms.ModelForm):
         model = OrderItemPhoto
         fields = ("image",)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields["image"].widget.attrs.update({
-            "class": "form-control",
-            "accept": "image/*",
-        })
+        widgets = {
+            "image": forms.ClearableFileInput(attrs={
+                "class": "form-control",
+                "accept": "image/*"
+            })
+        }
 
 
 OrderItemPhotoFormSet = inlineformset_factory(
@@ -120,31 +124,32 @@ OrderItemPhotoFormSet = inlineformset_factory(
 )
 
 
-
-# =========================
-# FAST MODEL CACHE
-# =========================
+# =====================================================
+# MEASUREMENT MODEL CACHE
+# =====================================================
 
 @lru_cache(maxsize=32)
 def get_measurement_model(model_name):
     """
-    Cache measurement model lookup.
+    Cache measurement model lookup to avoid repeated
+    apps.get_model calls (expensive).
     """
+
     try:
         return apps.get_model("orders", model_name)
     except LookupError:
         return None
 
 
-
-# =========================
-# FAST FORM FACTORY CACHE
-# =========================
+# =====================================================
+# MEASUREMENT FORM FACTORY CACHE
+# =====================================================
 
 @lru_cache(maxsize=32)
 def get_measurement_modelform(model):
     """
-    Cache modelform creation (expensive operation).
+    Cache modelform creation because modelform_factory
+    is expensive.
     """
 
     BaseForm = modelform_factory(
@@ -158,17 +163,14 @@ def get_measurement_modelform(model):
             super().__init__(*args, **kwargs)
 
             for field in self.fields.values():
-                field.widget.attrs.update({
-                    "class": "form-control"
-                })
+                field.widget.attrs["class"] = "form-control"
 
     return StyledMeasurementForm
 
 
-
-# =========================
+# =====================================================
 # MAIN DYNAMIC FORM LOADER
-# =========================
+# =====================================================
 
 def get_measurement_form(product_type):
 
@@ -182,12 +184,11 @@ def get_measurement_form(product_type):
     return get_measurement_modelform(model)
 
 
-
-# =========================
+# =====================================================
 # CLIENT PHOTO FORM
-# =========================
+# =====================================================
 
-class ClientPhotoForm(forms.ModelForm):
+class ClientPhotoForm(StyledModelForm):
 
     photo_type = forms.ChoiceField(
         choices=ClientPhoto.PHOTO_TYPES,
@@ -199,15 +200,13 @@ class ClientPhotoForm(forms.ModelForm):
         required=False,
         label="Upload Photo",
         widget=forms.ClearableFileInput(attrs={
-            "class": "form-control",
-            "accept": "image/*",
+            "accept": "image/*"
         })
     )
 
     class Meta:
         model = ClientPhoto
         fields = ["photo_type", "image"]
-
 
 
 ClientPhotoFormSet = inlineformset_factory(

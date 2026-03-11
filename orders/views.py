@@ -3,20 +3,19 @@ from django.contrib.auth.decorators import user_passes_test
 from django.http import HttpResponse
 from django.core.paginator import Paginator
 from django.core.cache import cache
-from django.apps import apps
-from django.forms import modelform_factory
 
 import base64
 import uuid
 from django.core.files.base import ContentFile
 
-from orders.models import Order, OrderItem, ProductType, BaseMeasurement
+from orders.models import Order, ProductType, BaseMeasurement
 from .models import ScratchNote
 
 from .forms import (
     OrderForm,
     OrderItemFormSet,
     get_measurement_form,
+    get_measurement_model,
     OrderItemPhotoFormSet,
     ClientPhotoFormSet,
 )
@@ -66,7 +65,11 @@ def dashboard(request):
 
     if request.method == "POST":
 
-        order_form = OrderForm(request.POST, instance=edit_order) if show_edit_form else OrderForm(request.POST)
+        order_form = (
+            OrderForm(request.POST, instance=edit_order)
+            if show_edit_form
+            else OrderForm(request.POST)
+        )
 
         item_formset = (
             OrderItemFormSet(request.POST, request.FILES, instance=edit_order)
@@ -75,9 +78,18 @@ def dashboard(request):
         )
 
         client_photo_formset = (
-            ClientPhotoFormSet(request.POST, request.FILES, instance=edit_order, prefix="client_photos")
+            ClientPhotoFormSet(
+                request.POST,
+                request.FILES,
+                instance=edit_order,
+                prefix="client_photos",
+            )
             if show_edit_form
-            else ClientPhotoFormSet(request.POST, request.FILES, prefix="client_photos")
+            else ClientPhotoFormSet(
+                request.POST,
+                request.FILES,
+                prefix="client_photos",
+            )
         )
 
         if order_form.is_valid() and item_formset.is_valid() and client_photo_formset.is_valid():
@@ -130,7 +142,6 @@ def dashboard(request):
             for form, item in zip(item_formset.forms, items):
 
                 total += item.total_price
-
                 form_prefix = form.prefix
 
                 # ===============================
@@ -148,30 +159,38 @@ def dashboard(request):
                     photo_formset.save()
 
                 # ===============================
-                # MEASUREMENTS
+                # MEASUREMENTS (FAST VERSION)
                 # ===============================
 
                 if item.product_type:
 
                     model_name = item.product_type.measurement_model
-                    model = apps.get_model("orders", model_name)
 
-                    base, _ = BaseMeasurement.objects.get_or_create(order_item=item)
+                    # cached model lookup
+                    model = get_measurement_model(model_name)
 
-                    MeasurementForm = modelform_factory(model, exclude=("base",))
+                    if model:
 
-                    measurement_instance = model.objects.filter(base=base).first()
+                        base, _ = BaseMeasurement.objects.get_or_create(
+                            order_item=item
+                        )
 
-                    measurement_form = MeasurementForm(
-                        request.POST,
-                        instance=measurement_instance,
-                        prefix=f"measure-{form_prefix}",
-                    )
+                        MeasurementForm = get_measurement_form(item.product_type)
 
-                    if measurement_form.is_valid():
-                        measurement = measurement_form.save(commit=False)
-                        measurement.base = base
-                        measurement.save()
+                        measurement_instance = model.objects.filter(
+                            base=base
+                        ).first()
+
+                        measurement_form = MeasurementForm(
+                            request.POST,
+                            instance=measurement_instance,
+                            prefix=f"measure-{form_prefix}",
+                        )
+
+                        if measurement_form.is_valid():
+                            measurement = measurement_form.save(commit=False)
+                            measurement.base = base
+                            measurement.save()
 
             order.total_amount = total
             order.save()
