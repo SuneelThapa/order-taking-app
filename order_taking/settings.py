@@ -146,7 +146,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 #STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
@@ -162,7 +162,7 @@ LOGIN_REDIRECT_URL = "orders:dashboard"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
-MEDIA_URL = '/media/'
+#MEDIA_URL = '/media/'
 #MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
@@ -200,16 +200,6 @@ STORAGES = {
 }
 
 
+WHITENOISE_MANIFEST_STRICT = False
 
-LOGGING = {
-    "version": 1,
-    "handlers": {
-        "console": {"class": "logging.StreamHandler"},
-    },
-    "loggers": {
-        "django.db.backends": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-        },
-    },
-}
+
