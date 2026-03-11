@@ -88,6 +88,21 @@ class OrderItemForm(StyledModelForm):
         model = OrderItem
         exclude = ("order",)
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        product_type = cleaned_data.get("product_type")
+        product_name = cleaned_data.get("product_name")
+        price = cleaned_data.get("price")
+
+        # If nothing entered, treat the form as empty
+        if not product_type and not product_name and not price:
+            self.cleaned_data = {}
+            return cleaned_data
+
+        return cleaned_data
+    
+
 
 OrderItemFormSet = inlineformset_factory(
     Order,
