@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count
 from django.apps import apps
 from django.forms import modelform_factory
+from django.core.cache import cache
 
 from orders.models import Order, OrderItem, ProductType, BaseMeasurement, ClientPhoto
 from .forms import (
@@ -30,11 +31,15 @@ def staff_check(user):
 def dashboard(request):
 
     # ===============================
-    # ORDER COUNTS (optimized)
+    # ORDER COUNTS (CACHED)
     # ===============================
 
-    order_counts = Order.objects.values("status").annotate(count=Count("id"))
-    counts = {o["status"]: o["count"] for o in order_counts}
+    counts = cache.get("dashboard_order_counts")
+
+    if not counts:
+        order_counts = Order.objects.values("status").annotate(count=Count("id"))
+        counts = {o["status"]: o["count"] for o in order_counts}
+        cache.set("dashboard_order_counts", counts, 60)
 
     new_orders = counts.get("new", 0)
     pending_orders = counts.get("pending", 0)
@@ -87,16 +92,15 @@ def dashboard(request):
 
         if order_form.is_valid() and item_formset.is_valid() and client_photo_formset.is_valid():
 
-            # ===============================
-            # SAVE ORDER
-            # ===============================
-
             order = order_form.save(commit=False)
 
             if not show_edit_form:
                 order.total_amount = 0
 
             order.save()
+
+            # Clear cache when data changes
+            cache.clear()
 
             # ===============================
             # SAVE SCRATCH NOTE
@@ -270,21 +274,27 @@ def dashboard(request):
         item_forms_with_photos.append((form, photo_formset, measurement_form))
 
     # ===============================
-    # ORDER DETAIL (optimized query)
+    # ORDER DETAIL (CACHED)
     # ===============================
 
     selected_order = None
     order_id = request.GET.get("order")
 
     if order_id and not show_add_form and not show_edit_form:
-        selected_order = get_object_or_404(
-            Order.objects.prefetch_related(
-                "client_photos",
-                "items__photos",
-                "scratch_notes",
-            ),
-            pk=order_id,
-        )
+
+        cache_key = f"order_detail_{order_id}"
+        selected_order = cache.get(cache_key)
+
+        if not selected_order:
+            selected_order = get_object_or_404(
+                Order.objects.prefetch_related(
+                    "client_photos",
+                    "items__photos",
+                    "scratch_notes",
+                ),
+                pk=order_id,
+            )
+            cache.set(cache_key, selected_order, 60)
 
     context = {
         "edit_order": edit_order,
@@ -308,39 +318,46 @@ def dashboard(request):
 @user_passes_test(staff_check)
 def orders_table(request):
 
-    orders = Order.objects.only(
-        "id",
-        "order_number",
-        "status",
-        "total_amount",
-        "created_at",
-    )
-
     status = request.GET.get("status")
-    if status:
-        orders = orders.filter(status=status)
-
     sort = request.GET.get("sort", "-created_at")
+    page_number = request.GET.get("page", 1)
 
-    allowed_sorts = [
-        "order_number",
-        "status",
-        "total_amount",
-        "created_at",
-        "-order_number",
-        "-status",
-        "-total_amount",
-        "-created_at",
-    ]
+    cache_key = f"orders_table_{status}_{sort}_{page_number}"
+    page_obj = cache.get(cache_key)
 
-    if sort not in allowed_sorts:
-        sort = "-created_at"
+    if not page_obj:
 
-    orders = orders.order_by(sort)
+        orders = Order.objects.only(
+            "id",
+            "order_number",
+            "status",
+            "total_amount",
+            "created_at",
+        )
 
-    paginator = Paginator(orders, 10)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
+        if status:
+            orders = orders.filter(status=status)
+
+        allowed_sorts = [
+            "order_number",
+            "status",
+            "total_amount",
+            "created_at",
+            "-order_number",
+            "-status",
+            "-total_amount",
+            "-created_at",
+        ]
+
+        if sort not in allowed_sorts:
+            sort = "-created_at"
+
+        orders = orders.order_by(sort)
+
+        paginator = Paginator(orders, 10)
+        page_obj = paginator.get_page(page_number)
+
+        cache.set(cache_key, page_obj, 60)
 
     return render(
         request,
@@ -360,6 +377,7 @@ def order_delete(request, pk):
 
     if request.method == "DELETE":
         order.delete()
+        cache.clear()
         return orders_table(request)
 
     return HttpResponse(status=405)

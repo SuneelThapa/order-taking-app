@@ -1,5 +1,5 @@
 {% extends "_base.html" %}
-{% load static %}
+{% load static cache %}
 
 {% block title %}Admin Dashboard{% endblock %}
 
@@ -41,6 +41,7 @@
 <div class="container-fluid">
 
 
+{% cache 60 dashboard_stats %}
 <!-- ================= ORDER STATS ================= -->
 <div class="row">
 
@@ -53,7 +54,6 @@
     </div>
   </div>
 
-
   <div class="col-lg-3 col-6">
     <div class="small-box bg-success">
       <div class="inner">
@@ -63,7 +63,6 @@
     </div>
   </div>
 
-
   <div class="col-lg-3 col-6">
     <div class="small-box bg-warning">
       <div class="inner">
@@ -72,7 +71,6 @@
       </div>
     </div>
   </div>
-
 
   <div class="col-lg-3 col-6">
     <div class="small-box bg-danger">
@@ -84,6 +82,7 @@
   </div>
 
 </div>
+{% endcache %}
 
 
 <!-- ================= ORDERS TABLE ================= -->
