@@ -17,9 +17,9 @@ class Order(models.Model):
         ('viber', 'Viber'),
     ]
 
-    order_number = models.CharField(max_length=20, unique=True)
+    order_number = models.CharField(max_length=20, unique=True, db_index=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
@@ -54,8 +54,13 @@ class Order(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='new'
+        default='new',
+        db_index=True
     )
+
+    class Meta:
+        ordering = ["-created_at"]
+        
 
     def __str__(self):
         return self.order_number

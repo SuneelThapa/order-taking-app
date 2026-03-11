@@ -1,6 +1,7 @@
 from django.db import models
 from .order import Order
 from .product_type import ProductType
+from django.core.validators import MinValueValidator
 
 
 
@@ -10,20 +11,22 @@ class OrderItem(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name='items'
+        related_name='items',
+        db_index=True
     )
 
     product_type = models.ForeignKey(
         ProductType,
         on_delete=models.PROTECT,
-        related_name='items'
+        related_name='items',
+        db_index=True
     )
 
    
 
     product_name = models.CharField(max_length=200)
     quantity = models.PositiveIntegerField(default=1)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
 
 
     def __str__(self):

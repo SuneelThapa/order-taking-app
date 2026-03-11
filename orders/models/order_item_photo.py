@@ -8,7 +8,8 @@ class OrderItemPhoto(models.Model):
     order_item = models.ForeignKey(
         OrderItem,
         on_delete=models.CASCADE,
-        related_name='photos'
+        related_name='photos',
+        db_index=True
     )
 
     image = models.ImageField(upload_to='order_item_photos/')

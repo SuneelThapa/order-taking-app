@@ -1,20 +1,25 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
-from orders.models import Order, OrderItem, ProductType, BaseMeasurement, ClientPhoto
-from django.core.paginator import Paginator
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
-from .forms import OrderForm, OrderItemFormSet, get_measurement_form, OrderItemPhotoFormSet, ClientPhotoFormSet
+from django.core.paginator import Paginator
+from django.db.models import Count
 from django.apps import apps
 from django.forms import modelform_factory
 
-import base64
-from django.core.files.base import ContentFile
+from orders.models import Order, OrderItem, ProductType, BaseMeasurement, ClientPhoto
+from .forms import (
+    OrderForm,
+    OrderItemFormSet,
+    get_measurement_form,
+    OrderItemPhotoFormSet,
+    ClientPhotoFormSet,
+)
+
 from .models import ScratchNote
 
-
+import base64
 import uuid
-
+from django.core.files.base import ContentFile
 
 
 def staff_check(user):
@@ -25,17 +30,19 @@ def staff_check(user):
 def dashboard(request):
 
     # ===============================
-    # ORDER COUNTS
+    # ORDER COUNTS (optimized)
     # ===============================
 
-    new_orders = Order.objects.filter(status="new").count()
-    in_progress = Order.objects.filter(status="in_progress").count()
-    ready_orders = Order.objects.filter(status="ready").count()
-    delivered_orders = Order.objects.filter(status="delivered").count()
-    pending_orders = Order.objects.filter(status="pending").count()
+    order_counts = Order.objects.values("status").annotate(count=Count("id"))
+    counts = {o["status"]: o["count"] for o in order_counts}
+
+    new_orders = counts.get("new", 0)
+    pending_orders = counts.get("pending", 0)
+    in_progress = counts.get("in_progress", 0)
+    ready_orders = counts.get("ready", 0)
+    delivered_orders = counts.get("delivered", 0)
 
     show_add_form = request.GET.get("add") == "true"
-
 
     edit_order_id = request.GET.get("edit")
     show_edit_form = False
@@ -46,57 +53,39 @@ def dashboard(request):
         show_edit_form = True
 
     # ===============================
-    # POST (CREATE ORDER)
+    # POST (CREATE / EDIT ORDER)
     # ===============================
 
     if request.method == "POST":
 
-        print("\n========== POST RECEIVED ==========\n")
+        order_form = (
+            OrderForm(request.POST, instance=edit_order)
+            if show_edit_form
+            else OrderForm(request.POST)
+        )
 
-        if show_edit_form:
-            order_form = OrderForm(request.POST, instance=edit_order)
-        else:
-            order_form = OrderForm(request.POST)
+        item_formset = (
+            OrderItemFormSet(request.POST, request.FILES, instance=edit_order)
+            if show_edit_form
+            else OrderItemFormSet(request.POST, request.FILES)
+        )
 
-       
-        if show_edit_form:
-            item_formset = OrderItemFormSet(
-                request.POST,
-                request.FILES,
-                instance=edit_order
-            )
-        else:
-            item_formset = OrderItemFormSet(
-                request.POST,
-                request.FILES
-            )
-
-        # ⚠️ Do NOT pass instance yet
-        if show_edit_form:
-            client_photo_formset = ClientPhotoFormSet(
+        client_photo_formset = (
+            ClientPhotoFormSet(
                 request.POST,
                 request.FILES,
                 instance=edit_order,
-                prefix="client_photos"
+                prefix="client_photos",
             )
-        else:
-            client_photo_formset = ClientPhotoFormSet(
+            if show_edit_form
+            else ClientPhotoFormSet(
                 request.POST,
                 request.FILES,
-                prefix="client_photos"
+                prefix="client_photos",
             )
-
-        print("ORDER ERRORS:", order_form.errors)
-
-        print("ORDER VALID:", order_form.is_valid())
-        print("ITEM FORMSET VALID:", item_formset.is_valid())
-        print("CLIENT PHOTO FORMSET VALID:", client_photo_formset.is_valid())
-        print("CLIENT PHOTO ERRORS:", client_photo_formset.errors)
-        print("CLIENT PHOTO NON FORM ERRORS:", client_photo_formset.non_form_errors())
+        )
 
         if order_form.is_valid() and item_formset.is_valid() and client_photo_formset.is_valid():
-
-
 
             # ===============================
             # SAVE ORDER
@@ -109,66 +98,37 @@ def dashboard(request):
 
             order.save()
 
-
             # ===============================
             # SAVE SCRATCH NOTE
             # ===============================
 
-            print("---- SCRATCH DEBUG ----")
-
             canvas_data = request.POST.get("scratch_canvas_image")
 
-            print("Canvas POST exists:", "scratch_canvas_image" in request.POST)
-
             if canvas_data:
-
-                print("Canvas data length:", len(canvas_data))
-                print("Canvas data preview:", canvas_data[:50])
-
                 try:
                     format, imgstr = canvas_data.split(";base64,")
                     ext = format.split("/")[-1]
 
                     file = ContentFile(
                         base64.b64decode(imgstr),
-                        name=f"scratch_{uuid.uuid4()}.{ext}"
+                        name=f"scratch_{uuid.uuid4()}.{ext}",
                     )
 
-                    scratch = ScratchNote.objects.create(
-                        order=order,
-                        image=file
-                    )
+                    ScratchNote.objects.create(order=order, image=file)
 
-                    print("✅ SCRATCH NOTE SAVED:", scratch.pk)
-
-                except Exception as e:
-                    print("❌ Scratch note save error:", e)
-
-            else:
-                print("⚠️ No canvas data received")
-
-            print("------------------------")
-
-
+                except Exception:
+                    pass
 
             # ===============================
             # SAVE CLIENT PHOTOS
             # ===============================
 
-            if show_edit_form:
-                client_photo_formset = ClientPhotoFormSet(
-                    request.POST,
-                    request.FILES,
-                    instance=edit_order,
-                    prefix="client_photos"
-                )
-            else:
-                client_photo_formset = ClientPhotoFormSet(
-                    request.POST,
-                    request.FILES,
-                    instance=order,
-                    prefix="client_photos"
-                )
+            client_photo_formset = ClientPhotoFormSet(
+                request.POST,
+                request.FILES,
+                instance=order,
+                prefix="client_photos",
+            )
 
             if client_photo_formset.is_valid():
                 client_photo_formset.save()
@@ -177,50 +137,33 @@ def dashboard(request):
             # SAVE ORDER ITEMS
             # ===============================
 
-            if show_edit_form:
-                item_formset = OrderItemFormSet(
-                    request.POST,
-                    request.FILES,
-                    instance=edit_order
-                )
-            else:
-                item_formset = OrderItemFormSet(
-                    request.POST,
-                    request.FILES,
-                    instance=order
+            item_formset = OrderItemFormSet(
+                request.POST,
+                request.FILES,
+                instance=order,
+            )
 
-                )
-
-            print("REBIND ITEM FORMSET VALID:", item_formset.is_valid())
-
-            if not item_formset.is_valid():
-                show_add_form = True
-            else:
+            if item_formset.is_valid():
 
                 item_formset.save()
-                items = item_formset.instance.items.all().order_by("id")
 
+                items = order.items.all().order_by("id")
                 total = 0
 
                 for index, item in enumerate(items):
 
-                    print(f"\n--- Saving Item Index {index} ---")
-
-                    item.order = order
-                    item.save()
                     total += item.total_price
-
                     form_prefix = item_formset.forms[index].prefix
 
                     # ===============================
-                    # SAVE ITEM PHOTOS
+                    # ITEM PHOTOS
                     # ===============================
 
                     photo_formset = OrderItemPhotoFormSet(
                         request.POST,
                         request.FILES,
                         instance=item,
-                        prefix=f"photos-{form_prefix}"
+                        prefix=f"photos-{form_prefix}",
                     )
 
                     if photo_formset.is_valid():
@@ -235,76 +178,37 @@ def dashboard(request):
                             obj.delete()
 
                     # ===============================
-                    # SAVE MEASUREMENTS
-                    # ===============================
-
-                    
-
-                    # ===============================
-                    # SAVE MEASUREMENTS
+                    # MEASUREMENTS
                     # ===============================
 
                     product_type = item.product_type
-                    print("PRODUCT TYPE:", product_type)
 
-                    if not product_type:
-                        print("⚠️ No product type — skipping measurement")
-                    else:
+                    if product_type and product_type.measurement_model:
 
-                        model_name = product_type.measurement_model
-                        print("MEASUREMENT MODEL NAME:", model_name)
+                        model = apps.get_model("orders", product_type.measurement_model)
 
-                        model = apps.get_model("orders", model_name)
-
-                        base, created = BaseMeasurement.objects.get_or_create(order_item=item)
-
-                        
+                        base, _ = BaseMeasurement.objects.get_or_create(order_item=item)
 
                         MeasurementForm = modelform_factory(
                             model,
-                            exclude=("base",)
+                            exclude=("base",),
                         )
 
                         measurement_instance = model.objects.filter(base=base).first()
 
-                        print("MEASUREMENT INSTANCE:", measurement_instance)
-
-                        measurement_prefix = f"measure-{form_prefix}"
-
-                        print("MEASUREMENT PREFIX:", measurement_prefix)
-
-                        # 🔎 Print all POST keys for debugging
-                        print("---- POST KEYS ----")
-                        for k in request.POST.keys():
-                            if measurement_prefix in k:
-                                print("POST FIELD:", k, "=", request.POST.get(k))
-                        print("-------------------")
-
                         measurement_form = MeasurementForm(
                             request.POST,
                             instance=measurement_instance,
-                            prefix=measurement_prefix
+                            prefix=f"measure-{form_prefix}",
                         )
 
-                        print("FORM IS VALID:", measurement_form.is_valid())
-
                         if measurement_form.is_valid():
-
                             measurement = measurement_form.save(commit=False)
                             measurement.base = base
                             measurement.save()
 
-                            print("✅ MEASUREMENT SAVED:", measurement.id)
-
-                        else:
-                            print("❌ MEASUREMENT ERRORS:", measurement_form.errors)
-
-
-
                 order.total_amount = total
                 order.save()
-
-            print("\n========== ORDER SAVED ==========\n")
 
             return redirect("orders:dashboard")
 
@@ -313,25 +217,16 @@ def dashboard(request):
     else:
 
         if show_edit_form:
-
             order_form = OrderForm(instance=edit_order)
-
             item_formset = OrderItemFormSet(instance=edit_order)
-
             client_photo_formset = ClientPhotoFormSet(
                 instance=edit_order,
-                prefix="client_photos"
+                prefix="client_photos",
             )
-
         else:
-
             order_form = OrderForm()
-
             item_formset = OrderItemFormSet()
-
-            client_photo_formset = ClientPhotoFormSet(
-                prefix="client_photos"
-            )
+            client_photo_formset = ClientPhotoFormSet(prefix="client_photos")
 
     # ===============================
     # BUILD ITEM + PHOTO FORMSETS
@@ -343,27 +238,20 @@ def dashboard(request):
 
         item = form.instance
 
-        # ------------------------------
-        # PHOTO FORMSET
-        # ------------------------------
-
         photo_formset = OrderItemPhotoFormSet(
             request.POST or None,
             request.FILES or None,
             instance=item,
-            prefix=f"photos-{form.prefix}"
+            prefix=f"photos-{form.prefix}",
         )
-
-        # ------------------------------
-        # MEASUREMENT FORM
-        # ------------------------------
 
         measurement_form = None
 
         if item.pk and item.product_type:
 
-            model_name = item.product_type.measurement_model
-            model = apps.get_model("orders", model_name)
+            model = apps.get_model(
+                "orders", item.product_type.measurement_model
+            )
 
             base = BaseMeasurement.objects.filter(order_item=item).first()
 
@@ -371,24 +259,18 @@ def dashboard(request):
             if base:
                 measurement_instance = model.objects.filter(base=base).first()
 
-            MeasurementForm = modelform_factory(
-                model,
-                exclude=("base",)
-            )
+            MeasurementForm = modelform_factory(model, exclude=("base",))
 
             measurement_form = MeasurementForm(
                 request.POST or None,
                 instance=measurement_instance,
-                prefix=f"measure-{form.prefix}"
+                prefix=f"measure-{form.prefix}",
             )
 
-        item_forms_with_photos.append(
-            (form, photo_formset, measurement_form)
-        )
-        
+        item_forms_with_photos.append((form, photo_formset, measurement_form))
 
     # ===============================
-    # ORDER DETAIL
+    # ORDER DETAIL (optimized query)
     # ===============================
 
     selected_order = None
@@ -399,15 +281,10 @@ def dashboard(request):
             Order.objects.prefetch_related(
                 "client_photos",
                 "items__photos",
-                "items__measurement",
-                "scratch_notes"
+                "scratch_notes",
             ),
-            pk=order_id
+            pk=order_id,
         )
-
-    # ===============================
-    # CONTEXT
-    # ===============================
 
     context = {
         "edit_order": edit_order,
@@ -428,20 +305,23 @@ def dashboard(request):
     return render(request, "admin_dashboard/dashboard.html", context)
 
 
-
 @user_passes_test(staff_check)
 def orders_table(request):
-    orders = Order.objects.all()
 
-    # 🔎 FILTERING
+    orders = Order.objects.only(
+        "id",
+        "order_number",
+        "status",
+        "total_amount",
+        "created_at",
+    )
+
     status = request.GET.get("status")
     if status:
         orders = orders.filter(status=status)
 
-    # 🔄 SORTING
     sort = request.GET.get("sort", "-created_at")
 
-    # Protect against invalid sort values (security best practice)
     allowed_sorts = [
         "order_number",
         "status",
@@ -458,7 +338,6 @@ def orders_table(request):
 
     orders = orders.order_by(sort)
 
-    # 📄 PAGINATION
     paginator = Paginator(orders, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -474,25 +353,20 @@ def orders_table(request):
     )
 
 
-
-
 @user_passes_test(staff_check)
 def order_delete(request, pk):
+
     order = get_object_or_404(Order, pk=pk)
 
     if request.method == "DELETE":
         order.delete()
-        return orders_table(request)  # re-render table
+        return orders_table(request)
 
     return HttpResponse(status=405)
 
 
-
-
-
-
-
 def load_measurement_form(request):
+
     product_type_id = request.GET.get("product_type")
     prefix = request.GET.get("prefix")
 
@@ -514,11 +388,5 @@ def load_measurement_form(request):
         {
             "form": form,
             "product_type": product_type,
-        }
+        },
     )
-
-
-
-
-
-

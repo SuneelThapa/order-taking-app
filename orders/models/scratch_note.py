@@ -7,7 +7,8 @@ class ScratchNote(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name="scratch_notes"
+        related_name="scratch_notes",
+        db_index=True
     )
 
     image = models.ImageField(upload_to="scratch_notes/")

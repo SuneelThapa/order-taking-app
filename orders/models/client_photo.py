@@ -14,7 +14,8 @@ class ClientPhoto(models.Model):
     order = models.ForeignKey(
         Order,
         on_delete=models.CASCADE,
-        related_name='client_photos'
+        related_name='client_photos',
+        db_index=True
     )
 
     photo_type = models.CharField(max_length=20, choices=PHOTO_TYPES)
