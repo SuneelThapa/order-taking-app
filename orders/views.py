@@ -177,16 +177,24 @@ def dashboard(request):
 
                         MeasurementForm = get_measurement_form(item.product_type)
 
-                        measurement_instance = model.objects.filter(
-                            base=base
-                        ).first()
+                        if MeasurementForm:
 
-                        measurement_form = MeasurementForm(
-                            request.POST,
-                            instance=measurement_instance,
-                            prefix=f"measure-{form_prefix}",
-                        )
+                            measurement_instance = model.objects.filter(
+                                base=base
+                            ).first()
 
+                            measurement_form = MeasurementForm(
+                                request.POST,
+                                instance=measurement_instance,
+                                prefix=f"measure-{form_prefix}",
+                            )
+
+                            if measurement_form.is_valid():
+                                measurement = measurement_form.save(commit=False)
+                                measurement.base = base
+                                measurement.save()
+
+                                
                         if measurement_form.is_valid():
                             measurement = measurement_form.save(commit=False)
                             measurement.base = base
