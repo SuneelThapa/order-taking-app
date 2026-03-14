@@ -9,17 +9,24 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 # Set work directory
 WORKDIR /code
 
-# Install system dependencies (if needed)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN apt-get update && apt-get install -y curl
-
 # Copy project
 COPY . .
 
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+
+# Make it executable
+RUN chmod +x /entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
