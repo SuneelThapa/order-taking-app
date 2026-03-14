@@ -2,6 +2,9 @@ from django.db import models
 from .order_item import OrderItem
 from PIL import Image, ExifTags
 
+from django.core.files.base import ContentFile
+from io import BytesIO
+
 
 class OrderItemPhoto(models.Model):
 
@@ -17,32 +20,40 @@ class OrderItemPhoto(models.Model):
 
     def __str__(self):
         return f"{self.order_item.product_name} photo"
+    
+
+
+   
+
 
     def save(self, *args, **kwargs):
+
+        if self.image:
+
+            img = Image.open(self.image)
+
+            try:
+                for orientation in ExifTags.TAGS.keys():
+                    if ExifTags.TAGS[orientation] == 'Orientation':
+                        break
+
+                exif = getattr(img, "_getexif", lambda: None)()
+
+                if exif is not None:
+                    if exif.get(orientation) == 3:
+                        img = img.rotate(180, expand=True)
+                    elif exif.get(orientation) == 6:
+                        img = img.rotate(270, expand=True)
+                    elif exif.get(orientation) == 8:
+                        img = img.rotate(90, expand=True)
+            except:
+                pass
+
+            img.thumbnail((1200, 1200))
+
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", optimize=True, quality=70)
+
+            self.image.save(self.image.name, ContentFile(buffer.getvalue()), save=False)
+
         super().save(*args, **kwargs)
-
-        img = Image.open(self.image.path)
-
-        # Fix phone rotation
-        try:
-            for orientation in ExifTags.TAGS.keys():
-                if ExifTags.TAGS[orientation] == 'Orientation':
-                    break
-
-            exif = getattr(img, "_getexif", lambda: None)()
-
-            if exif is not None:
-                if exif.get(orientation) == 3:
-                    img = img.rotate(180, expand=True)
-                elif exif.get(orientation) == 6:
-                    img = img.rotate(270, expand=True)
-                elif exif.get(orientation) == 8:
-                    img = img.rotate(90, expand=True)
-        except:
-            pass
-
-        # Resize large phone images
-        img.thumbnail((1200, 1200))
-
-        # Compress image
-        img.save(self.image.path, optimize=True, quality=70)

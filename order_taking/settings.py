@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from re import DEBUG
 from environs import Env
 
 import cloudinary
@@ -34,7 +35,8 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DJANGO_DEBUG", default=False)
+DEBUG = True # type: ignore
+
 
 ALLOWED_HOSTS = ['*']
 
@@ -93,23 +95,23 @@ WSGI_APPLICATION = "order_taking.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-#DATABASES = {
- #   "default": {
- #       "ENGINE": "django.db.backends.postgresql",
-  #      "NAME": "postgres",
-  #      "USER": "postgres",
-   #     "PASSWORD": "postgres",
-  #      "HOST": "db",
-  #      "PORT": 5432
- #   }
-#}
-
 DATABASES = {
-    "default": env.dj_db_url(
-        "DATABASE_URL",
-        default="postgres://postgres:postgres@db:5432/postgres"  #postgres://USER:PASSWORD@HOST:PORT/DBNAME
-    )
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "postgres",
+        "USER": "postgres",
+        "PASSWORD": "postgres",
+        "HOST": "db",
+        "PORT": 5432
+    }
 }
+
+#DATABASES = {
+#    "default": env.dj_db_url(
+ #       "DATABASE_URL",
+ #       default="postgres://postgres:postgres@db:5432/postgres"  #postgres://USER:PASSWORD@HOST:PORT/DBNAME
+ #   )
+#}
 
 
 # Password validation
@@ -136,7 +138,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Bangkok"
 
 USE_I18N = True
 
@@ -162,21 +164,11 @@ LOGIN_REDIRECT_URL = "orders:dashboard"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
+# comment out because you are uploading to Cloudinary cdn
 #MEDIA_URL = '/media/'
 #MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-SECURE_SSL_REDIRECT = env.bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
-
-SECURE_HSTS_SECONDS = env.int("DJANGO_SECURE_HSTS_SECONDS", default=2592000) # 30 days
-SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True)
-SECURE_HSTS_PRELOAD = env.bool("DJANGO_SECURE_HSTS_PRELOAD", default=True)
-
-SESSION_COOKIE_SECURE = env.bool("DJANGO_SESSION_COOKIE_SECURE", default=True)
-CSRF_COOKIE_SECURE = env.bool("DJANGO_CSRF_COOKIE_SECURE", default=True)
-
-
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 
@@ -204,23 +196,15 @@ WHITENOISE_MANIFEST_STRICT = False
 
 
 
-
-REDIS_URL = env("REDIS_URL", default="redis://redis:6379/1")
-
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
-            "CONNECTION_POOL_KWARGS": {
-                "ssl_cert_reqs": None
-            }
-        }
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "unique-snowflake",
     }
 }
 
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
-SESSION_CACHE_ALIAS = "default"
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600

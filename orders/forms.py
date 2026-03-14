@@ -231,7 +231,7 @@ ClientPhotoFormSet = inlineformset_factory(
     Order,
     ClientPhoto,
     form=ClientPhotoForm,
-    extra=3,
+    extra=0,
     max_num=3,
     can_delete=False
 )

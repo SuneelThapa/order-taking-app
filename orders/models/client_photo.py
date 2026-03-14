@@ -3,6 +3,11 @@ from .order import Order
 from PIL import Image, ExifTags
 
 
+from django.core.files.base import ContentFile
+from io import BytesIO
+
+
+
 class ClientPhoto(models.Model):
 
     PHOTO_TYPES = [
@@ -30,14 +35,14 @@ class ClientPhoto(models.Model):
     
 
 
+
     def save(self, *args, **kwargs):
 
-        super().save(*args, **kwargs)
+        if self.image:
 
-        if self.image and hasattr(self.image, "path"):
+            img = Image.open(self.image)
 
-            img = Image.open(self.image.path)
-
+            # Fix phone rotation
             try:
                 for orientation in ExifTags.TAGS.keys():
                     if ExifTags.TAGS[orientation] == 'Orientation':
@@ -55,5 +60,12 @@ class ClientPhoto(models.Model):
             except:
                 pass
 
+            # Resize
             img.thumbnail((1200, 1200))
-            img.save(self.image.path, optimize=True, quality=70)
+
+            buffer = BytesIO()
+            img.save(buffer, format="JPEG", optimize=True, quality=70)
+
+            self.image.save(self.image.name, ContentFile(buffer.getvalue()), save=False)
+
+        super().save(*args, **kwargs)

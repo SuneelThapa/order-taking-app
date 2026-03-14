@@ -1,26 +1,19 @@
 services:
   web:
     build: .
-    command: gunicorn order_taking.wsgi -b 0.0.0.0:8000
+    command: >
+      gunicorn order_taking.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers 3
+      --timeout 120
     volumes:
       - .:/code
     ports:
-      - "1111:8000"
+      - "2222:8000"
     depends_on:
       - db
-    environment:
-      - "DJANGO_SECRET_KEY=TN98ZmDpd8VsIwIc-ZB3ixzCAVcOZ0ugUa2HDK07STgR7W6FYno"
-      - "DJANGO_DEBUG=True"
-      - "DJANGO_SECURE_SSL_REDIRECT=False"
-      - "DJANGO_SECURE_HSTS_SECONDS=0"
-      - "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS=False"
-      - "DJANGO_SECURE_HSTS_PRELOAD=False"
-      - "DJANGO_SESSION_COOKIE_SECURE=False"
-      - "DJANGO_CSRF_COOKIE_SECURE=False"
-      - DB_NAME=postgres
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_HOST=db
+    env_file:
+      - .env
 
   db:
     image: postgres:15

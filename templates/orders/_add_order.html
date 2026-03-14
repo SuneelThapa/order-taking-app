@@ -32,7 +32,7 @@
           <div class="row">
             <div class="col-md-6 form-group">
               <label>Order Number</label>
-              <p class="form-control bg-light">Auto Generated After Save</p>
+              <p class="form-control bg-light">Order Number - Auto Generated After Save</p>
             </div>
             <div class="col-md-6 form-group">
               <label>Status</label>
@@ -170,7 +170,7 @@
 
 <!-- ================= SCRATCH NOTES ================= -->
 
-<div class="card card-outline card-danger mt-3" style="position:relative;">
+<div class="card card-outline card-danger mt-3">
 
   <div class="card-header">
     <h3 class="card-title">Scratch Notes</h3>
@@ -224,12 +224,8 @@
     <!-- ===== End Toolbar ===== -->
 
 
-
-
     <!-- ===== Canvas Container ===== -->
-<div id="canvasFullscreenContainer"
-     style="
-        position:relative;
+    <div style="
         overflow:auto;
         border:1px solid #dee2e6;
         border-radius:6px;
@@ -237,41 +233,22 @@
         max-height:420px;
         background:#f8f9fa;
         padding:10px;
-">
+    ">
 
-<canvas id="scratchCanvas"
-        width="1200"
-        height="800"
-        style="
-            background:white;
-            border-radius:5px;
-            box-shadow:0 2px 6px rgba(0,0,0,0.1);
-            display:block;
-            margin:auto;
-        ">
-</canvas>
+      <canvas id="scratchCanvas"
+              width="1200"
+              height="800"
+              style="
+                background:white;
+                border-radius:5px;
+                box-shadow:0 2px 6px rgba(0,0,0,0.1);
+                display:block;
+                margin:auto;
+              ">
+      </canvas>
 
-<button type="button"
-        id="exitFullscreenCanvas"
-        style="
-            display:none;
-            position:absolute;
-            top:15px;
-            right:15px;
-            z-index:100000;
-            background:#dc3545;
-            color:white;
-            border:none;
-            padding:10px 14px;
-            border-radius:6px;
-            font-size:16px;
-        ">
-✕ Close
-</button>
-
-</div>
-
-    
+    </div>
+    <!-- ===== End Canvas ===== -->
 
 
     <!-- ===== Bottom Action Buttons ===== -->
@@ -350,6 +327,8 @@
 
 
 
+      
+
 
       <!-- ================= ORDER ITEMS ================= -->
       <div class="card card-dark">
@@ -366,17 +345,7 @@
 
           <!-- Error form messsage -->
 
-          <!-- 
-          {% for form in item_formset %}
-            {% for field in form %}
-              {% if field.errors %}
-                <div class="alert alert-danger">
-                  <strong>{{ field.label }}:</strong> {{ field.errors|striptags }}
-                </div>
-              {% endif %}
-            {% endfor %}
-          {% endfor %}
-          -->
+          
           
            <!-- start item form loop -->
           {% for item_form, photo_formset, measurement_form in item_forms_with_photos %}
@@ -694,6 +663,8 @@
 
 
       </div> <!-- end card card dark-->
+
+
 
       <div class="card card-footer">
         <button type="button" id="add-item-btn" class="btn btn-info mt-3">
