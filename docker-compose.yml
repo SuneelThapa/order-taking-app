@@ -1,4 +1,5 @@
 services:
+
   web:
     build: .
     command: >
@@ -7,22 +8,38 @@ services:
       --workers 3
       --timeout 120
     volumes:
-      - .:/code
-    ports:
-      - "2222:8000"
+      - static_volume:/code/staticfiles
+      - media_volume:/code/media
+    expose:
+      - "8000"
     depends_on:
       - db
     env_file:
       - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=order_taking.settings.prod
 
   db:
     image: postgres:15
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+    env_file:
+      - .env
+
+  nginx:
+    image: nginx:1.25.5
+    restart: always
+    volumes:
+      - static_volume:/code/staticfiles
+      - media_volume:/code/media
+      - ./config/nginx:/etc/nginx/conf.d
+    ports:
+      - "3333:80"
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
+  static_volume:
+  media_volume:

@@ -1,6 +1,44 @@
-.venv
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Django
 db.sqlite3
-.DS_Store # Mac only
-docker-compose-prod.yml
+*.log
+media/
+
+# Environment variables / secrets
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Static build artifacts
+staticfiles/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
 gunicorn.ctl
+
+# Node (if you add frontend later)
+node_modules/

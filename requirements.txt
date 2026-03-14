@@ -20,3 +20,5 @@ whitenoise
 psycopg2-binary
 django-redis
 redis
+uwsgi==2.0.25.1
+python-decouple==3.8
