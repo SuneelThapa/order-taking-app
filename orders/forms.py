@@ -126,8 +126,7 @@ class OrderItemPhotoForm(forms.ModelForm):
         widgets = {
             "image": forms.ClearableFileInput(attrs={
                 "class": "form-control",
-                "accept": "image/*",
-                "capture": "environment"
+                "accept": "image/*"
             })
         }
 
@@ -217,8 +216,7 @@ class ClientPhotoForm(StyledModelForm):
         required=False,
         label="Upload Photo",
         widget=forms.ClearableFileInput(attrs={
-            "accept": "image/*",
-            "capture": "environment"
+            "accept": "image/*"
         })
     )
 
