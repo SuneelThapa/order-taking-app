@@ -11,14 +11,23 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <!-- Sidebar user panel (optional) -->
-      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-        <div class="image">
-          <img src="{% static 'img/user2-160x160.jpg' %}" class="img-circle elevation-2" alt="User Image">
-        </div>
-        <div class="info">
-          <a href="{% url 'orders:dashboard' %}" class="d-block">Sulk Dai</a>
-        </div>
-      </div>
+<div class="user-panel mt-3 pb-3 mb-3 d-flex">
+    <div class="image">
+        {% if request.user.profile_image %}
+            <img src="{{ request.user.profile_image.url }}" class="img-circle elevation-2" alt="{{ request.user.username }}">
+        {% else %}
+            <img src="{% static 'img/user2-160x160.jpg' %}" class="img-circle elevation-2" alt="User Image">
+        {% endif %}
+    </div>
+   <div class="info">
+    <a href="{% url 'orders:dashboard' %}" class="d-block">
+        {{ request.user.get_full_name|default:request.user.username }}
+        {% if request.user.tenant %}
+            <small>({{ request.user.tenant.name }})</small>
+        {% endif %}
+    </a>
+</div>
+</div>
 
       <!-- SidebarSearch Form -->
       <!--

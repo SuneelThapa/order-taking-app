@@ -16,3 +16,8 @@
 #canvasFullscreenContainer:fullscreen #exitFullscreenCanvas{
     display:block !important;
 }
+
+
+img {
+  cursor: zoom-in;
+}

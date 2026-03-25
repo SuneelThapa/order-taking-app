@@ -4,43 +4,17 @@ services:
 
   web:
     build: .
-    command: >
-      gunicorn order_taking.wsgi:application
-      --bind 0.0.0.0:8000
-      --workers 3
-      --timeout 120
-    restart: always
-    volumes:
-      - static_volume:/code/staticfiles
-      - media_volume:/code/media
-    expose:
-      - "8000"
     depends_on:
       - db
     env_file:
       - .env
-    environment:
-      - DJANGO_SETTINGS_MODULE=order_taking.settings.prod
 
   db:
     image: postgres:15
-    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     env_file:
       - .env
-
-  nginx:
-    image: nginx:1.25.5
-    restart: always
-    volumes:
-      - static_volume:/code/staticfiles
-      - media_volume:/code/media
-      - ./config/nginx:/etc/nginx/conf.d
-    ports:
-      - "3333:80"
-    depends_on:
-      - web
 
 volumes:
   postgres_data:

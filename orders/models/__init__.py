@@ -17,3 +17,7 @@ from .vest import *
 from .coat import *
 from .suit import *
 from .scratch_note import *
+from .no_measurement import *
+from .shoes import *
+from .belt import *
+from .tenant import *

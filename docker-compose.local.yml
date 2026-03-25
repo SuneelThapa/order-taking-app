@@ -1,0 +1,15 @@
+services:
+
+  web:
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/code   # ✅ LIVE CODE
+    ports:
+      - "3333:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=order_taking.settings.local
+
+  db:
+    restart: always

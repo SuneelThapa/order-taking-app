@@ -59,6 +59,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+
+    # 👇 Your Tenant middleware
+    "orders.middleware.tenant_middleware.TenantMiddleware",
 ]
 
 ROOT_URLCONF = "order_taking.urls"
@@ -204,3 +207,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3333",
     "https://yourdomain.com",
 ]
+
+
+# if missed, in url and add "/"
+APPEND_SLASH = True  # default is True

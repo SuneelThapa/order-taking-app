@@ -51,6 +51,10 @@ class OrderItemPhoto(models.Model):
 
             img.thumbnail((1200, 1200))
 
+            # Fix color mode issue
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+
             buffer = BytesIO()
             img.save(buffer, format="JPEG", optimize=True, quality=70)
 

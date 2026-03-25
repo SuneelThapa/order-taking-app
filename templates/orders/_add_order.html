@@ -34,10 +34,18 @@
               <label>Order Number</label>
               <p class="form-control bg-light">Order Number - Auto Generated After Save</p>
             </div>
-            <div class="col-md-6 form-group">
-              <label>Status</label>
-              {{ order_form.status }}
-            </div>
+
+           <div class="col-md-6 form-group">
+    <label>Status</label>
+    {% if request.user.is_tenant %}
+        {{ order_form.status }}
+        {{ order_form.status_hidden }}
+    {% else %}
+        {{ order_form.status }}
+    {% endif %}
+</div>
+
+       
           </div>
         </div>
       </div>
@@ -225,7 +233,9 @@
 
 
     <!-- ===== Canvas Container ===== -->
-    <div style="
+    <div id="canvasFullscreenContainer"
+     style="
+        position:relative;
         overflow:auto;
         border:1px solid #dee2e6;
         border-radius:6px;
@@ -233,7 +243,7 @@
         max-height:420px;
         background:#f8f9fa;
         padding:10px;
-    ">
+">
 
       <canvas id="scratchCanvas"
               width="1200"
@@ -246,6 +256,25 @@
                 margin:auto;
               ">
       </canvas>
+
+      <button type="button"
+        id="exitFullscreenCanvas"
+        style="
+            display:none;
+            position:absolute;
+            top:15px;
+            right:15px;
+            z-index:100000;
+            background:#dc3545;
+            color:white;
+            border:none;
+            padding:10px 14px;
+            border-radius:6px;
+            font-size:16px;
+        ">
+✕ Close
+</button>
+
 
     </div>
     <!-- ===== End Canvas ===== -->
