@@ -4,10 +4,7 @@ docker-compose up -d --build
 docker compose down -v
 docker compose up --build
 
-#admin 
-username - min
-email - 
-password - ****
+
 
 #local run
 docker-compose -f docker-compose.yml -f docker-compose.local.yml up
@@ -36,3 +33,16 @@ docker-compose -f docker-compose.yml -f docker-compose.local.yml restart web
 from orders.models.tenant import Tenant
 # If you’re using localhost without subdomain
 Tenant.objects.create(name="Local Tenant", subdomain="127-0-0-1")
+
+
+
+
+git remote add origin https://github.com/suneel/order-taking-app.git
+
+git branch -M main
+
+git push -u origin main
+
+git add .
+git commit -m "your message"
+git push
