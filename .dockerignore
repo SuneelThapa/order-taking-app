@@ -1,39 +1,62 @@
-# Python cache
+# ===============================
+# PYTHON CACHE
+# ===============================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Virtual environments
+# ===============================
+# VIRTUAL ENV
+# ===============================
 venv/
 .venv/
+env/
 
-# Environment variables / secrets
+# ===============================
+# ENV / SECRETS
+# ===============================
 .env
 .env.*
 
-# Git
+# ===============================
+# GIT
+# ===============================
 .git/
 .gitignore
 
-# Docker
-Dockerfile
-docker-compose.yml
+# ===============================
+# DJANGO
+# ===============================
+db.sqlite3
+media/
+staticfiles/
 
-# OS files
+# ===============================
+# OS FILES
+# ===============================
 .DS_Store
 Thumbs.db
 
-# Logs
+# ===============================
+# LOGS
+# ===============================
 *.log
 
-# Node (if frontend later)
+# ===============================
+# NODE (future)
+# ===============================
 node_modules/
 
-# Testing / coverage
+# ===============================
+# TESTING / COVERAGE
+# ===============================
 .coverage
 htmlcov/
+.pytest_cache/
 
+# ===============================
 # IDE
+# ===============================
 .vscode/
 .idea/

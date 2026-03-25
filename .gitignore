@@ -1,44 +1,67 @@
-# Python virtual environments
-.venv/
-venv/
-
-# Python cache
+# ===============================
+# PYTHON
+# ===============================
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Django
+# Virtual environments
+.venv/
+venv/
+env/
+
+# ===============================
+# DJANGO
+# ===============================
 db.sqlite3
 *.log
 media/
+staticfiles/
 
-# Environment variables / secrets
+# Local settings (if any)
+local_settings.py
+
+# ===============================
+# ENV / SECRETS
+# ===============================
 .env
 .env.*
+!.env.example
 
-# OS files
+# ===============================
+# OS FILES
+# ===============================
 .DS_Store
 Thumbs.db
 
-# IDE
+# ===============================
+# IDE / EDITOR
+# ===============================
 .vscode/
 .idea/
+*.swp
 
-# Static build artifacts
-staticfiles/
-
-# Python packaging
+# ===============================
+# PYTHON PACKAGING
+# ===============================
 build/
 dist/
 *.egg-info/
 
-# Testing
+# ===============================
+# TESTING / COVERAGE
+# ===============================
 .coverage
 htmlcov/
 .pytest_cache/
 
-# Docker
+# ===============================
+# DOCKER
+# ===============================
 gunicorn.ctl
+*.pid
 
-# Node (if you add frontend later)
+# ===============================
+# NODE (future frontend)
+# ===============================
 node_modules/
