@@ -1,12 +1,55 @@
-{% extends "_base.html" %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sign up{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'plugins/bootstrap5/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/font/bootstrap-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <style>
+    body { background: var(--sidebar-bg); display: grid; place-items: center; min-height: 100vh; padding: 1.5rem 0; }
+    .auth-card { width: min(420px, 92vw); }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="text-center text-white mb-3">
+      <h1 class="h4 mb-0">Create your account</h1>
+    </div>
 
-{% block title %}Sign Up{% endblock title %}
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
 
-{% block content %}
-    <h2>Sign Up</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Sign Up</button>
-    </form>
-{% endblock content %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}
+                <div class="form-text">{{ field.help_text|safe }}</div>
+              {% endif %}
+              {% for error in field.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+          <button type="submit" class="btn btn-primary w-100">Sign up</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Django renders these widgets without BS classes; add them after load -->
+  <script>
+    document.querySelectorAll('form input').forEach(el => {
+      if (el.type !== 'checkbox' && el.type !== 'radio' && el.type !== 'hidden') {
+        el.classList.add('form-control');
+      }
+    });
+  </script>
+</body>
+</html>

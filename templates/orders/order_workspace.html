@@ -1,0 +1,16 @@
+{% extends "_base.html" %}
+{% comment %}
+  Temporary wrapper so the order add/edit form keeps working on the OLD AdminLTE
+  base (which still carries the canvas + formset-cloning JS) while the rest of the
+  app moves to Bootstrap 5. This whole file is replaced next turn when the order
+  form is rebuilt as a drawer partial on the new base.
+{% endcomment %}
+
+
+{% block content %}
+  {% if show_edit_form %}
+    {% include "orders/_edit_order.html" %}
+  {% else %}
+    {% include "orders/_add_order.html" %}
+  {% endif %}
+{% endblock %}

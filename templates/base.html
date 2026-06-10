@@ -1,0 +1,115 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Order System{% endblock %}</title>
+
+  <!-- Vendored Bootstrap 5 (kept in its own folder so it never collides with the AdminLTE/BS4 plugins) -->
+  <link rel="stylesheet" href="{% static 'plugins/bootstrap5/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/font/bootstrap-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+
+<!-- hx-headers puts the CSRF token on every htmx request (GET/POST/DELETE) automatically -->
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      x-data="{ sidebarOpen: false }"
+      :class="{ 'sidebar-open': sidebarOpen }">
+
+  <div class="app">
+
+    {% include "includes/app_sidebar.html" %}
+
+    <!-- Mobile backdrop for the sidebar -->
+    <div class="app-backdrop" @click="sidebarOpen = false" x-show="sidebarOpen" x-transition.opacity></div>
+
+    <div class="app-main">
+      {% include "includes/app_navbar.html" %}
+
+      <main class="app-content">
+        {% block content %}{% endblock %}
+      </main>
+
+      {% include "includes/app_footer.html" %}
+    </div>
+  </div>
+
+  <!-- ===== Right slide-over drawer (BS5 offcanvas). HTMX swaps content into #drawer-body ===== -->
+  <div class="offcanvas offcanvas-end app-drawer" tabindex="-1" id="app-drawer"
+       aria-labelledby="app-drawer-label">
+    <div class="offcanvas-header border-bottom">
+      <h5 class="offcanvas-title" id="app-drawer-label">Details</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" id="drawer-body">
+      <!-- replaced by htmx; reset to spinner when closed -->
+      <div class="text-center text-muted py-5">
+        <div class="spinner-border" role="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast container ===== -->
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container"></div>
+
+  {% include "includes/messages.html" %}
+
+  <!-- Vendored scripts -->
+  <script src="{% static 'plugins/bootstrap5/js/bootstrap.bundle.min.js' %}"></script>
+  <script src="{% static 'plugins/htmx/htmx.min.js' %}"></script>
+  <script defer src="{% static 'plugins/alpinejs/alpine.min.js' %}"></script>
+
+  <script>
+    // Spinner markup reused whenever the drawer is (re)opened
+    const DRAWER_SPINNER =
+      '<div class="text-center text-muted py-5"><div class="spinner-border" role="status"></div></div>';
+
+    const drawerEl = document.getElementById('app-drawer');
+
+    // Reset the drawer to a spinner after it closes, so the next open never flashes stale content
+    drawerEl.addEventListener('hidden.bs.offcanvas', () => {
+      document.getElementById('drawer-body').innerHTML = DRAWER_SPINNER;
+    });
+
+    // Set the drawer title from the triggering element's data-drawer-title
+    document.body.addEventListener('click', (e) => {
+      const trigger = e.target.closest('[data-bs-target="#app-drawer"]');
+      if (trigger && trigger.dataset.drawerTitle) {
+        document.getElementById('app-drawer-label').textContent = trigger.dataset.drawerTitle;
+      }
+    });
+
+    // ---- Toasts ----
+    function appToast(message, level = 'success') {
+      const palette = { success: 'text-bg-success', danger: 'text-bg-danger',
+                        warning: 'text-bg-warning', info: 'text-bg-info' };
+      const el = document.createElement('div');
+      el.className = `toast align-items-center border-0 ${palette[level] || palette.info}`;
+      el.setAttribute('role', 'alert');
+      el.innerHTML =
+        `<div class="d-flex"><div class="toast-body">${message}</div>
+         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+      document.getElementById('toast-container').appendChild(el);
+      const t = bootstrap.Toast.getOrCreateInstance(el, { delay: 3500 });
+      t.show();
+      el.addEventListener('hidden.bs.toast', () => el.remove());
+    }
+
+    // ---- Server-driven events via HX-Trigger response headers (ready for the save flow next turn) ----
+    // HX-Trigger: {"toast": {"message": "Order saved", "level": "success"}}
+    document.body.addEventListener('toast', (e) => appToast(e.detail.message, e.detail.level));
+    // HX-Trigger: {"closeDrawer": true}
+    document.body.addEventListener('closeDrawer', () => {
+      bootstrap.Offcanvas.getInstance(drawerEl)?.hide();
+    });
+    // HX-Trigger: {"refreshTable": true}
+    document.body.addEventListener('refreshTable', () => {
+      htmx.trigger('#orders-region', 'refresh');
+    });
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,165 @@
+/* ============================================================
+   app.css — layout + tokens for the BS5/HTMX/Alpine front-end
+   ============================================================ */
+
+:root {
+  --sidebar-w: 250px;
+  --topbar-h: 56px;
+
+  --ink: #1f2933;
+  --muted: #647488;
+  --line: #e4e8ee;
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+
+  --sidebar-bg: #1f2a37;
+  --sidebar-ink: #c3ccd8;
+  --sidebar-ink-active: #ffffff;
+  --sidebar-active: #2b3a4d;
+  --brand: #2563eb;
+
+  /* Order-pipeline status colors — reused by cards, badges and rows */
+  --st-new: #0ea5e9;
+  --st-pending: #f59e0b;
+  --st-progress: #2563eb;
+  --st-ready: #16a34a;
+  --st-delivered: #475569;
+}
+
+body { background: var(--bg); color: var(--ink); }
+
+/* ---------- Shell ---------- */
+.app { min-height: 100vh; }
+
+.app-main {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content { flex: 1 1 auto; padding: 1.25rem; }
+
+/* ---------- Sidebar ---------- */
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  color: var(--sidebar-ink);
+  display: flex;
+  flex-direction: column;
+  z-index: 1040;
+}
+
+.app-sidebar .brand {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: 0 1rem;
+  height: var(--topbar-h);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.app-sidebar .brand img { width: 32px; height: 32px; border-radius: 50%; }
+
+.app-userpanel {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .9rem 1rem; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.app-userpanel img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+.app-userpanel .name { color: #fff; font-size: .9rem; line-height: 1.1; }
+.app-userpanel .tenant { color: var(--sidebar-ink); font-size: .75rem; }
+
+.app-nav { list-style: none; margin: .5rem 0 0; padding: 0; }
+.app-nav a {
+  display: flex; align-items: center; gap: .65rem;
+  padding: .6rem 1rem; color: var(--sidebar-ink); text-decoration: none;
+  font-size: .92rem; border-left: 3px solid transparent;
+}
+.app-nav a:hover { background: rgba(255,255,255,.04); color: #fff; }
+.app-nav a.active {
+  background: var(--sidebar-active); color: var(--sidebar-ink-active);
+  border-left-color: var(--brand);
+}
+.app-nav .bi { width: 1.1rem; text-align: center; }
+
+/* ---------- Topbar ---------- */
+.app-topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: .75rem;
+  padding: 0 1rem; position: sticky; top: 0; z-index: 1030;
+}
+.app-topbar .sidebar-toggle { display: none; }
+
+/* ---------- Footer ---------- */
+.app-footer {
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  padding: .75rem 1.25rem;
+  font-size: .85rem; color: var(--muted);
+}
+
+/* ---------- Backdrop (mobile sidebar) ---------- */
+.app-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1035; display: none;
+}
+
+/* ---------- Drawer ---------- */
+.app-drawer { width: min(560px, 92vw); }
+
+/* ---------- Stat cards ---------- */
+.stat-card {
+  display: block; background: var(--surface); border: 1px solid var(--line);
+  border-radius: .6rem; padding: 1rem 1.1rem; text-decoration: none; color: var(--ink);
+  border-left: 4px solid var(--c, var(--brand)); transition: box-shadow .15s, transform .15s;
+}
+.stat-card:hover { box-shadow: 0 4px 14px rgba(31,41,51,.08); transform: translateY(-1px); color: var(--ink); }
+.stat-card .num { font-size: 1.75rem; font-weight: 700; line-height: 1; }
+.stat-card .label { color: var(--muted); font-size: .85rem; margin-top: .25rem; }
+.stat-card .bi { font-size: 1.4rem; color: var(--c, var(--brand)); opacity: .85; }
+
+.c-new { --c: var(--st-new); }
+.c-pending { --c: var(--st-pending); }
+.c-progress { --c: var(--st-progress); }
+.c-ready { --c: var(--st-ready); }
+.c-delivered { --c: var(--st-delivered); }
+
+/* ---------- Status badges ---------- */
+.badge-status { color: #fff; font-weight: 500; }
+.badge-new { background: var(--st-new); }
+.badge-pending { background: var(--st-pending); }
+.badge-in_progress { background: var(--st-progress); }
+.badge-ready { background: var(--st-ready); }
+.badge-delivered { background: var(--st-delivered); }
+
+/* ---------- Sortable table headers ---------- */
+.th-sort { cursor: pointer; white-space: nowrap; user-select: none; }
+.th-sort:hover { color: var(--brand); }
+
+/* ---------- Lightbox (Alpine) ---------- */
+.lightbox {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 2rem;
+}
+.lightbox img { max-width: 100%; max-height: 90vh; border-radius: 6px; }
+
+/* ---------- Focus visibility (quality floor) ---------- */
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 991.98px) {
+  .app-main { margin-left: 0; }
+  .app-sidebar { transform: translateX(-100%); transition: transform .2s ease; }
+  .sidebar-open .app-sidebar { transform: translateX(0); }
+  .sidebar-open .app-backdrop { display: block; }
+  .app-topbar .sidebar-toggle { display: inline-flex; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

@@ -1,0 +1,25 @@
+{% load static %}
+<header class="app-topbar">
+
+  <button type="button" class="btn btn-light btn-sm sidebar-toggle" @click="sidebarOpen = !sidebarOpen"
+          aria-label="Toggle menu">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <a href="{% url 'orders:dashboard' %}" class="text-decoration-none text-body fw-semibold d-none d-sm-inline">
+    Home
+  </a>
+
+  <div class="ms-auto d-flex align-items-center gap-3">
+    {% if request.user.is_authenticated %}
+      <span class="text-muted small">
+        <i class="bi bi-person-circle"></i> {{ request.user.username }}
+      </span>
+      <form method="post" action="{% url 'logout' %}" class="m-0">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm">Log out</button>
+      </form>
+    {% endif %}
+  </div>
+
+</header>

@@ -1,0 +1,42 @@
+{% load static %}
+<aside class="app-sidebar">
+
+  <a href="{% url 'orders:dashboard' %}" class="brand">
+    <img src="{% static 'img/AdminLTELogo.png' %}" alt="Logo">
+    <span>Emporium Armani</span>
+  </a>
+
+  {% if request.user.is_authenticated %}
+  <div class="app-userpanel">
+    {% if request.user.profile_image %}
+      <img src="{{ request.user.profile_image.url }}" alt="{{ request.user.username }}">
+    {% else %}
+      <img src="{% static 'img/user2-160x160.jpg' %}" alt="User">
+    {% endif %}
+    <div>
+      <div class="name">{{ request.user.get_full_name|default:request.user.username }}</div>
+      {% if request.user.tenant %}
+        <div class="tenant">{{ request.user.tenant.name }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <nav>
+    <ul class="app-nav">
+      <li>
+        <a href="{% url 'orders:dashboard' %}" class="active">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      </li>
+      {% if not request.user.is_tenant %}
+      <li>
+        <a href="{% url 'orders:order_add' %}">
+          <i class="bi bi-plus-square"></i> New order
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+
+</aside>

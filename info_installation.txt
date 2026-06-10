@@ -15,6 +15,11 @@ docker-compose -f docker-compose.yml -f docker-compose.local.yml build --no-cach
 docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python manage.py shell
 docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python manage.py createsuperuser
 
+docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python manage.py collectstatic
+
+docker compose -f docker-compose.yml -f docker-compose.local.yml run --rm web python manage.py collectstatic --noinput
+
+
 docker-compose -f docker-compose.yml -f docker-compose.local.yml down
 
 #prod run

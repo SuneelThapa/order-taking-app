@@ -1,43 +1,6 @@
 {% if form %}
-<div class="card card-outline card-info mt-3">
-
-  <div class="card-header">
-    <h5 class="card-title mb-0">
-      {{ product_type.name }} Measurements
-    </h5>
-  </div>
-
-  <div class="card-body">
-
-    <div class="row">
-      {% for field in form %}
-        <div class="col-lg-4 col-md-6 col-sm-12">
-          <div class="form-group">
-
-            <label class="font-weight-normal">
-              {{ field.label }}
-            </label>
-
-            {{ field }}
-
-            {% if field.help_text %}
-              <small class="form-text text-muted">
-                {{ field.help_text }}
-              </small>
-            {% endif %}
-
-            {% if field.errors %}
-              <small class="text-danger">
-                {{ field.errors|striptags }}
-              </small>
-            {% endif %}
-
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-
-  </div>
-
+<div class="border rounded p-2 bg-white">
+  <div class="small fw-semibold mb-2">{{ product_type.name }} measurements</div>
+  {% include "orders/partials/_measurement_fields.html" with form=form %}
 </div>
 {% endif %}

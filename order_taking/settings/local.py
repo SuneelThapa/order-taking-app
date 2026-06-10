@@ -14,3 +14,6 @@ DATABASES = {
         "PORT": env("DB_PORT"),
     }
 }
+
+
+WHITENOISE_USE_FINDERS = True

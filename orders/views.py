@@ -1,26 +1,27 @@
 # orders/views.py
-from django.shortcuts import render, redirect, get_object_or_404 
+import base64
+import uuid
+
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
+from django.contrib import messages
 from django.core.paginator import Paginator
-from django.http import HttpResponse
 from django.core.cache import cache
+from django.core.files.base import ContentFile
+from django.db.models import Q
+from django.http import HttpResponse
 from django.apps import apps
 from django.forms import modelform_factory
 
-from orders.models import Order, ProductType, BaseMeasurement
+from orders.models import Order, ProductType, BaseMeasurement, OrderItemPhoto
+from .models import ScratchNote
 from .forms import (
     OrderForm,
+    OrderItemForm,
     OrderItemFormSet,
-    OrderItemPhotoFormSet,
     ClientPhotoFormSet,
     get_measurement_form,
 )
-
-from .models import ScratchNote
-
-import base64
-import uuid
-from django.core.files.base import ContentFile
 
 
 def staff_check(user):
@@ -28,135 +29,176 @@ def staff_check(user):
 
 
 # =====================================================
-# DASHBOARD
+# Shared helpers
+# =====================================================
+def _get_counts(tenant):
+    key = f"order_status_counts_{tenant.id}"
+    counts = cache.get(key)
+    if counts is None:
+        counts = {
+            "new": Order.objects.filter(status="new", tenant=tenant).count(),
+            "pending": Order.objects.filter(status="pending", tenant=tenant).count(),
+            "in_progress": Order.objects.filter(status="in_progress", tenant=tenant).count(),
+            "ready": Order.objects.filter(status="ready", tenant=tenant).count(),
+            "delivered": Order.objects.filter(status="delivered", tenant=tenant).count(),
+        }
+        cache.set(key, counts, 60)
+    return counts
+
+
+def _build_cards(counts):
+    return [
+        {"status": "new",         "label": "New",         "css": "c-new",       "icon": "bi-inbox",           "count": counts["new"]},
+        {"status": "pending",     "label": "Pending",     "css": "c-pending",   "icon": "bi-hourglass-split", "count": counts["pending"]},
+        {"status": "in_progress", "label": "In progress", "css": "c-progress",  "icon": "bi-gear",            "count": counts["in_progress"]},
+        {"status": "ready",       "label": "Ready",        "css": "c-ready",     "icon": "bi-check2-circle",   "count": counts["ready"]},
+        {"status": "delivered",   "label": "Delivered",    "css": "c-delivered", "icon": "bi-truck",           "count": counts["delivered"]},
+    ]
+
+
+_ALLOWED_SORTS = {
+    "order_number", "-order_number", "status", "-status",
+    "total_amount", "-total_amount", "created_at", "-created_at",
+}
+
+
+def _orders_table_context(request, tenant):
+    status = request.GET.get("status") or ""
+    q = (request.GET.get("q") or "").strip()
+    sort = request.GET.get("sort") or "-created_at"
+    if sort not in _ALLOWED_SORTS:
+        sort = "-created_at"
+    page = request.GET.get("page", 1)
+
+    orders = Order.objects.filter(tenant=tenant)
+    if status:
+        orders = orders.filter(status=status)
+    if q:
+        orders = orders.filter(
+            Q(order_number__icontains=q) | Q(first_name__icontains=q)
+            | Q(last_name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q)
+        )
+
+    paginator = Paginator(orders.order_by(sort), 10)
+    page_obj = paginator.get_page(page)
+    return {"page_obj": page_obj, "current_status": status, "current_sort": sort, "current_q": q}
+
+
+# =====================================================
+# DASHBOARD / CARDS / TABLE / DETAIL / DELETE
 # =====================================================
 @user_passes_test(staff_check)
 def dashboard(request):
-    tenant = getattr(request, 'tenant', None)
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    return render(request, "admin_dashboard/dashboard.html", {"cards": _build_cards(_get_counts(tenant))})
+
+
+@user_passes_test(staff_check)
+def stat_cards(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    return render(request, "admin_dashboard/partials/_stat_cards.html", {"cards": _build_cards(_get_counts(tenant))})
+
+
+@user_passes_test(staff_check)
+def orders_table(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    return render(request, "admin_dashboard/partials/orders_table.html", _orders_table_context(request, tenant))
+
+
+@user_passes_test(staff_check)
+def order_detail(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    selected_order = get_object_or_404(
+        Order.objects.prefetch_related(
+            "client_photos", "scratch_notes", "items__photos", "items__measurement"
+        ).filter(tenant=tenant),
+        pk=pk,
+    )
+    return render(request, "orders/_order_detail.html", {"selected_order": selected_order})
+
+
+@user_passes_test(staff_check)
+def order_delete(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    if request.method != "DELETE":
+        return HttpResponse(status=405)
+
+    order = get_object_or_404(Order, pk=pk, tenant=tenant)
+    order.delete()
+    cache.delete(f"order_status_counts_{tenant.id}")
+
+    context = _orders_table_context(request, tenant)
+    context["oob_cards"] = True
+    context["cards"] = _build_cards(_get_counts(tenant))
+    return render(request, "admin_dashboard/partials/orders_table.html", context)
+
+
+# =====================================================
+# ADD / EDIT ORDER  — wizard, single POST
+# =====================================================
+@user_passes_test(staff_check)
+def order_form_view(request, pk=None):
+    tenant = getattr(request, "tenant", None)
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
 
-    # -------------------------------
-    # Cached order counts
-    # -------------------------------
-    counts = cache.get(f"order_status_counts_{tenant.id}")
-    if not counts:
-        counts = {
-            "new_orders": Order.objects.filter(status="new", tenant=tenant).count(),
-            "pending_orders": Order.objects.filter(status="pending", tenant=tenant).count(),
-            "in_progress": Order.objects.filter(status="in_progress", tenant=tenant).count(),
-            "ready_orders": Order.objects.filter(status="ready", tenant=tenant).count(),
-            "delivered_orders": Order.objects.filter(status="delivered", tenant=tenant).count(),
-        }
-        cache.set(f"order_status_counts_{tenant.id}", counts, 60)
+    show_edit_form = pk is not None
+    edit_order = get_object_or_404(Order, pk=pk, tenant=tenant) if show_edit_form else None
 
-    new_orders = counts["new_orders"]
-    pending_orders = counts["pending_orders"]
-    in_progress = counts["in_progress"]
-    ready_orders = counts["ready_orders"]
-    delivered_orders = counts["delivered_orders"]
-
-    show_add_form = request.GET.get("add") == "true"
-    edit_order_id = request.GET.get("edit")
-    show_edit_form = False
-    edit_order = None
-
-    if edit_order_id:
-        edit_order = get_object_or_404(Order, pk=edit_order_id, tenant=tenant)
-        show_edit_form = True
-
-    # =====================================================
-    # POST
-    # =====================================================
     if request.method == "POST":
-        order_form = OrderForm(
-            request.POST,
-            instance=edit_order if show_edit_form else None,
-            user=request.user,  
-            tenant=tenant
-        )
-
-        item_formset = OrderItemFormSet(
-            request.POST,
-            request.FILES,
-            instance=edit_order if show_edit_form else None
-        )
-
+        order_form = OrderForm(request.POST, instance=edit_order, user=request.user, tenant=tenant)
+        item_formset = OrderItemFormSet(request.POST, request.FILES, instance=edit_order)
         client_photo_formset = ClientPhotoFormSet(
-            request.POST,
-            request.FILES,
-            instance=edit_order if show_edit_form else None,
-            prefix="client_photos"
+            request.POST, request.FILES, instance=edit_order, prefix="client_photos"
         )
-
-        # ---- DEBUGGING HERE ----
-        print("POST DATA:", request.POST)
-        print("FILES:", request.FILES)
-        print("ORDER FORM VALID?", order_form.is_valid())
-        if not order_form.is_valid():
-            print("ORDER FORM ERRORS:", order_form.errors)
-        if not item_formset.is_valid():
-            print("ITEM FORMSET ERRORS:", item_formset.errors)
-        if not client_photo_formset.is_valid():
-            print("CLIENT PHOTO ERRORS:", client_photo_formset.errors)
-        # ------------------------
 
         if order_form.is_valid() and item_formset.is_valid() and client_photo_formset.is_valid():
             order = order_form.save(commit=False)
             order.tenant = tenant
 
-            # --- STATUS HANDLING ---
-            # Get model default for status
             model_default_status = Order._meta.get_field("status").get_default()
-
-            # Tenant staff: use hidden field submitted
             if getattr(request.user, "is_tenant", False) and request.user.is_staff:
                 status_value = order_form.cleaned_data.get("status_hidden") or model_default_status
                 order.status = status_value.lower()
-
-            # Normal tenant (not staff): use model default
             elif getattr(request.user, "is_tenant", False) and not request.user.is_staff:
                 order.status = model_default_status
-
-            # Admins: use whatever is in the dropdown (default behavior)
 
             if not show_edit_form:
                 order.total_amount = 0
             order.save()
-            
             cache.delete(f"order_status_counts_{tenant.id}")
 
-            # -------------------------------
-            # Scratch Note
-            # -------------------------------
+            # Scratch canvas
             canvas_data = request.POST.get("scratch_canvas_image")
             if canvas_data:
                 try:
                     fmt, imgstr = canvas_data.split(";base64,")
                     ext = fmt.split("/")[-1]
-                    file = ContentFile(
-                        base64.b64decode(imgstr),
-                        name=f"scratch_{uuid.uuid4()}.{ext}",
-                    )
+                    file = ContentFile(base64.b64decode(imgstr), name=f"scratch_{uuid.uuid4()}.{ext}")
                     ScratchNote.objects.create(order=order, image=file)
                 except Exception:
                     pass
 
-            # -------------------------------
-            # Client photos
-            # -------------------------------
+            # Client photos (3 fixed slots)
             client_photo_formset.instance = order
             client_photo_formset.save()
 
-            # -------------------------------
-            # Items & Measurements
-            # -------------------------------
+            # Items + measurements + photos
             item_formset.instance = order
-            items = item_formset.save(commit=False)
+            item_formset.save(commit=False)
             total = 0
-
             for form in item_formset.forms:
-                if not form.cleaned_data:
+                if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                     continue
 
                 item = form.save(commit=False)
@@ -164,192 +206,114 @@ def dashboard(request):
                 item.save()
                 total += getattr(item, "total_price", 0)
 
-                # Photos
-                photo_formset = OrderItemPhotoFormSet(
-                    request.POST,
-                    request.FILES,
-                    instance=item,
-                    prefix=f"photos-{form.prefix}",
-                )
-                if photo_formset.is_valid():
-                    photo_formset.save()
+                # Item photos via a single multiple-file input named item_photos_<prefix>
+                for uploaded in request.FILES.getlist(f"item_photos_{form.prefix}"):
+                    OrderItemPhoto.objects.create(order_item=item, image=uploaded)
 
-                # Measurements
+                # Existing photo deletions
+                delete_ids = request.POST.getlist(f"delete_item_photos_{form.prefix}")
+                if delete_ids:
+                    OrderItemPhoto.objects.filter(id__in=delete_ids, order_item=item).delete()
+
+                # Measurement
                 if item.product_type:
-                    model_name = item.product_type.measurement_model
-                    model = apps.get_model("orders", model_name)
+                    model = apps.get_model("orders", item.product_type.measurement_model)
                     base, _ = BaseMeasurement.objects.get_or_create(order_item=item)
-
                     MeasurementForm = modelform_factory(model, exclude=("base",))
                     measurement_instance = model.objects.filter(base=base).first()
                     measurement_form = MeasurementForm(
-                        request.POST,
-                        instance=measurement_instance,
-                        prefix=f"measure-{form.prefix}"
+                        request.POST, instance=measurement_instance, prefix=f"measure-{form.prefix}"
                     )
-
-                    # Disable measurement fields for tenant users
                     if getattr(request.user, "is_tenant", False) and not request.user.is_staff:
-                        for f in measurement_form.fields.values():
-                            f.disabled = True
-
+                        for fld in measurement_form.fields.values():
+                            fld.disabled = True
                     if measurement_form.is_valid():
-                        measurement = measurement_form.save(commit=False)
-                        measurement.base = base
-                        measurement.save()
+                        m = measurement_form.save(commit=False)
+                        m.base = base
+                        m.save()
 
             for obj in item_formset.deleted_objects:
                 obj.delete()
 
             order.total_amount = total
             order.save()
+
+            messages.success(request, f"Order #{order.order_number} saved.")
             return redirect("orders:dashboard")
-
-        show_add_form = True
-
-    # =====================================================
-    # GET
-    # =====================================================
+        # invalid -> fall through and re-render with errors
     else:
-        # Pre-fill status_hidden with default for new orders
         initial_data = {}
         if not show_edit_form:
-            default_status = Order._meta.get_field("status").get_default()
-            initial_data["status_hidden"] = default_status
+            initial_data["status_hidden"] = Order._meta.get_field("status").get_default()
+        order_form = OrderForm(instance=edit_order, user=request.user, tenant=tenant, initial=initial_data)
+        item_formset = OrderItemFormSet(instance=edit_order)
+        client_photo_formset = ClientPhotoFormSet(instance=edit_order, prefix="client_photos")
 
-        order_form = OrderForm(
-            request.POST or None,
-            instance=edit_order if show_edit_form else None,
-            user=request.user,
-            tenant=tenant,
-            initial=initial_data
-        )
-        item_formset = OrderItemFormSet(instance=edit_order if show_edit_form else None)
-        client_photo_formset = ClientPhotoFormSet(instance=edit_order if show_edit_form else None, prefix="client_photos")
-
-    # =====================================================
-    # Build item formsets with photos & measurements
-    # =====================================================
-    item_forms_with_photos = []
+    # Build per-item rows: (form, measurement_form, existing_photos)
+    post = request.POST if request.method == "POST" else None
+    item_rows = []
     for form in item_formset.forms:
         item = form.instance
-
-        photo_formset = OrderItemPhotoFormSet(
-            request.POST or None,
-            request.FILES or None,
-            instance=item,
-            prefix=f"photos-{form.prefix}",
-        )
-
+        existing_photos = list(item.photos.all()) if item.pk else []
         measurement_form = None
-        if item.pk and item.product_type:
+        if item.pk and item.product_type_id:
             model = apps.get_model("orders", item.product_type.measurement_model)
             base = BaseMeasurement.objects.filter(order_item=item).first()
             measurement_instance = model.objects.filter(base=base).first() if base else None
             MeasurementForm = modelform_factory(model, exclude=("base",))
-            measurement_form = MeasurementForm(
-                request.POST or None,
-                instance=measurement_instance,
-                prefix=f"measure-{form.prefix}"
-            )
-
-            # Disable measurement fields for tenant users
+            measurement_form = MeasurementForm(post, instance=measurement_instance, prefix=f"measure-{form.prefix}")
             if getattr(request.user, "is_tenant", False) and not request.user.is_staff:
-                for f in measurement_form.fields.values():
-                    f.disabled = True
-
-        item_forms_with_photos.append((form, photo_formset, measurement_form))
-
-    # =====================================================
-    # Order Detail
-    # =====================================================
-    selected_order = None
-    order_id = request.GET.get("order")
-    if order_id and not show_add_form and not show_edit_form:
-        selected_order = get_object_or_404(
-            Order.objects.prefetch_related("client_photos", "items__photos", "items__measurement").filter(tenant=tenant),
-            pk=order_id
-        )
+                for fld in measurement_form.fields.values():
+                    fld.disabled = True
+        item_rows.append({"form": form, "measurement_form": measurement_form, "existing_photos": existing_photos})
 
     context = {
-        "new_orders": new_orders,
-        "pending_orders": pending_orders,
-        "in_progress": in_progress,
-        "ready_orders": ready_orders,
-        "delivered_orders": delivered_orders,
-        "selected_order": selected_order,
-        "show_add_form": show_add_form,
         "show_edit_form": show_edit_form,
+        "edit_order": edit_order,
         "order_form": order_form,
         "item_formset": item_formset,
-        "item_forms_with_photos": item_forms_with_photos,
+        "item_rows": item_rows,
         "client_photo_formset": client_photo_formset,
-        "edit_order": edit_order,
     }
-
-    return render(request, "admin_dashboard/dashboard.html", context)
-
-
-# =====================================================
-# ORDERS TABLE
-# =====================================================
-@user_passes_test(staff_check)
-def orders_table(request):
-    tenant = getattr(request, 'tenant', None)
-    if not tenant:
-        return HttpResponse("Tenant not found", status=404)
-
-    status = request.GET.get("status")
-    sort = request.GET.get("sort", "-created_at")
-    page = request.GET.get("page", 1)
-
-    cache_key = f"orders_table_{tenant.id}_{status}_{sort}_{page}"
-    cached = cache.get(cache_key)
-    if cached:
-        return cached
-
-    orders = Order.objects.filter(tenant=tenant)
-    if status:
-        orders = orders.filter(status=status)
-
-    orders = orders.order_by(sort)
-    paginator = Paginator(orders, 10)
-    page_obj = paginator.get_page(page)
-
-    response = render(request, "admin_dashboard/partials/orders_table.html", {"page_obj": page_obj, "current_sort": sort, "current_status": status})
-    #cache.set(cache_key, response, 30)
-    return response
+    return render(request, "orders/order_form.html", context)
 
 
 # =====================================================
-# DELETE ORDER
+# BLANK ITEM ROW (htmx "Add item")
 # =====================================================
 @user_passes_test(staff_check)
-def order_delete(request, pk):
-    tenant = getattr(request, 'tenant', None)
+def order_item_row(request):
+    tenant = getattr(request, "tenant", None)
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
+    try:
+        index = int(request.GET.get("index", 0))
+    except (TypeError, ValueError):
+        index = 0
 
-    order = get_object_or_404(Order, pk=pk, tenant=tenant)
-    if request.method == "DELETE":
-        order.delete()
-        cache.delete(f"order_status_counts_{tenant.id}")
-        return orders_table(request)
-    return HttpResponse(status=405)
+    item_form = OrderItemForm(prefix=f"items-{index}")
+    return render(
+        request,
+        "orders/partials/_order_item_row.html",
+        {"item_form": item_form, "measurement_form": None, "existing_photos": [], "is_new": True},
+    )
 
 
 # =====================================================
-# LOAD MEASUREMENT FORM
+# LOAD MEASUREMENT FORM (htmx, on product_type change)
 # =====================================================
 def load_measurement_form(request):
-    tenant = getattr(request, 'tenant', None)
+    tenant = getattr(request, "tenant", None)
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
 
     product_type_id = request.GET.get("product_type")
     prefix = request.GET.get("prefix")
+    if not product_type_id and prefix:
+        # hx-include sends the select under its own prefixed name (items-N-product_type)
+        product_type_id = request.GET.get(f"{prefix}-product_type")
     if not product_type_id or not prefix:
-        return render(request, "admin_dashboard/partials/_empty.html")
+        return HttpResponse("")  # empty -> clears the container
 
     cache_key = f"product_type_{product_type_id}"
     product_type = cache.get(cache_key)
@@ -359,7 +323,11 @@ def load_measurement_form(request):
 
     MeasurementForm = get_measurement_form(product_type)
     if not MeasurementForm:
-        return render(request, "admin_dashboard/partials/_empty.html")
+        return HttpResponse("")
 
     form = MeasurementForm(prefix=f"measure-{prefix}")
-    return render(request, "admin_dashboard/partials/_dynamic_measurement.html", {"form": form, "product_type": product_type})
+    return render(
+        request,
+        "admin_dashboard/partials/_dynamic_measurement.html",
+        {"form": form, "product_type": product_type},
+    )

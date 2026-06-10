@@ -1,0 +1,26 @@
+{% comment %}
+  Rendered standalone (GET cards/) and included in the dashboard shell.
+  When `oob` is True it swaps itself out-of-band so a delete/save response
+  can refresh the counts without re-rendering the whole page.
+{% endcomment %}
+<div id="stat-cards" class="row g-3" {% if oob %}hx-swap-oob="true"{% endif %}>
+
+  {% for c in cards %}
+  <div class="col-6 col-lg">
+    <a class="stat-card {{ c.css }}"
+       hx-get="{% url 'orders:orders_table' %}?status={{ c.status }}"
+       hx-target="#orders-region"
+       hx-swap="innerHTML"
+       href="#" role="button">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="num">{{ c.count }}</div>
+          <div class="label">{{ c.label }}</div>
+        </div>
+        <i class="bi {{ c.icon }}"></i>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+
+</div>

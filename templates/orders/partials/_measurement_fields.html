@@ -1,0 +1,10 @@
+{% comment %} Shared measurement field grid. Expects `form`. {% endcomment %}
+<div class="row g-2">
+  {% for field in form %}
+    <div class="col-6 col-md-4 col-lg-3">
+      <label class="form-label small mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<div class="text-danger small">{{ field.errors|striptags }}</div>{% endif %}
+    </div>
+  {% endfor %}
+</div>

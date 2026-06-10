@@ -1,192 +1,134 @@
-<div class="card">
-    <div class="card-body table-responsive p-0">
+{% comment %}
+  Orders table partial. Everything targets #orders-region and pulls the current
+  filter/search from #orders-filter so state survives sorts and pagination.
+  status + q live in the form; sort + page are carried explicitly on each link.
+{% endcomment %}
 
-        <!-- 🔎 FILTER -->
-        <div class="p-3">
-            <form id="filter-form">
+<!-- Filter + search -->
+<form id="orders-filter" class="d-flex flex-wrap gap-2 p-3 border-bottom"
+      onsubmit="return false">
+  <select class="form-select form-select-sm" style="max-width: 12rem"
+          name="status"
+          hx-get="{% url 'orders:orders_table' %}"
+          hx-target="#orders-region"
+          hx-trigger="change"
+          hx-include="#orders-filter">
+    <option value="">All statuses</option>
+    <option value="new"         {% if current_status == "new" %}selected{% endif %}>New</option>
+    <option value="pending"     {% if current_status == "pending" %}selected{% endif %}>Pending</option>
+    <option value="in_progress" {% if current_status == "in_progress" %}selected{% endif %}>In progress</option>
+    <option value="ready"       {% if current_status == "ready" %}selected{% endif %}>Ready</option>
+    <option value="delivered"   {% if current_status == "delivered" %}selected{% endif %}>Delivered</option>
+  </select>
 
-                <select class="form-control w-25"
-                        name="status"
-                        hx-get="{% url 'orders:orders_table' %}"
-                        hx-target="#orders-table"
-                        hx-trigger="change"
-                        hx-include="#filter-form">
+  <input type="search" name="q" value="{{ current_q }}"
+         class="form-control form-control-sm" style="max-width: 18rem"
+         placeholder="Search order #, name, phone…"
+         hx-get="{% url 'orders:orders_table' %}"
+         hx-target="#orders-region"
+         hx-trigger="keyup changed delay:350ms, search"
+         hx-include="#orders-filter">
+</form>
 
-                    <option value="">All Status</option>
+<div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th class="th-sort" hx-get="{% url 'orders:orders_table' %}?sort=order_number"
+            hx-target="#orders-region" hx-include="#orders-filter">Order&nbsp;#</th>
+        <th>Customer</th>
+        <th class="d-none d-md-table-cell">Email</th>
+        <th class="d-none d-md-table-cell">Phone</th>
+        <th class="text-center">Urgent</th>
+        <th class="th-sort" hx-get="{% url 'orders:orders_table' %}?sort=status"
+            hx-target="#orders-region" hx-include="#orders-filter">Status</th>
+        <th class="th-sort text-end" hx-get="{% url 'orders:orders_table' %}?sort=total_amount"
+            hx-target="#orders-region" hx-include="#orders-filter">Total</th>
+        <th class="th-sort d-none d-lg-table-cell" hx-get="{% url 'orders:orders_table' %}?sort=-created_at"
+            hx-target="#orders-region" hx-include="#orders-filter">Created</th>
+        <th class="text-end">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for order in page_obj %}
+      <tr class="{% if order.is_urgent %}table-danger{% endif %}">
+        <td class="fw-semibold">{{ order.order_number }}</td>
+        <td>{{ order.first_name }} {{ order.last_name }}</td>
+        <td class="d-none d-md-table-cell">{{ order.email }}</td>
+        <td class="d-none d-md-table-cell">{{ order.phone }}</td>
+        <td class="text-center">
+          {% if order.is_urgent %}
+            <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge badge-status badge-{{ order.status }}">
+            {{ order.get_status_display }}
+          </span>
+        </td>
+        <td class="text-end">${{ order.total_amount }}</td>
+        <td class="d-none d-lg-table-cell">{{ order.created_at|date:"Y-m-d" }}</td>
+        <td class="text-end text-nowrap">
 
-                    <option value="new" {% if current_status == "new" %}selected{% endif %}>New</option>
-                    <option value="pending" {% if current_status == "pending" %}selected{% endif %}>Pending</option>
-                    <option value="in_progress" {% if current_status == "in_progress" %}selected{% endif %}>In Progress</option>
-                    <option value="ready" {% if current_status == "ready" %}selected{% endif %}>Ready</option>
-                    <option value="delivered" {% if current_status == "delivered" %}selected{% endif %}>Delivered</option>
+          <!-- View → drawer -->
+          <button class="btn btn-sm btn-outline-secondary"
+                  hx-get="{% url 'orders:order_detail' order.id %}"
+                  hx-target="#drawer-body"
+                  data-bs-toggle="offcanvas" data-bs-target="#app-drawer"
+                  data-drawer-title="Order #{{ order.order_number }}">
+            <i class="bi bi-eye"></i>
+          </button>
 
-                </select>
+          {% if not request.user.is_tenant %}
+          <!-- Edit → full page (rebuilt into the drawer next) -->
+          <a class="btn btn-sm btn-outline-primary" href="{% url 'orders:order_edit' order.id %}">
+            <i class="bi bi-pencil"></i>
+          </a>
 
-            </form>
-        </div>
+          <!-- Delete → htmx, refreshes table + cards -->
+          <button class="btn btn-sm btn-outline-danger"
+                  hx-delete="{% url 'orders:order_delete' order.id %}"
+                  hx-target="#orders-region"
+                  hx-swap="innerHTML"
+                  hx-confirm="Delete order #{{ order.order_number }}? This cannot be undone.">
+            <i class="bi bi-trash"></i>
+          </button>
+          {% endif %}
 
-
-        <!-- 📊 TABLE -->
-        <table id="orders-table" class="table table-bordered table-striped w-100">
-            <thead>
-                <tr>
-                    <th>
-                        <a hx-get="?sort=order_number"
-                           hx-target="#orders-table"
-                           hx-include="#filter-form">
-                            Order Number
-                        </a>
-                    </th>
-
-                    <th>Customer</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Urgent</th>
-
-                    <th>
-                        <a hx-get="?sort=status"
-                           hx-target="#orders-table"
-                           hx-include="#filter-form">
-                            Status
-                        </a>
-                    </th>
-
-                    <th>
-                        <a hx-get="?sort=total_amount"
-                           hx-target="#orders-table"
-                           hx-include="#filter-form">
-                            Total
-                        </a>
-                    </th>
-
-                    <th>
-                        <a hx-get="?sort=-created_at"
-                           hx-target="#orders-table"
-                           hx-include="#filter-form">
-                            Created
-                        </a>
-                    </th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for order in page_obj %}
-                <tr class="{% if order.is_urgent %}table-danger{% endif %}">
-
-                    <td>{{ order.order_number }}</td>
-
-                    <td>{{ order.first_name }} {{ order.last_name }}</td>
-
-                    <td>{{ order.email }}</td>
-
-                    <td>{{ order.phone }}</td>
-
-                    <td class="text-center">
-                        {% if order.is_urgent %}
-                            <span class="badge bg-danger">✔</span>
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-
-                    <!-- 🎨 Dynamic Status Badge -->
-                    <td>
-                        {% if order.status == "pending" %}
-                            <span class="badge bg-warning">Pending</span>
-                        {% elif order.status == "in_progress" %}
-                            <span class="badge bg-primary">In Progress</span>
-                        {% elif order.status == "ready" %}
-                            <span class="badge bg-success">Ready</span>
-                        {% elif order.status == "delivered" %}
-                            <span class="badge bg-dark">Delivered</span>
-                        {% else %}
-                            <span class="badge bg-secondary">New</span>
-                        {% endif %}
-                    </td>
-
-                    <td>${{ order.total_amount }}</td>
-
-                    <td>{{ order.created_at|date:"Y-m-d" }}</td>
-
-                    <td class="project-actions text-right">
-
-                        <!-- VIEW -->
-                        <a class="btn btn-primary btn-sm"
-                        href="{% url 'orders:dashboard' %}?order={{ order.id }}">
-                            <i class="fas fa-folder"></i>
-                            View
-                        </a>
-
-                        <!-- EDIT -->
-{% if not request.user.is_tenant or request.user.is_superuser or request.user.is_staff == False %}
-<a class="btn btn-info btn-sm"
-   href="{% url 'orders:dashboard' %}?edit={{ order.id }}">
-    <i class="fas fa-pencil-alt"></i>
-    Edit
-</a>
-{% endif %}
-
-<!-- DELETE (HTMX) -->
-{% if not request.user.is_tenant or request.user.is_superuser or request.user.is_staff == False %}
-<button class="btn btn-danger btn-sm"
-        hx-delete="{% url 'orders:order_delete' order.id %}"
-        hx-target="#orders-table"
-        hx-confirm="Are you sure you want to delete this order?"
-        hx-swap="innerHTML">
-    <i class="fas fa-trash"></i>
-    Delete
-</button>
-{% endif %}
-
-                    </td>
-
-                    
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8">No orders found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-
-
-        <!-- 📄 PAGINATION -->
-        <div class="p-3">
-            <nav>
-                <ul class="pagination">
-
-                    {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link"
-                           hx-get="?page={{ page_obj.previous_page_number }}"
-                           hx-target="#orders-table"
-                           hx-include="#filter-form">
-                            Previous
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    <li class="page-item active">
-                        <span class="page-link">
-                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                        </span>
-                    </li>
-
-                    {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link"
-                           hx-get="?page={{ page_obj.next_page_number }}"
-                           hx-target="#orders-table"
-                           hx-include="#filter-form">
-                            Next
-                        </a>
-                    </li>
-                    {% endif %}
-
-                </ul>
-            </nav>
-        </div>
-
-    </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" class="text-center text-muted py-5">
+          No orders match this view. Try clearing the filter, or
+          {% if not request.user.is_tenant %}<a href="{% url 'orders:order_add' %}">add a new order</a>.{% else %}check back later.{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+<div class="d-flex align-items-center justify-content-between p-3 border-top">
+  <span class="small text-muted">
+    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    · {{ page_obj.paginator.count }} order{{ page_obj.paginator.count|pluralize }}
+  </span>
+  <div class="btn-group">
+    <button class="btn btn-sm btn-outline-secondary" {% if not page_obj.has_previous %}disabled{% endif %}
+            hx-get="{% url 'orders:orders_table' %}?page={{ page_obj.previous_page_number }}&sort={{ current_sort }}"
+            hx-target="#orders-region" hx-include="#orders-filter">Previous</button>
+    <button class="btn btn-sm btn-outline-secondary" {% if not page_obj.has_next %}disabled{% endif %}
+            hx-get="{% url 'orders:orders_table' %}?page={{ page_obj.next_page_number }}&sort={{ current_sort }}"
+            hx-target="#orders-region" hx-include="#orders-filter">Next</button>
+  </div>
+</div>
+{% endif %}
+
+{% comment %} After a delete, the view re-renders the cards out-of-band. {% endcomment %}
+{% if oob_cards %}
+  {% include "admin_dashboard/partials/_stat_cards.html" with oob=True %}
+{% endif %}
