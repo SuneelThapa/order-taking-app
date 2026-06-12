@@ -49,11 +49,18 @@ document.body.addEventListener('htmx:afterSettle', function(e) {
   var id = e.detail.target.id;
 
   if (id === 'order-detail-modal-body') {
+    // Close client profile modal if open (user navigated to order from profile)
+    var cpModal = bootstrap.Modal.getInstance(document.getElementById('clientProfileModal'));
+    if (cpModal) cpModal.hide();
     bootstrap.Modal.getOrCreateInstance(document.getElementById('orderDetailModal')).show();
   }
 
   if (id === 'cancel-modal-body') {
     bootstrap.Modal.getOrCreateInstance(document.getElementById('cancelOrderModal')).show();
+  }
+
+  if (id === 'client-profile-modal-body') {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('clientProfileModal')).show();
   }
 });
 
@@ -76,14 +83,40 @@ document.body.addEventListener('orderCanceled', function(e) {
       swap:   'innerHTML'
     });
     htmx.ajax('GET', "{% url 'orders:stat_cards' %}", {target:'#stat-cards', swap:'innerHTML'});
-    htmx.ajax('GET', "{% url 'orders:orders_table' %}", {target:'#orders-region', swap:'outerHTML'});
+    var _or = document.getElementById('orders-region'); if(_or) htmx.trigger(_or, 'refresh');
   }, 400);
+});
+
+// Reload client profile + refresh dashboard after a successful save
+document.body.addEventListener('clientSaved', function(e) {
+  var pk = e.detail.pk;
+  if (pk) {
+    htmx.ajax('GET', '/client/' + pk + '/', {
+      target: '#client-profile-modal-body',
+      swap:   'innerHTML'
+    });
+  }
+  // Refresh orders table and stat cards
+  var _or = document.getElementById('orders-region'); if(_or) htmx.trigger(_or, 'refresh');
+  htmx.ajax('GET', "{% url 'orders:stat_cards' %}", {target:'#stat-cards', swap:'innerHTML'});
+
+  // Refresh order detail modal if it is currently open (client name/data may have changed)
+  var detailModalEl = document.getElementById('orderDetailModal');
+  if (detailModalEl && detailModalEl.classList.contains('show')) {
+    var pkEl = document.querySelector('#order-detail-modal-body [data-order-pk]');
+    if (pkEl) {
+      htmx.ajax('GET', '/' + pkEl.dataset.orderPk + '/detail/', {
+        target: '#order-detail-modal-body',
+        swap:   'innerHTML'
+      });
+    }
+  }
 });
 
 // Refresh stat cards and table when status changes or payment added inside modal
 document.body.addEventListener('statusChanged', function() {
   htmx.ajax('GET', "{% url 'orders:stat_cards' %}", {target:'#stat-cards', swap:'innerHTML'});
-  htmx.ajax('GET', "{% url 'orders:orders_table' %}", {target:'#orders-region', swap:'outerHTML'});
+  var _or = document.getElementById('orders-region'); if(_or) htmx.trigger(_or, 'refresh');
 });
 document.body.addEventListener('paymentAdded', function() {
   htmx.ajax('GET', "{% url 'orders:stat_cards' %}", {target:'#stat-cards', swap:'innerHTML'});

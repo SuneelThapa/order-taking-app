@@ -79,7 +79,7 @@ class Client(models.Model):
 
     # Marketing
     marketing_consent = models.BooleanField(
-        default=False,
+        default=True,
         help_text="Client has consented to receive marketing communications (PDPA)"
     )
 

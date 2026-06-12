@@ -25,6 +25,7 @@ from .forms import (
     PaymentForm, PaymentCreateFormSet,
     OrderStaffFormSet, get_measurement_form,
     CancellationForm,
+    ClientEditForm,
 )
 
 
@@ -853,3 +854,61 @@ def pending_approvals(request):
     ).select_related("order__client", "canceled_by").order_by("-order__created_at")
     return render(request, "admin_dashboard/partials/_pending_approvals.html",
                   {"pending_refunds": pending_refunds})
+
+
+# ─────────────────────────────────────────────────────────
+# Client profile modal
+# ─────────────────────────────────────────────────────────
+
+@user_passes_test(staff_check)
+def client_profile(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    client = get_object_or_404(Client, pk=pk)
+    all_orders = list(
+        client.orders.filter(tenant=tenant)
+        .select_related("delivery")
+        .order_by("-created_at")
+    )
+    return render(request, "orders/partials/_client_profile_modal.html", {
+        "client":            client,
+        "form":              ClientEditForm(instance=client),
+        "recent_orders":     all_orders[:5],
+        "remaining_orders":  all_orders[5:],
+        "total_order_count": len(all_orders),
+        "total_spent":       client.total_spent(),
+        "editing":           False,
+    })
+
+
+@user_passes_test(staff_check)
+def client_edit(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    client = get_object_or_404(Client, pk=pk)
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    form = ClientEditForm(request.POST, instance=client)
+    if form.is_valid():
+        form.save()
+        response = HttpResponse("")
+        response["HX-Trigger"] = json.dumps({"clientSaved": {"pk": client.pk}})
+        return response
+
+    # Return with errors — HX-Retarget overrides hx-swap="none" to show them
+    all_orders = list(client.orders.filter(tenant=tenant).select_related("delivery").order_by("-created_at"))
+    response = render(request, "orders/partials/_client_profile_modal.html", {
+        "client":            client,
+        "form":              form,
+        "recent_orders":     all_orders[:5],
+        "remaining_orders":  all_orders[5:],
+        "total_order_count": len(all_orders),
+        "total_spent":       client.total_spent(),
+        "editing":           True,
+    })
+    response["HX-Retarget"] = "#client-profile-modal-body"
+    response["HX-Reswap"]   = "innerHTML"
+    return response

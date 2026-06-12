@@ -1,0 +1,248 @@
+{% comment %}Client profile modal — loaded by HTMX into #client-profile-modal-body{% endcomment %}
+{% load static %}
+
+<div x-data="{ editing: {{ editing|yesno:'true,false' }}, expanded: false }">
+
+{# ── Header ── #}
+<div class="modal-header border-bottom">
+  <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+    <i class="bi bi-person-circle fs-5 text-primary flex-shrink-0"></i>
+    <h5 class="modal-title mb-0 text-truncate">{{ client.name }}</h5>
+    <span class="badge {% if client.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+      {% if client.is_active %}Active{% else %}Inactive{% endif %}
+    </span>
+  </div>
+  <div class="d-flex gap-2 align-items-center ms-3 flex-shrink-0">
+    <button x-show="!editing" @click="editing = true" type="button"
+            class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-pencil me-1"></i>Edit
+    </button>
+    <button x-show="editing" x-cloak
+            type="submit" form="clientEditForm-{{ client.pk }}"
+            class="btn btn-sm btn-primary">
+      <i class="bi bi-check-lg me-1"></i>Save
+    </button>
+    <button x-show="editing" x-cloak
+            @click="editing = false" type="button"
+            class="btn btn-sm btn-outline-secondary">
+      Cancel
+    </button>
+    <button type="button" class="btn-close ms-1" data-bs-dismiss="modal"></button>
+  </div>
+</div>
+
+{# ── Body ── #}
+<div class="modal-body">
+
+  {# ── View mode ── #}
+  <div x-show="!editing">
+
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+      <span class="fw-semibold">{{ client.phone }}</span>
+      {% if client.email %}
+      <a href="mailto:{{ client.email }}" class="text-decoration-none text-body">
+        <i class="bi bi-envelope me-1 text-muted"></i>{{ client.email }}
+      </a>
+      {% endif %}
+      {% if client.get_whatsapp_url %}
+      <a href="{{ client.get_whatsapp_url }}" target="_blank" class="text-success text-decoration-none">
+        <i class="bi bi-whatsapp me-1"></i>WhatsApp
+      </a>
+      {% endif %}
+      <span class="badge text-bg-light border text-dark small">
+        {{ client.get_contact_method_display }}
+      </span>
+    </div>
+
+    {% if client.street_address or client.city %}
+    <div class="text-muted small mb-2">
+      <i class="bi bi-geo-alt me-1"></i>
+      {% if client.street_address %}{{ client.street_address }}, {% endif %}
+      {% if client.city %}{{ client.city }}{% if client.state %}, {{ client.state }}{% endif %}{% endif %}
+      {% if client.postcode %} {{ client.postcode }}{% endif %}
+      {% if client.country %} · {{ client.country }}{% endif %}
+    </div>
+    {% endif %}
+
+    <div class="d-flex flex-wrap gap-3 text-muted small mb-2">
+      <span><i class="bi bi-funnel me-1"></i>{{ client.get_acquisition_channel_display }}</span>
+      {% if client.referral_source %}
+      <span><i class="bi bi-signpost me-1"></i>{{ client.referral_source }}</span>
+      {% endif %}
+      {% if client.referred_by %}
+      <span><i class="bi bi-person-check me-1"></i>Ref'd by {{ client.referred_by.name }}</span>
+      {% endif %}
+      <span><i class="bi bi-calendar me-1"></i>Client since {{ client.created_at|date:"M Y" }}</span>
+      {% if client.marketing_consent %}
+      <span class="text-success"><i class="bi bi-check-circle me-1"></i>PDPA ✓</span>
+      {% endif %}
+    </div>
+
+    {% if client.notes %}
+    <div class="alert alert-light py-2 px-3 small mb-2">
+      <i class="bi bi-sticky me-1 text-warning"></i>{{ client.notes }}
+    </div>
+    {% endif %}
+
+  </div>
+
+  {# ── Edit mode ── #}
+  <div x-show="editing" x-cloak>
+    <form id="clientEditForm-{{ client.pk }}"
+          hx-post="{% url 'orders:client_edit' client.pk %}"
+          hx-swap="none"
+          novalidate>
+      {% csrf_token %}
+      <div class="row g-2">
+
+        <div class="col-md-6">
+          <label class="form-label form-label-sm">{{ form.name.label }} *</label>
+          {{ form.name }}
+          {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors|striptags }}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label form-label-sm">{{ form.phone.label }}</label>
+          {{ form.phone }}
+          {% if form.phone.errors %}<div class="text-danger small">{{ form.phone.errors|striptags }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label form-label-sm">{{ form.email.label }}</label>
+          {{ form.email }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">{{ form.contact_method.label }}</label>
+          {{ form.contact_method }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">{{ form.acquisition_channel.label }}</label>
+          {{ form.acquisition_channel }}
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label form-label-sm">{{ form.referral_source.label }}</label>
+          {{ form.referral_source }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label form-label-sm">{{ form.referred_by.label }}</label>
+          {{ form.referred_by }}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label form-label-sm">{{ form.street_address.label }}</label>
+          {{ form.street_address }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label form-label-sm">{{ form.city.label }}</label>
+          {{ form.city }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">{{ form.state.label }}</label>
+          {{ form.state }}
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm">{{ form.postcode.label }}</label>
+          {{ form.postcode }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">{{ form.country.label }}</label>
+          {{ form.country }}
+        </div>
+
+        <div class="col-12">
+          <label class="form-label form-label-sm">{{ form.notes.label }}</label>
+          {{ form.notes }}
+        </div>
+
+        <div class="col-12 d-flex gap-4 pt-1">
+          <div class="form-check">
+            {{ form.is_active }}
+            <label class="form-check-label small">{{ form.is_active.label }}</label>
+          </div>
+          <div class="form-check">
+            {{ form.marketing_consent }}
+            <label class="form-check-label small">{{ form.marketing_consent.label }}</label>
+          </div>
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  {# ── Order history ── #}
+  <hr class="my-3">
+  <div class="d-flex justify-content-between align-items-baseline mb-2">
+    <span class="fw-semibold">Order History</span>
+    <div class="text-end small">
+      <span class="text-muted">{{ total_order_count }} order{{ total_order_count|pluralize }}</span>
+      &nbsp;·&nbsp;
+      <span class="fw-bold text-primary">฿{{ total_spent|floatformat:0 }} collected</span>
+    </div>
+  </div>
+
+  {% if recent_orders %}
+  <div class="list-group list-group-flush">
+    {% for order in recent_orders %}
+    <div class="list-group-item list-group-item-action px-0 py-2 border-0 border-bottom"
+         style="cursor:pointer"
+         hx-get="{% url 'orders:order_detail' order.pk %}"
+         hx-target="#order-detail-modal-body"
+         hx-swap="innerHTML">
+      <div class="d-flex justify-content-between align-items-center small">
+        <div>
+          <span class="fw-semibold me-2">#{{ order.order_number }}</span>
+          <span class="badge status-{{ order.status }} me-1">{{ order.get_status_display }}</span>
+          {% if order.is_urgent %}<span class="badge text-bg-danger">URGENT</span>{% endif %}
+        </div>
+        <div class="text-muted text-end">
+          <div>{{ order.created_at|date:"d M Y" }}</div>
+          <div class="fw-semibold">{{ order.total_amount|floatformat:0 }} {{ order.total_currency }}</div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if remaining_orders %}
+  <div x-show="expanded" x-cloak>
+    <div class="list-group list-group-flush">
+      {% for order in remaining_orders %}
+      <div class="list-group-item list-group-item-action px-0 py-2 border-0 border-bottom"
+           style="cursor:pointer"
+           hx-get="{% url 'orders:order_detail' order.pk %}"
+           hx-target="#order-detail-modal-body"
+           hx-swap="innerHTML">
+        <div class="d-flex justify-content-between align-items-center small">
+          <div>
+            <span class="fw-semibold me-2">#{{ order.order_number }}</span>
+            <span class="badge status-{{ order.status }} me-1">{{ order.get_status_display }}</span>
+          </div>
+          <div class="text-muted text-end">
+            <div>{{ order.created_at|date:"d M Y" }}</div>
+            <div class="fw-semibold">{{ order.total_amount|floatformat:0 }} {{ order.total_currency }}</div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <button type="button"
+          class="btn btn-sm btn-outline-secondary w-100 mt-2"
+          @click="expanded = !expanded">
+    <span x-show="!expanded">
+      <i class="bi bi-chevron-down me-1"></i>
+      Show {{ remaining_orders|length }} more order{{ remaining_orders|length|pluralize }}
+    </span>
+    <span x-show="expanded" x-cloak>
+      <i class="bi bi-chevron-up me-1"></i>Show less
+    </span>
+  </button>
+  {% endif %}
+
+  {% else %}
+  <div class="text-center text-muted small py-3">No orders yet for this client.</div>
+  {% endif %}
+
+</div>{# end modal-body #}
+</div>{# end x-data #}

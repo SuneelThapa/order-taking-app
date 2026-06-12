@@ -112,6 +112,18 @@
 
   {% block extra_js %}{% endblock %}
 
+{# ── Client profile modal ── #}
+<div class="modal fade" id="clientProfileModal" tabindex="-1" aria-hidden="true" style="z-index:1065">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" id="client-profile-modal-body">
+      <div class="modal-body text-center py-5">
+        <div class="spinner-border text-primary spinner-border-sm"></div>
+        <div class="mt-2 text-muted small">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ── Cancel order modal (opens on top of order detail modal) ── #}
 <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true" style="z-index:1060">
   <div class="modal-dialog modal-dialog-centered" style="max-width:500px">

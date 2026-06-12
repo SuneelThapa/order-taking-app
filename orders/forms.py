@@ -308,3 +308,42 @@ class CancellationForm(StyledModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["resolution_notes"].required = False
+
+
+# =====================================================
+# CLIENT EDIT FORM
+# =====================================================
+class ClientEditForm(StyledModelForm):
+    class Meta:
+        model  = Client
+        fields = [
+            "name", "phone", "email", "contact_method",
+            "acquisition_channel", "referral_source", "referred_by",
+            "street_address", "city", "state", "postcode", "country",
+            "notes", "marketing_consent", "is_active",
+        ]
+        labels = {
+            "contact_method":    "Preferred contact",
+            "acquisition_channel": "How they found us",
+            "referral_source":   "Referral source",
+            "referred_by":       "Referred by client",
+            "marketing_consent": "Marketing consent (PDPA)",
+            "is_active":         "Active client",
+        }
+        widgets = {
+            "notes": forms.Textarea(attrs={
+                "rows": 2,
+                "placeholder": "Fabric preferences, fit notes, reminders…",
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["email"].required          = False
+        self.fields["referral_source"].required = False
+        self.fields["referred_by"].required     = False
+        self.fields["notes"].required           = False
+        # referred_by: exclude self from choices
+        if self.instance and self.instance.pk:
+            self.fields["referred_by"].queryset = \
+                Client.objects.exclude(pk=self.instance.pk)

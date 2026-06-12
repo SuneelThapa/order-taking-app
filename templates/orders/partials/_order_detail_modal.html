@@ -2,6 +2,9 @@
 
 {% comment %}Order detail modal — loaded by HTMX into #order-detail-modal-body{% endcomment %}
 
+{# ── Order PK stored for JS refresh after client edit ── #}
+<span class="d-none" data-order-pk="{{ order.pk }}"></span>
+
 {# ── Modal header ─────────────────────────────────────── #}
 <div class="modal-header border-bottom pb-2 d-flex align-items-start gap-3">
   <div class="flex-grow-1">
@@ -18,7 +21,13 @@
       {% endif %}
     </div>
     <div class="small text-muted mt-1">
-      {{ order.client.name }}
+      <button type="button"
+              class="btn btn-link p-0 fw-semibold text-decoration-none text-body"
+              hx-get="{% url 'orders:client_profile' order.client.pk %}"
+              hx-target="#client-profile-modal-body"
+              hx-swap="innerHTML">
+        {{ order.client.name }}
+      </button>
       &nbsp;·&nbsp; {{ order.client.phone }}
       {% if order.client.email %}&nbsp;·&nbsp;
       <a href="mailto:{{ order.client.email }}" class="text-decoration-none">{{ order.client.email }}</a>

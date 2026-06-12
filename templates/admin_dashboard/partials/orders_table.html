@@ -83,7 +83,14 @@
           <td class="fw-semibold">{{ order.order_number }}</td>
 
           <td>
-            <div class="fw-semibold">{{ order.client.name }}</div>
+            <button type="button"
+                    class="btn btn-link p-0 fw-semibold text-decoration-none text-body text-start"
+                    hx-get="{% url 'orders:client_profile' order.client.pk %}"
+                    hx-target="#client-profile-modal-body"
+                    hx-swap="innerHTML"
+                    onclick="event.stopPropagation()">
+              {{ order.client.name }}
+            </button>
             <div class="small text-muted">{{ order.client.phone }}</div>
           </td>
 
