@@ -1,0 +1,31 @@
+{% comment %}
+  Shown after a client is selected or created.
+  Also returned by client_create_inline with HX-Trigger: clientSelected.
+{% endcomment %}
+<div class="border rounded p-3 bg-white d-flex justify-content-between align-items-start">
+  <div>
+    <div class="fw-semibold">{{ client.name }}</div>
+    <div class="small text-muted">
+      {{ client.phone }}
+      {% if client.email %}&nbsp;·&nbsp;{{ client.email }}{% endif %}
+    </div>
+    {% if client.street_address %}
+    <div class="small text-muted mt-1">
+      {{ client.street_address }}, {{ client.city }} {{ client.postcode }}, {{ client.country }}
+    </div>
+    {% endif %}
+    <div class="mt-1">
+      <span class="badge text-bg-light border">{{ client.get_acquisition_channel_display }}</span>
+      {% if client.marketing_consent %}
+        <span class="badge text-bg-success ms-1">Marketing ✓</span>
+      {% endif %}
+    </div>
+    {% if client.get_whatsapp_url %}
+      <a href="{{ client.get_whatsapp_url }}" target="_blank" class="small text-success mt-1 d-inline-block">
+        <i class="bi bi-whatsapp"></i> WhatsApp
+      </a>
+    {% endif %}
+  </div>
+  <button type="button" class="btn btn-sm btn-outline-secondary"
+          @click="clearClient()">Change</button>
+</div>

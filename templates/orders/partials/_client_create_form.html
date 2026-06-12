@@ -1,0 +1,94 @@
+<div class="border rounded p-3 bg-light mt-2" id="client-create-form">
+  <div class="fw-semibold mb-3">New client</div>
+
+  {% if client_form.non_field_errors %}
+    <div class="alert alert-danger py-2 small">{{ client_form.non_field_errors }}</div>
+  {% endif %}
+
+  <div class="row g-2">
+    <div class="col-md-6">
+      <label class="form-label small mb-1">Name *</label>
+      {{ client_form.name }}
+      {% if client_form.name.errors %}<div class="text-danger small">{{ client_form.name.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label small mb-1">Phone * <span class="text-muted">(+66812345678)</span></label>
+      {{ client_form.phone }}
+      {% if client_form.phone.errors %}<div class="text-danger small">{{ client_form.phone.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label small mb-1">Email</label>
+      {{ client_form.email }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label small mb-1">Contact method</label>
+      {{ client_form.contact_method }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label small mb-1">How did they find us?</label>
+      {{ client_form.acquisition_channel }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label small mb-1">Referral source <span class="text-muted">(optional)</span></label>
+      {{ client_form.referral_source }}
+    </div>
+    <div class="col-md-12">
+      <label class="form-label small mb-1">Referred by <span class="text-muted">(existing client, optional)</span></label>
+      {{ client_form.referred_by }}
+    </div>
+  </div>
+
+  <hr class="my-2">
+
+  <div class="row g-2">
+    <div class="col-12">
+      <label class="form-label small mb-1">Street address</label>
+      {{ client_form.street_address }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label small mb-1">City</label>
+      {{ client_form.city }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label small mb-1">State</label>
+      {{ client_form.state }}
+    </div>
+    <div class="col-md-4">
+      <label class="form-label small mb-1">Postcode</label>
+      {{ client_form.postcode }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label small mb-1">Country</label>
+      {{ client_form.country }}
+    </div>
+  </div>
+
+  <hr class="my-2">
+
+  <div class="row g-2">
+    <div class="col-12">
+      <label class="form-label small mb-1">Notes</label>
+      {{ client_form.notes }}
+    </div>
+    <div class="col-12">
+      <div class="form-check">
+        {{ client_form.marketing_consent }}
+        <label class="form-check-label small" for="{{ client_form.marketing_consent.id_for_label }}">
+          Marketing consent (PDPA)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-3">
+    {# Native fetch — avoids HTMX event-bubbling issues with outerHTML swap #}
+    <button type="button" class="btn btn-primary btn-sm"
+            onclick="saveClientInline(this)">
+      Save client
+    </button>
+    <button type="button" class="btn btn-outline-secondary btn-sm"
+            @click="showCreate = false">
+      Cancel
+    </button>
+  </div>
+</div>

@@ -1,0 +1,37 @@
+{% comment %}One payment row. Used in the finish step formset and fetched via HTMX for "Add payment".{% endcomment %}
+<div class="payment-row border rounded p-3 mb-2 bg-light">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="small fw-semibold text-muted">Payment</span>
+    <button type="button" class="btn btn-sm btn-outline-danger"
+            onclick="removePaymentRow(this)">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+  <div class="row g-2">
+    <div class="col-md-3">
+      <label class="form-label small mb-1">Amount *</label>
+      {{ form.original_amount }}
+      {% if form.original_amount.errors %}<div class="text-danger small">{{ form.original_amount.errors|striptags }}</div>{% endif %}
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small mb-1">Currency</label>
+      {{ form.currency }}
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small mb-1">Rate to THB</label>
+      {{ form.exchange_rate_to_thb }}
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small mb-1">Method</label>
+      {{ form.method }}
+    </div>
+    <div class="col-md-3">
+      <label class="form-label small mb-1">Type</label>
+      {{ form.type }}
+    </div>
+    <div class="col-12">
+      <label class="form-label small mb-1">Notes</label>
+      {{ form.notes }}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,36 @@
+{% comment %}HTMX target: #client-search-results{% endcomment %}
+
+{% if clients %}
+  <ul class="list-group shadow-sm" id="client-search-results">
+    {% for client in clients %}
+    <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+        style="cursor:pointer"
+        onclick="if(_orderWizardRef) _orderWizardRef.selectClient('{{ client.pk }}', '{{ client.name|escapejs }}', '{{ client.phone|escapejs }}')">
+      <div>
+        <div class="fw-semibold">{{ client.name }}</div>
+        <div class="small text-muted">
+          {{ client.phone }}{% if client.email %} &middot; {{ client.email }}{% endif %}
+        </div>
+        {% if client.street_address %}
+        <div class="small text-muted">{{ client.street_address }}, {{ client.city }}</div>
+        {% endif %}
+      </div>
+      <span class="badge text-bg-secondary ms-2 flex-shrink-0">
+        {{ client.get_acquisition_channel_display }}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+
+{% elif q|length >= 2 %}
+  <div class="text-muted small px-2 py-2" id="client-search-results">
+    No clients found for <strong>{{ q }}</strong>.
+    <a href="#" class="ms-2"
+       onclick="event.preventDefault(); if(_orderWizardRef) _orderWizardRef.showCreate = true">
+      Create new client
+    </a>
+  </div>
+
+{% else %}
+  <div id="client-search-results"></div>
+{% endif %}

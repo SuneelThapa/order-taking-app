@@ -1,111 +1,275 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}{% if show_edit_form %}Edit order{% else %}New order{% endif %}{% endblock %}
+{% block title %}{% if is_edit %}Edit #{{ edit_order.order_number }}{% else %}New order{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>[x-cloak]{display:none!important}</style>
+{% endblock %}
 
 {% block content %}
-<div x-data="{ step: 1, total: 4 }">
+<div x-data="orderWizard()" x-init="init()">
 
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h4 mb-0">
-      {% if show_edit_form %}Edit order #{{ edit_order.order_number }}{% else %}New order{% endif %}
-    </h1>
+    <h1 class="h4 mb-0">{% if is_edit %}Edit order #{{ edit_order.order_number }}{% else %}New order{% endif %}</h1>
     <a href="{% url 'orders:dashboard' %}" class="btn btn-outline-secondary btn-sm">Cancel</a>
   </div>
 
-  <!-- Step indicator -->
-  <ol class="list-unstyled d-flex flex-wrap gap-2 mb-4">
+  <div class="d-flex flex-wrap gap-2 mb-4">
     {% for n, label in steps %}
-    <li>
-      <button type="button" class="btn btn-sm"
-              :class="step === {{ n }} ? 'btn-primary' : 'btn-outline-secondary'"
-              @click="step = {{ n }}">
-        <span class="badge text-bg-light me-1">{{ n }}</span>{{ label }}
-      </button>
-    </li>
+    <button type="button" class="btn btn-sm" style="min-width:110px"
+            :class="step==={{ n }}?'btn-primary':'btn-outline-secondary'"
+            @click="step={{ n }}">
+      <span class="badge me-1" :class="step==={{ n }}?'text-bg-light':'text-bg-secondary'">{{ n }}</span>{{ label }}
+    </button>
     {% endfor %}
-  </ol>
+  </div>
 
   {% if order_form.errors or item_formset.non_form_errors %}
-    <div class="alert alert-danger">Some fields need attention — check the highlighted steps.</div>
+  <div class="alert alert-danger">Some fields need attention. Check the steps and fix before saving.</div>
   {% endif %}
 
-  <form method="post" enctype="multipart/form-data" id="orderForm">
+  <form method="post" enctype="multipart/form-data" id="orderForm" novalidate>
     {% csrf_token %}
     {{ item_formset.management_form }}
     {{ client_photo_formset.management_form }}
+    {{ payment_formset.management_form }}
+    <input type="hidden" name="client" :value="clientId">
 
-    <!-- ============ STEP 1: CUSTOMER ============ -->
-    <section x-show="step === 1" x-cloak class="card">
-      <div class="card-header bg-white fw-semibold">Customer & address</div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">First name</label>{{ order_form.first_name }}
-            {% if order_form.first_name.errors %}<div class="text-danger small">{{ order_form.first_name.errors|striptags }}</div>{% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Last name</label>{{ order_form.last_name }}
-            {% if order_form.last_name.errors %}<div class="text-danger small">{{ order_form.last_name.errors|striptags }}</div>{% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Email</label>{{ order_form.email }}
-            {% if order_form.email.errors %}<div class="text-danger small">{{ order_form.email.errors|striptags }}</div>{% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Phone</label>{{ order_form.phone }}
-            {% if order_form.phone.errors %}<div class="text-danger small">{{ order_form.phone.errors|striptags }}</div>{% endif %}
-          </div>
-          <div class="col-md-6">
-            <label class="form-label">Preferred contact</label>{{ order_form.contact_method }}
-          </div>
+    
+    <section x-show="step===1" x-cloak>
+      <div class="card">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+          <span>Client</span>
+          {% if is_edit and edit_order %}<span class="text-muted small">Order #{{ edit_order.order_number }} · {{ edit_order.created_at|date:"M d, Y" }}</span>{% endif %}
         </div>
+        <div class="card-body">
 
-        <hr class="my-4">
+          {% if order_form.client.errors or client_error %}
+          <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <strong>Client required.</strong>
+            {% if client_error %}{{ client_error }}{% else %}Search for an existing client or create a new one before saving.{% endif %}
+          </div>
+          {% endif %}
 
-        <div class="row g-3">
-          <div class="col-12">
-            <label class="form-label">Street address</label>{{ order_form.street_address }}
+          
+          <div x-show="clientId" x-cloak>
+            <div id="selected-client-card">
+              {% if selected_client %}
+              <div class="border rounded p-3 bg-white d-flex justify-content-between align-items-start">
+                <div>
+                  <div class="fw-semibold">{{ selected_client.name }}</div>
+                  <div class="small text-muted">{{ selected_client.phone }}{% if selected_client.email %} · {{ selected_client.email }}{% endif %}</div>
+                  {% if selected_client.street_address %}<div class="small text-muted">{{ selected_client.street_address }}, {{ selected_client.city }}</div>{% endif %}
+                  {% if selected_client.get_whatsapp_url %}<a href="{{ selected_client.get_whatsapp_url }}" target="_blank" class="small text-success"><i class="bi bi-whatsapp"></i> WhatsApp</a>{% endif %}
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-secondary" @click="clearClient()">Change</button>
+              </div>
+              {% endif %}
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">City</label>{{ order_form.city }}
+
+          
+          <div x-show="!clientId" x-cloak>
+            <label class="form-label">Search by name or phone</label>
+            <input type="text" class="form-control mb-1" placeholder="e.g. John Smith or +66812345678"
+                   x-model="searchQ"
+                   hx-get="{% url 'orders:client_search' %}"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#client-search-results"
+                   :hx-vals='JSON.stringify({q:searchQ})'>
+            <div id="client-search-results"></div>
+            <div class="mt-2 d-flex gap-2 align-items-center">
+              <span class="text-muted small">Not found?</span>
+              <button type="button" class="btn btn-outline-primary btn-sm" @click="showCreate=!showCreate">
+                <i class="bi bi-person-plus"></i> Create new client
+              </button>
+            </div>
+            <div x-show="showCreate" x-cloak class="mt-2">
+              {% include "orders/partials/_client_create_form.html" with client_form=client_form_empty %}
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">State / province</label>{{ order_form.state }}
+
+          
+          <div class="row g-2 mt-3">
+            <div class="col-md-6">
+              <label class="form-label small">Hotel name <span class="text-muted">(where client is staying)</span></label>
+              {{ order_form.hotel_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small">Room number</label>
+              {{ order_form.room_number }}
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Postal code</label>{{ order_form.postcode }}
+
+          
+          <div class="row g-2 mt-2">
+            <div class="col-md-4">
+              <label class="form-label small">Client departure date</label>
+              {{ order_form.departure_date }}
+            </div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Country</label>{{ order_form.country }}
+
+          
+          <div class="mt-2 small text-muted">
+            <i class="bi bi-info-circle"></i>
+            Acquisition channel, referral source and referred-by are inside the
+            <strong>Create new client</strong> form above.
           </div>
+
         </div>
       </div>
     </section>
 
-    <!-- ============ STEP 2: ITEMS ============ -->
-    <section x-show="step === 2" x-cloak class="card">
-      <div class="card-header bg-white fw-semibold">Items</div>
-      <div class="card-body">
-        <div id="items-container">
-          {% for row in item_rows %}
-            {% include "orders/partials/_order_item_row.html" with item_form=row.form measurement_form=row.measurement_form existing_photos=row.existing_photos is_new=False %}
-          {% endfor %}
-        </div>
+    
+    <section x-show="step===2" x-cloak>
+      <div class="card">
+        <div class="card-header bg-white fw-semibold">Order details</div>
+        <div class="card-body">
 
-        <button type="button" class="btn btn-outline-primary btn-sm"
-                hx-get="{% url 'orders:order_item_row' %}"
-                hx-target="#items-container"
-                hx-swap="beforeend"
-                hx-vals='js:{index: parseInt(document.getElementById("id_items-TOTAL_FORMS").value)}'
-                hx-on::after-request="var t=document.getElementById('id_items-TOTAL_FORMS'); t.value = parseInt(t.value) + 1;">
-          <i class="bi bi-plus-lg"></i> Add item
-        </button>
+          
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Status</label>
+              {{ order_form.status }}{{ order_form.status_hidden }}
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <div class="form-check">
+                {{ order_form.is_urgent }}
+                <label class="form-check-label text-danger fw-semibold" for="{{ order_form.is_urgent.id_for_label }}">Mark as urgent</label>
+              </div>
+            </div>
+          </div>
+
+          
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label">Fitting date</label>{{ order_form.fitting_date }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Ready date</label>{{ order_form.ready_date }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Delivery date</label>{{ order_form.delivery_date }}
+            </div>
+          </div>
+
+          
+          <div class="mb-3" x-data="{ open: false }" x-init="open={% if order_form.parent_order.value %}true{% else %}false{% endif %}">
+            <label class="d-flex align-items-center gap-2 mb-0" style="cursor:pointer">
+              <input type="checkbox" class="form-check-input" x-model="open">
+              <span class="small text-muted">Link to previous order (reorder / remake)</span>
+            </label>
+            <div x-show="open" x-cloak class="modal-backdrop-alpine" @click.self="open=false">
+              <div class="modal-box-alpine">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Linked order</h6>
+                  <button type="button" class="btn-close" @click="open=false"></button>
+                </div>
+                <label class="form-label small">Select the original order this links back to</label>
+                {{ order_form.parent_order }}
+                <div class="mt-3 text-end">
+                  <button type="button" class="btn btn-primary btn-sm" @click="open=false">Done</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          
+          <div class="mb-3" x-data="{ open: false }" x-init="open={% if order_form.street_address.value %}true{% else %}false{% endif %}">
+            <label class="d-flex align-items-center gap-2 mb-0" style="cursor:pointer">
+              <input type="checkbox" class="form-check-input" x-model="open">
+              <span class="small text-muted">Override delivery address <span class="text-muted">(auto-filled from client)</span></span>
+            </label>
+            <div x-show="open" x-cloak class="modal-backdrop-alpine" @click.self="open=false">
+              <div class="modal-box-alpine">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Delivery address</h6>
+                  <button type="button" class="btn-close" @click="open=false"></button>
+                </div>
+                <div class="row g-2">
+                  <div class="col-12"><label class="form-label small">Street</label>{{ order_form.street_address }}</div>
+                  <div class="col-md-4"><label class="form-label small">City</label>{{ order_form.city }}</div>
+                  <div class="col-md-4"><label class="form-label small">State</label>{{ order_form.state }}</div>
+                  <div class="col-md-4"><label class="form-label small">Postcode</label>{{ order_form.postcode }}</div>
+                  <div class="col-md-6"><label class="form-label small">Country</label>{{ order_form.country }}</div>
+                </div>
+                <div class="mt-3 text-end">
+                  <button type="button" class="btn btn-primary btn-sm" @click="open=false">Done</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          
+          <div class="mb-3" x-data="{ open: false }" x-init="open={% if order_form.note.value %}true{% else %}false{% endif %}">
+            <label class="d-flex align-items-center gap-2 mb-0" style="cursor:pointer">
+              <input type="checkbox" class="form-check-input" x-model="open">
+              <span class="small text-muted">Add customer notes <span class="text-muted">(shown on invoice)</span></span>
+            </label>
+            <div x-show="open" x-cloak class="modal-backdrop-alpine" @click.self="open=false">
+              <div class="modal-box-alpine">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Customer notes</h6>
+                  <button type="button" class="btn-close" @click="open=false"></button>
+                </div>
+                {{ order_form.note }}
+                <div class="mt-3 text-end">
+                  <button type="button" class="btn btn-primary btn-sm" @click="open=false">Done</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          
+          <div x-data="{ open: false }" x-init="open={% if order_form.internal_notes.value %}true{% else %}false{% endif %}">
+            <label class="d-flex align-items-center gap-2 mb-0" style="cursor:pointer">
+              <input type="checkbox" class="form-check-input" x-model="open">
+              <span class="small text-muted">Add internal notes <span class="text-muted">(staff only)</span></span>
+            </label>
+            <div x-show="open" x-cloak class="modal-backdrop-alpine" @click.self="open=false">
+              <div class="modal-box-alpine">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Internal notes</h6>
+                  <button type="button" class="btn-close" @click="open=false"></button>
+                </div>
+                {{ order_form.internal_notes }}
+                <div class="mt-3 text-end">
+                  <button type="button" class="btn btn-primary btn-sm" @click="open=false">Done</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
 
-    <!-- ============ STEP 3: PHOTOS & NOTES ============ -->
-    <section x-show="step === 3" x-cloak>
+    
+    <section x-show="step===3" x-cloak>
+      <div class="card">
+        <div class="card-header bg-white fw-semibold">Items</div>
+        <div class="card-body">
+          <div id="items-container">
+            {% for row in item_rows %}
+              {% include "orders/partials/_order_item_row.html" with item_form=row.form measurement_form=row.measurement_form existing_photos=row.existing_photos is_new=False %}
+            {% endfor %}
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-2"
+                  hx-get="{% url 'orders:order_item_row' %}"
+                  hx-target="#items-container"
+                  hx-swap="beforeend"
+                  hx-vals='js:{index:parseInt(document.getElementById("id_items-TOTAL_FORMS").value)}'
+                  hx-on::after-request="var t=document.getElementById('id_items-TOTAL_FORMS');t.value=parseInt(t.value)+1;normalizeForm();">
+            <i class="bi bi-plus-lg"></i> Add item
+          </button>
+        </div>
+      </div>
+    </section>
+
+    
+    <section x-show="step===4" x-cloak>
       <div class="card mb-3">
         <div class="card-header bg-white fw-semibold">Client photos</div>
         <div class="card-body">
@@ -114,61 +278,37 @@
             <div class="col-md-4">
               <div class="border rounded p-3 text-center photo-slot">
                 {{ form.id }}
-                {% if forloop.counter == 1 %}
-                  <div class="fw-semibold mb-2">Front</div>
-                  <input type="hidden" name="{{ form.photo_type.html_name }}" value="front">
-                {% elif forloop.counter == 2 %}
-                  <div class="fw-semibold mb-2">Side</div>
-                  <input type="hidden" name="{{ form.photo_type.html_name }}" value="side">
-                {% else %}
-                  <div class="fw-semibold mb-2">Back</div>
-                  <input type="hidden" name="{{ form.photo_type.html_name }}" value="back">
-                {% endif %}
-
+                {% if forloop.counter == 1 %}<div class="fw-semibold mb-2">Front</div><input type="hidden" name="{{ form.photo_type.html_name }}" value="front">
+                {% elif forloop.counter == 2 %}<div class="fw-semibold mb-2">Side</div><input type="hidden" name="{{ form.photo_type.html_name }}" value="side">
+                {% else %}<div class="fw-semibold mb-2">Back</div><input type="hidden" name="{{ form.photo_type.html_name }}" value="back">{% endif %}
                 <div class="mb-2">
-                  {% if form.instance.image %}
-                    <img src="{{ form.instance.image.url }}" class="img-fluid rounded preview-img" style="max-height:160px">
-                  {% else %}
-                    <img src="" class="img-fluid rounded preview-img d-none" style="max-height:160px">
-                  {% endif %}
+                  {% if form.instance.image %}<img src="{{ form.instance.image.url }}" class="img-fluid rounded preview-img" style="max-height:160px">
+                  {% else %}<img src="" class="img-fluid rounded preview-img d-none" style="max-height:160px">{% endif %}
                 </div>
-
                 {{ form.image }}
-                {% if form.errors %}<div class="text-danger small mt-1">{{ form.errors|striptags }}</div>{% endif %}
               </div>
             </div>
             {% endfor %}
           </div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-header bg-white fw-semibold">Scratch note</div>
         <div class="card-body">
-
-          {% if show_edit_form and edit_order.scratch_notes.exists %}
-          <div class="mb-3" x-data="{ zoom: null }">
+          {% if is_edit and edit_order.scratch_notes.exists %}
+          <div class="mb-3" x-data="{zoom:null}">
             <template x-if="zoom"><div class="lightbox" @click="zoom=null"><img :src="zoom"></div></template>
             <div class="small text-muted mb-1">Previous notes</div>
             <div class="d-flex flex-wrap gap-2">
-              {% for note in edit_order.scratch_notes.all %}
-                <img src="{{ note.image.url }}" style="max-width:160px;cursor:pointer" class="rounded border" @click="zoom='{{ note.image.url }}'">
-              {% endfor %}
+              {% for note in edit_order.scratch_notes.all %}<img src="{{ note.image.url }}" style="max-width:160px;cursor:pointer" class="rounded border" @click="zoom='{{ note.image.url }}'">{% endfor %}
             </div>
           </div>
           {% endif %}
-
           <div class="d-flex flex-wrap align-items-center gap-3 p-2 bg-light border rounded mb-3">
-            <div class="d-flex align-items-center gap-1">
-              <label class="small mb-0">Pen</label>
-              <select id="penSize" class="form-select form-select-sm" style="width:auto">
-                <option value="2">Thin</option>
-                <option value="4" selected>Medium</option>
-                <option value="8">Thick</option>
-              </select>
+            <div class="d-flex align-items-center gap-1"><label class="small mb-0">Pen</label>
+              <select id="penSize" class="form-select form-select-sm" style="width:auto"><option value="2">Thin</option><option value="4" selected>Medium</option><option value="8">Thick</option></select>
             </div>
-            <div class="d-flex align-items-center gap-1">
-              <label class="small mb-0">Color</label>
+            <div class="d-flex align-items-center gap-1"><label class="small mb-0">Color</label>
               <input type="color" id="penColor" value="#000000" class="form-control form-control-color" style="width:42px">
             </div>
             <div class="btn-group">
@@ -176,207 +316,551 @@
               <button type="button" id="undoCanvas" class="btn btn-sm btn-outline-warning">Undo</button>
             </div>
           </div>
-
           <div id="canvasFullscreenContainer" style="position:relative;overflow:auto;border:1px solid #dee2e6;border-radius:6px;max-height:420px;background:#f8f9fa;padding:10px">
             <canvas id="scratchCanvas" width="1200" height="800" style="background:#fff;border-radius:5px;display:block;margin:auto;box-shadow:0 2px 6px rgba(0,0,0,.1)"></canvas>
             <button type="button" id="exitFullscreenCanvas" style="display:none;position:absolute;top:15px;right:15px;z-index:100000;background:#dc3545;color:#fff;border:none;padding:10px 14px;border-radius:6px">Close</button>
           </div>
-
           <div class="mt-3 d-flex justify-content-center">
             <div class="btn-group">
               <button type="button" id="clearCanvas" class="btn btn-sm btn-outline-secondary">Clear</button>
               <button type="button" id="fullscreenCanvas" class="btn btn-sm btn-primary">Full screen</button>
             </div>
           </div>
-
           <input type="hidden" name="scratch_canvas_image" id="scratchCanvasImage">
         </div>
       </div>
     </section>
 
-    <!-- ============ STEP 4: FINISH ============ -->
-    <section x-show="step === 4" x-cloak class="card">
-      <div class="card-header bg-white fw-semibold">Finish</div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <label class="form-label">Ready date</label>{{ order_form.ready_date }}
+    
+    <section x-show="step===5" x-cloak>
+      <div class="card mb-3" x-data="{dtype:'{{ delivery_form.instance.type|default:'pickup' }}'}">
+        <div class="card-header bg-white fw-semibold">Delivery</div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Delivery type</label>
+            <select name="{{ delivery_form.type.html_name }}" class="form-select" @change="dtype=$event.target.value">
+              {% for val, label in delivery_form.fields.type.choices %}
+              <option value="{{ val }}"{% if delivery_form.instance.type == val %} selected{% elif not delivery_form.instance.type and val == 'pickup' %} selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
           </div>
-          <div class="col-md-6">
-            <label class="form-label">Status</label>
-            {{ order_form.status }}{{ order_form.status_hidden }}
+          <div x-show="dtype==='hotel'" class="row g-2 mb-2">
+            <div class="col-md-6"><label class="form-label small">Hotel name</label>{{ delivery_form.hotel_name }}</div>
+            <div class="col-md-6"><label class="form-label small">Room number</label>{{ delivery_form.room_number }}</div>
           </div>
-          <div class="col-12">
-            <label class="form-label">Notes</label>{{ order_form.note }}
+          <div x-show="dtype==='ship'" class="row g-2 mb-2">
+            <div class="col-12"><label class="form-label small">Street</label>{{ delivery_form.shipping_street }}</div>
+            <div class="col-md-4"><label class="form-label small">City</label>{{ delivery_form.shipping_city }}</div>
+            <div class="col-md-4"><label class="form-label small">State</label>{{ delivery_form.shipping_state }}</div>
+            <div class="col-md-4"><label class="form-label small">Postcode</label>{{ delivery_form.shipping_postcode }}</div>
+            <div class="col-md-6"><label class="form-label small">Country</label>{{ delivery_form.shipping_country }}</div>
           </div>
-          <div class="col-12">
-            <div class="form-check">
-              {{ order_form.is_urgent }}
-              <label class="form-check-label" for="{{ order_form.is_urgent.id_for_label }}">Mark as urgent</label>
+
+          
+          <div x-data="{ open: false }" x-init="open={% if delivery_form.delivery_notes.value %}true{% else %}false{% endif %}">
+            <label class="d-flex align-items-center gap-2 mb-0" style="cursor:pointer">
+              <input type="checkbox" class="form-check-input" x-model="open">
+              <span class="small text-muted">Add delivery notes</span>
+            </label>
+            <div x-show="open" x-cloak class="modal-backdrop-alpine" @click.self="open=false">
+              <div class="modal-box-alpine">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <h6 class="mb-0">Delivery notes</h6>
+                  <button type="button" class="btn-close" @click="open=false"></button>
+                </div>
+                {{ delivery_form.delivery_notes }}
+                <div class="mt-3 text-end"><button type="button" class="btn btn-primary btn-sm" @click="open=false">Done</button></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      
+      <div class="card">
+        <div class="card-header bg-white fw-semibold">Staff assignment</div>
+        <div class="card-body">
+          {{ staff_formset.management_form }}
+          <div id="staff-container">
+            {% for form in staff_formset %}
+            <div class="row g-2 mb-2 align-items-end staff-row border rounded p-2">
+              {{ form.id }}
+              <div class="col-md-5">
+                <label class="form-label small mb-1">Staff member</label>
+                {{ form.user }}
+                {% if form.user.errors %}<div class="text-danger small">{{ form.user.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Role</label>
+                {{ form.role }}
+              </div>
+              <div class="col-md-3">
+                {% if form.instance.pk %}
+                <div class="form-check mt-4">{{ form.DELETE }}<label class="form-check-label text-danger small">Remove</label></div>
+                {% else %}
+                <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove()"><i class="bi bi-x"></i> Remove</button>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="button" class="btn btn-outline-secondary btn-sm mt-2"
+                  onclick="addStaffRow()">
+            <i class="bi bi-person-plus"></i> Add staff member
+          </button>
+        </div>
+      </div>
     </section>
 
-    <!-- Nav -->
+    
+    <section x-show="step===6" x-cloak>
+
+      
+      <div class="card mb-3">
+        <div class="card-header bg-white fw-semibold">Order total</div>
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label">Total amount</label>
+              {{ order_form.total_amount }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Currency</label>
+              {{ order_form.total_currency }}
+            </div>
+            <div class="col-md-5">
+              <div class="form-text pt-1">
+                Enter the agreed total in the client's preferred currency.<br>
+                All commission calculations use THB equivalent from payments.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="card mb-3">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+          <span>Payments</span>
+          <span class="text-muted small">Deposit, balance, re-deposit, pickup…</span>
+        </div>
+        <div class="card-body">
+
+          {# ── Existing recorded payments (edit mode) ── #}
+          {% if existing_payments %}
+          <div class="mb-3">
+            <div class="small fw-semibold text-muted mb-2">Recorded payments</div>
+            {% for p in existing_payments %}
+            <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2 mb-1 bg-white">
+              <div>
+                <span class="badge text-bg-{% if p.is_refund %}danger{% else %}success{% endif %} me-2">
+                  {{ p.get_type_display }}
+                </span>
+                <span class="fw-semibold">
+                  {% if p.is_refund %}&minus;{% endif %}{{ p.original_amount|floatformat:0 }} {{ p.currency }}
+                </span>
+                {% if p.currency != 'THB' %}
+                  <span class="text-muted small"> = ฿{{ p.thb_equivalent|floatformat:0 }}</span>
+                {% endif %}
+                <span class="text-muted small ms-2">
+                  {{ p.get_method_display }} · {{ p.created_at|date:"d M Y" }}
+                </span>
+              </div>
+              <span class="text-muted small">{{ p.recorded_by.get_full_name|default:p.recorded_by.username }}</span>
+            </div>
+            {% endfor %}
+            <div class="small mt-1">
+              <span class="text-muted">Balance due:</span>
+              <strong class="{% if edit_order.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                ฿{{ edit_order.balance_due|floatformat:0 }}
+              </strong>
+            </div>
+          </div>
+          {% endif %}
+
+          {# ── Add new payment ── #}
+          <div class="small fw-semibold text-muted mb-2">
+            {% if existing_payments %}Add another payment{% else %}Record payment{% endif %}
+          </div>
+          <div id="payments-container">
+            {% for form in payment_formset %}
+            {% include "orders/partials/_payment_row.html" with form=form %}
+            {% endfor %}
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-1"
+                  hx-get="{% url 'orders:payment_row' %}"
+                  hx-target="#payments-container"
+                  hx-swap="beforeend"
+                  hx-vals='js:{index:parseInt(document.getElementById("id_payments-TOTAL_FORMS").value)}'
+                  hx-on::after-request="var t=document.getElementById('id_payments-TOTAL_FORMS');t.value=parseInt(t.value)+1;normalizeForm();">
+            <i class="bi bi-plus-lg"></i> Add payment
+          </button>
+          <div class="small text-muted mt-2">Leave amount blank to skip. Refunds: enter negative amount in THB (rate=1).</div>
+        </div>
+      </div>
+
+      
+      <div class="card">
+        <div class="card-header bg-white fw-semibold">Client signature <span class="text-muted fw-normal small">(no-refund policy acknowledgement)</span></div>
+        <div class="card-body">
+          {% if existing_signature and existing_signature.image %}
+          <div class="mb-3 d-flex align-items-center gap-3">
+            <img src="{{ existing_signature.image.url }}"
+                 style="max-height:80px;max-width:220px;border:1px solid #dee2e6;border-radius:6px;background:#fff"
+                 alt="Client signature">
+            <div class="text-muted small">
+              Signed {{ existing_signature.signed_at|date:"d M Y H:i" }}<br>
+              Draw below to update
+            </div>
+          </div>
+          {% elif is_edit %}
+          <div class="mb-2 text-muted small">No signature on file — draw below to capture.</div>
+          {% endif %}
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <select id="sigPenSize" class="form-select form-select-sm" style="width:auto"><option value="2">Thin</option><option value="3" selected>Medium</option></select>
+            <button type="button" id="clearSigCanvas" class="btn btn-sm btn-outline-secondary">Clear</button>
+          </div>
+          <div style="border:2px dashed #ccc;border-radius:6px;background:#fff">
+            <canvas id="signatureCanvas" width="600" height="200" style="display:block;margin:auto;touch-action:none;cursor:crosshair"></canvas>
+          </div>
+          <div class="small text-muted mt-1">Client signs above to confirm the custom made no-refund policy.</div>
+          <input type="hidden" name="signature_canvas_image" id="signatureCanvasImage">
+        </div>
+      </div>
+
+    </section>
+
+    
     <div class="d-flex justify-content-between mt-3">
-      <button type="button" class="btn btn-outline-secondary" x-show="step > 1" @click="step--">
+      <button type="button" class="btn btn-outline-secondary" x-show="step>1" @click="step--">
         <i class="bi bi-arrow-left"></i> Back
       </button>
       <div class="ms-auto d-flex gap-2">
-        <button type="button" class="btn btn-primary" x-show="step < total" @click="step++">
+        <button type="button" class="btn btn-primary" x-show="step<{{ steps|length }}"
+                @click="nextStep()">
           Next <i class="bi bi-arrow-right"></i>
         </button>
-        <button type="submit" class="btn btn-success" x-show="step === total">
-          {% if show_edit_form %}Update order{% else %}Save order{% endif %}
+        <button type="submit" class="btn btn-success" x-show="step==={{ steps|length }}">
+          <i class="bi bi-check2-circle"></i> {% if is_edit %}Update order{% else %}Save order{% endif %}
         </button>
       </div>
     </div>
-
   </form>
 </div>
 {% endblock %}
 
-{% block extra_css %}
-<style>[x-cloak]{display:none!important}</style>
-{% endblock %}
-
 {% block extra_js %}
 <script>
-  // ---- Style Django widgets the BS5 way (also runs on htmx-added item rows) ----
-  function normalizeForm() {
-    document.querySelectorAll('#orderForm select').forEach(s => { s.classList.remove('form-control'); s.classList.add('form-select'); });
-    document.querySelectorAll('#orderForm input[type=checkbox]').forEach(c => c.classList.add('form-check-input'));
-  }
-  document.addEventListener('DOMContentLoaded', normalizeForm);
-  document.body.addEventListener('htmx:afterSwap', normalizeForm);
+// Global reference so saveClientInline() (outside Alpine) can call selectClient()
+let _orderWizardRef = null;
 
-  // ---- Remove an item row ----
-  function removeItem(btn) {
-    const row = btn.closest('.item-row');
-    const del = row.querySelector('input[name$="-DELETE"]');
-    const idInput = row.querySelector('input[name$="-id"]');
-    if (del && idInput && idInput.value) {
-      del.checked = true;          // existing item -> mark for deletion on save
-      row.style.display = 'none';
-    } else {
-      row.remove();                // new item -> just drop it (TOTAL_FORMS gaps are fine)
-    }
-  }
+function orderWizard() {
+  return {
+    step: {% if first_error_step %}{{ first_error_step }}{% else %}1{% endif %},
+    clientId: '{{ selected_client.pk|default:"" }}',
+    searchQ:  '',
+    showCreate: false,
 
-  // ---- Client photo live preview ----
-  document.addEventListener('change', function (e) {
-    if (e.target.type === 'file' && e.target.closest('.photo-slot')) {
-      const slot = e.target.closest('.photo-slot');
-      const img = slot.querySelector('.preview-img');
-      const file = e.target.files[0];
-      if (file && img) {
-        const r = new FileReader();
-        r.onload = ev => { img.src = ev.target.result; img.classList.remove('d-none'); };
-        r.readAsDataURL(file);
+    init() {
+      _orderWizardRef = this; // expose to saveClientInline()
+    },
+
+    // Called by _client_results.html @click and by saveClientInline() below
+    selectClient(id, name, phone) {
+      if (this.clientId) return; // guard against double-call
+      this.clientId   = String(id);
+      this.showCreate = false;
+      document.getElementById('client-search-results').innerHTML = '';
+      document.getElementById('selected-client-card').innerHTML =
+        `<div class="border rounded p-3 bg-white d-flex justify-content-between align-items-start">
+          <div>
+            <div class="fw-semibold">${name}</div>
+            <div class="small text-muted">${phone}</div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  @click="clearClient()">Change</button>
+        </div>`;
+    },
+
+    nextStep() {
+      if (this.step === 1 && !this.clientId) {
+        alert('Please select or create a client first.\n\nSearch for an existing client OR click "Create new client", fill the form, then click "Save client".');
+        return;
       }
+      this.step++;
+    },
+
+    clearClient() {
+      this.clientId = '';
+      this.searchQ  = '';
+      document.getElementById('selected-client-card').innerHTML = '';
+      document.getElementById('client-search-results').innerHTML = '';
     }
+  }
+}
+
+// Native fetch for client creation — bypasses HTMX event bubbling issues.
+// HX-Trigger custom events fire on the triggering button, which is removed from
+// the DOM by outerHTML swap before the event dispatches, so it never bubbles.
+// A direct fetch reads response headers immediately with no event needed.
+async function saveClientInline(btn) {
+  console.log('[saveClientInline] START');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const form = document.getElementById('client-create-form');
+  if (!form) { console.error('[saveClientInline] #client-create-form not found'); btn.disabled=false; btn.textContent='Save client'; return; }
+
+  const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+  const data = new FormData();
+  const collected = [];
+  form.querySelectorAll('input, select, textarea').forEach(el => {
+    if (!el.name || el.disabled) return;
+    if (el.type === 'checkbox') { if (el.checked) { data.append(el.name, el.value||'on'); collected.push(el.name+'='+el.value); } }
+    else if (el.type === 'radio') { if (el.checked) { data.append(el.name, el.value); collected.push(el.name+'='+el.value); } }
+    else if (el.type === 'file') { for (const f of (el.files||[])) { data.append(el.name, f); collected.push(el.name+'=FILE'); } }
+    else { data.append(el.name, el.value); collected.push(el.name+'='+el.value); }
   });
-</script>
+  console.log('[saveClientInline] fields:', collected);
 
-<!-- ===== Scratch canvas (kept from your working implementation) ===== -->
-<script>
-const canvas = document.getElementById("scratchCanvas");
-if (canvas) {
-  const ctx = canvas.getContext("2d");
-  let drawing = false, history = [], erasing = false, lastTap = 0;
-  let hasDrawing = false, scale = 1, startDistance = 0, isPinching = false;
-  const NORMAL_WIDTH = 1200, NORMAL_HEIGHT = 800;
-  const penSizeSelector = document.getElementById("penSize");
-  const penColorPicker = document.getElementById("penColor");
-  const eraserBtn = document.getElementById("eraserTool");
-  const fullscreenBtn = document.getElementById("fullscreenCanvas");
-  const exitFullscreenBtn = document.getElementById("exitFullscreenCanvas");
-  const canvasContainer = document.getElementById("canvasFullscreenContainer");
-  canvas.style.touchAction = "none";
+  try {
+    const url = "{% url 'orders:client_create_inline' %}";
+    console.log('[saveClientInline] POSTing to:', url);
+    const res = await fetch(url, { method:'POST', headers:{'X-CSRFToken':csrf}, body:data });
+    console.log('[saveClientInline] status:', res.status);
 
-  function fillWhite(){ ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height); }
-  fillWhite();
-  function saveState(){ history.push(canvas.toDataURL()); if(history.length>30) history.shift(); }
-  saveState();
+    const clientId    = res.headers.get('X-Created-Client-Id');
+    const clientName  = res.headers.get('X-Created-Client-Name')  || '';
+    const clientPhone = res.headers.get('X-Created-Client-Phone') || '';
+    console.log('[saveClientInline] X-Created-Client-Id:', clientId, '| ref:', !!_orderWizardRef);
 
-  if (eraserBtn) eraserBtn.onclick = function(){
-    erasing = !erasing;
-    eraserBtn.classList.toggle("btn-danger", erasing);
-    eraserBtn.classList.toggle("btn-outline-danger", !erasing);
-    canvas.style.cursor = erasing ? "crosshair" : "default";
-  };
-
-  function getPosition(e){
-    const rect = canvas.getBoundingClientRect();
-    if(e.touches) return { x:(e.touches[0].clientX-rect.left)/scale, y:(e.touches[0].clientY-rect.top)/scale };
-    return { x:e.offsetX/scale, y:e.offsetY/scale };
+    if (clientId) {
+      console.log('[saveClientInline] SUCCESS — calling selectClient');
+      if (_orderWizardRef) {
+        _orderWizardRef.clientId = '';
+        _orderWizardRef.selectClient(clientId, clientName, clientPhone);
+        setTimeout(() => {
+          console.log('[saveClientInline] clientId now:', _orderWizardRef.clientId);
+          console.log('[saveClientInline] hidden input:', document.querySelector('[name=client]')?.value);
+        }, 50);
+      } else {
+        console.error('[saveClientInline] _orderWizardRef is null!');
+      }
+    } else {
+      console.warn('[saveClientInline] no client ID header — form errors');
+      const html = await res.text();
+      const tmp = document.createElement('div'); tmp.innerHTML = html;
+      const newForm = tmp.querySelector('#client-create-form') || tmp.firstElementChild;
+      if (newForm) { form.replaceWith(newForm); if (typeof Alpine!=='undefined'&&Alpine.initTree) Alpine.initTree(newForm); }
+      btn.disabled=false; btn.textContent='Save client';
+    }
+  } catch (err) {
+    console.error('[saveClientInline] FETCH ERROR:', err);
+    btn.disabled=false; btn.textContent='Save client';
   }
-  function getDistance(t){ const dx=t[0].clientX-t[1].clientX, dy=t[0].clientY-t[1].clientY; return Math.sqrt(dx*dx+dy*dy); }
+}
 
-  canvas.addEventListener("mousedown", startDraw);
-  canvas.addEventListener("mouseup", stopDraw);
-  canvas.addEventListener("mouseleave", stopDraw);
-  canvas.addEventListener("mousemove", draw);
-  canvas.addEventListener("touchstart", handleTouchStart);
-  canvas.addEventListener("touchend", stopDraw);
-  canvas.addEventListener("touchcancel", stopDraw);
-  canvas.addEventListener("touchmove", handleTouchMove);
-
-  function handleTouchStart(e){
-    if(e.touches.length===2){ isPinching=true; startDistance=getDistance(e.touches); return; }
-    const now=Date.now(), tap=now-lastTap;
-    if(tap<300 && tap>0){ handleUndo(); lastTap=0; return; }
-    lastTap=now; startDraw(e);
-  }
-  function handleTouchMove(e){
-    if(isPinching && e.touches.length===2){
+// Block form submission if no client, jump back to step 1
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('orderForm')?.addEventListener('submit', (e) => {
+    const clientVal = document.querySelector('input[name="client"]')?.value;
+    console.log('[submit] client value:', JSON.stringify(clientVal));
+    if (!clientVal) {
       e.preventDefault();
-      let z=getDistance(e.touches)/startDistance; scale*=z;
-      scale=Math.max(1, Math.min(5, scale));
-      canvas.style.transform=`scale(${scale})`; startDistance=getDistance(e.touches); return;
+      console.warn('[submit] BLOCKED — no client');
+      if (_orderWizardRef) _orderWizardRef.step = 1;
+      alert('No client selected.\n\nStep 1: Search for a client OR click "Create new client", fill the form, then click "Save client".');
     }
-    draw(e);
-  }
-  function startDraw(e){ if(isPinching) return; e.preventDefault(); drawing=true; const p=getPosition(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }
-  function stopDraw(){ if(isPinching){ isPinching=false; return; } if(drawing) saveState(); drawing=false; ctx.beginPath(); }
-  function draw(e){
-    if(!drawing || isPinching) return; e.preventDefault();
-    const p=getPosition(e); ctx.lineWidth=penSizeSelector.value; ctx.lineCap="round"; hasDrawing=true;
-    if(erasing){ ctx.globalCompositeOperation="destination-out"; ctx.strokeStyle="rgba(0,0,0,1)"; }
-    else { ctx.globalCompositeOperation="source-over"; ctx.strokeStyle=penColorPicker.value; }
-    ctx.lineTo(p.x,p.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(p.x,p.y);
-  }
-  function handleUndo(){
-    if(history.length<=1) return; history.pop();
-    const img=new Image();
-    img.onload=function(){ ctx.globalCompositeOperation="source-over"; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0); };
-    img.src=history[history.length-1];
-  }
-  const undoBtn=document.getElementById("undoCanvas"); if(undoBtn) undoBtn.onclick=handleUndo;
-  const clearBtn=document.getElementById("clearCanvas");
-  if(clearBtn) clearBtn.onclick=function(){ ctx.clearRect(0,0,canvas.width,canvas.height); fillWhite(); hasDrawing=false; saveState(); };
-
-  function exportCanvas(){
-    const t=document.createElement("canvas"); t.width=canvas.width; t.height=canvas.height;
-    const tc=t.getContext("2d"); tc.fillStyle="#ffffff"; tc.fillRect(0,0,t.width,t.height); tc.drawImage(canvas,0,0);
-    return t.toDataURL("image/png");
-  }
-  const form=document.getElementById("orderForm");
-  if(form) form.addEventListener("submit", function(){
-    document.getElementById("scratchCanvasImage").value = hasDrawing ? exportCanvas() : "";
   });
+});
 
-  if(fullscreenBtn) fullscreenBtn.onclick=function(){ if(!document.fullscreenElement) canvasContainer.requestFullscreen(); };
-  if(exitFullscreenBtn) exitFullscreenBtn.onclick=function(){ document.exitFullscreen(); };
-  document.addEventListener("fullscreenchange", function(){
-    const data=canvas.toDataURL();
-    if(document.fullscreenElement){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; if(exitFullscreenBtn) exitFullscreenBtn.style.display="block"; }
-    else { canvas.width=NORMAL_WIDTH; canvas.height=NORMAL_HEIGHT; if(exitFullscreenBtn) exitFullscreenBtn.style.display="none"; }
-    fillWhite();
-    const img=new Image(); img.onload=function(){ ctx.drawImage(img,0,0,canvas.width,canvas.height); }; img.src=data;
+function normalizeForm() {
+  document.querySelectorAll('#orderForm select:not(.form-select)').forEach(s => {
+    s.classList.remove('form-control'); s.classList.add('form-select');
+  });
+  document.querySelectorAll('#orderForm input[type=checkbox]:not(.form-check-input)').forEach(c => {
+    c.classList.add('form-check-input');
   });
 }
+document.addEventListener('DOMContentLoaded', normalizeForm);
+document.body.addEventListener('htmx:afterSwap', normalizeForm);
+
+function removeItem(btn) {
+  const row = btn.closest('.item-row');
+  const idInput = row.querySelector('input[name$="-id"]');
+  const del    = row.querySelector('input[name$="-DELETE"]');
+
+  if (idInput && idInput.value) {
+    // Existing DB item — mark DELETE and hide, Django will delete on save
+    if (del) del.checked = true;
+    row.style.display = 'none';
+  } else {
+    // Brand-new item (never saved) — remove from DOM then renumber
+    row.remove();
+    renumberItemForms();
+  }
+}
+
+function renumberItemForms() {
+  const rows = Array.from(
+    document.querySelectorAll('#items-container .item-row')
+  );
+
+  rows.forEach((row, newIdx) => {
+    const firstField = row.querySelector('[name^="items-"]');
+    if (!firstField) return;
+    const m = firstField.name.match(/^items-(\d+)-/);
+    if (!m) return;
+    const oldIdx = m[1];
+    if (String(oldIdx) === String(newIdx)) return; // already correct
+
+    // Rename every [name] containing items-{oldIdx}-
+    row.querySelectorAll('[name]').forEach(el => {
+      el.name = el.name.replace(
+        new RegExp('items-' + oldIdx + '-', 'g'),
+        'items-' + newIdx + '-'
+      );
+    });
+    // Rename every [id] containing items-{oldIdx}-
+    row.querySelectorAll('[id]').forEach(el => {
+      el.id = el.id
+        .replace(new RegExp('id_items-' + oldIdx + '-', 'g'), 'id_items-' + newIdx + '-')
+        .replace(new RegExp('items-' + oldIdx + '-', 'g'),    'items-' + newIdx + '-');
+    });
+    // Update measurement container id
+    const mc = row.querySelector('[id^="measurement-container-"]');
+    if (mc) {
+      mc.id = 'measurement-container-items-' + newIdx;
+      // Rename measurement fields inside (prefix measure-items-N)
+      mc.querySelectorAll('[name]').forEach(el => {
+        el.name = el.name.replace(
+          new RegExp('measure-items-' + oldIdx + '-', 'g'),
+          'measure-items-' + newIdx + '-'
+        );
+      });
+    }
+    // Update hx-target on the product_type select
+    row.querySelectorAll('[hx-target]').forEach(el => {
+      el.setAttribute('hx-target', '#measurement-container-items-' + newIdx);
+    });
+    // Update hx-vals prefix reference
+    row.querySelectorAll('[hx-vals]').forEach(el => {
+      const v = el.getAttribute('hx-vals');
+      if (v) {
+        el.setAttribute('hx-vals',
+          v.replace(new RegExp('"items-' + oldIdx + '"'), '"items-' + newIdx + '"')
+        );
+      }
+    });
+  });
+
+  // Set TOTAL_FORMS to number of rows still in DOM
+  const tf = document.getElementById('id_items-TOTAL_FORMS');
+  if (tf) tf.value = rows.length;
+}
+
+function removePaymentRow(btn) {
+  const row = btn.closest('.payment-row');
+  const del = row.querySelector('input[name$="-DELETE"]');
+  if (del) { del.checked = true; row.style.display = 'none'; }
+  else { row.remove(); }
+}
+
+// Add a blank staff row dynamically
+function addStaffRow() {
+  const container = document.getElementById('staff-container');
+  const total = document.getElementById('id_staff-TOTAL_FORMS');
+  const idx = parseInt(total.value);
+  // Clone the last empty row or build a minimal one
+  const html = `<div class="row g-2 mb-2 align-items-end staff-row border rounded p-2">
+    <input type="hidden" name="staff-${idx}-id" value="">
+    <div class="col-md-5">
+      <label class="form-label small mb-1">Staff member</label>
+      <select name="staff-${idx}-user" class="form-select"><option value="">---------</option>
+        ${Array.from(document.querySelectorAll('[name="staff-0-user"] option')).map(o=>`<option value="${o.value}">${o.text}</option>`).join('')}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label small mb-1">Role</label>
+      <select name="staff-${idx}-role" class="form-select">
+        <option value="salesman">Salesman</option>
+        <option value="helper">Helper</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove()"><i class="bi bi-x"></i> Remove</button>
+    </div>
+  </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+  total.value = idx + 1;
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.type === 'file' && e.target.closest('.photo-slot')) {
+    const slot = e.target.closest('.photo-slot');
+    const img  = slot.querySelector('.preview-img');
+    const file = e.target.files[0];
+    if (file && img) {
+      const r = new FileReader();
+      r.onload = ev => { img.src = ev.target.result; img.classList.remove('d-none'); };
+      r.readAsDataURL(file);
+    }
+  }
+});
+</script>
+
+<script>
+// Scratch canvas
+(function(){
+  const canvas=document.getElementById('scratchCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  let drawing=false,history=[],erasing=false,lastTap=0,hasDrawing=false,scale=1,startDist=0,pinching=false;
+  function fillWhite(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);}
+  fillWhite();
+  function saveState(){history.push(canvas.toDataURL());if(history.length>30)history.shift();}
+  saveState();
+  const eraserBtn=document.getElementById('eraserTool');
+  if(eraserBtn)eraserBtn.onclick=()=>{erasing=!erasing;eraserBtn.classList.toggle('btn-danger',erasing);eraserBtn.classList.toggle('btn-outline-danger',!erasing);};
+  function gp(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:(e.touches[0].clientX-r.left)/scale,y:(e.touches[0].clientY-r.top)/scale};return{x:e.offsetX/scale,y:e.offsetY/scale};}
+  function gd(t){const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
+  canvas.addEventListener('mousedown',e=>{if(pinching)return;e.preventDefault();drawing=true;const p=gp(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
+  canvas.addEventListener('mouseup',()=>{if(drawing)saveState();drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseleave',()=>{if(drawing)saveState();drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mousemove',e=>{if(!drawing||pinching)return;e.preventDefault();const p=gp(e);ctx.lineWidth=document.getElementById('penSize').value;ctx.lineCap='round';hasDrawing=true;if(erasing){ctx.globalCompositeOperation='destination-out';ctx.strokeStyle='rgba(0,0,0,1)';}else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle=document.getElementById('penColor').value;}ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);});
+  canvas.style.touchAction='none';
+  canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinching=true;startDist=gd(e.touches);return;}const now=Date.now(),tap=now-lastTap;if(tap<300&&tap>0){undo();lastTap=0;return;}lastTap=now;e.preventDefault();drawing=true;const p=gp(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
+  canvas.addEventListener('touchend',()=>{if(pinching){pinching=false;return;}if(drawing)saveState();drawing=false;ctx.beginPath();});
+  canvas.addEventListener('touchmove',e=>{if(pinching&&e.touches.length===2){e.preventDefault();const z=gd(e.touches)/startDist;scale=Math.max(1,Math.min(5,scale*z));canvas.style.transform=`scale(${scale})`;startDist=gd(e.touches);return;}if(!drawing)return;e.preventDefault();const p=gp(e);ctx.lineWidth=document.getElementById('penSize').value;ctx.lineCap='round';hasDrawing=true;ctx.globalCompositeOperation='source-over';ctx.strokeStyle=document.getElementById('penColor').value;ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);});
+  function undo(){if(history.length<=1)return;history.pop();const img=new Image();img.onload=()=>{ctx.globalCompositeOperation='source-over';ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0);};img.src=history[history.length-1];}
+  const undoBtn=document.getElementById('undoCanvas');if(undoBtn)undoBtn.onclick=undo;
+  const clearBtn=document.getElementById('clearCanvas');if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);fillWhite();hasDrawing=false;saveState();};
+  const fullBtn=document.getElementById('fullscreenCanvas'),exitBtn=document.getElementById('exitFullscreenCanvas'),cont=document.getElementById('canvasFullscreenContainer');
+  if(fullBtn)fullBtn.onclick=()=>{if(!document.fullscreenElement)cont.requestFullscreen();};
+  if(exitBtn)exitBtn.onclick=()=>document.exitFullscreen();
+  document.addEventListener('fullscreenchange',()=>{const d=canvas.toDataURL();if(document.fullscreenElement){canvas.width=window.innerWidth;canvas.height=window.innerHeight;if(exitBtn)exitBtn.style.display='block';}else{canvas.width=1200;canvas.height=800;if(exitBtn)exitBtn.style.display='none';}fillWhite();const img=new Image();img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);img.src=d;});
+  const form=document.getElementById('orderForm');
+  if(form)form.addEventListener('submit',()=>{if(hasDrawing){const t=document.createElement('canvas');t.width=canvas.width;t.height=canvas.height;const tc=t.getContext('2d');tc.fillStyle='#fff';tc.fillRect(0,0,t.width,t.height);tc.drawImage(canvas,0,0);document.getElementById('scratchCanvasImage').value=t.toDataURL('image/png');}else document.getElementById('scratchCanvasImage').value='';});
+})();
+</script>
+
+<script>
+// Signature canvas
+(function(){
+  const canvas=document.getElementById('signatureCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  let drawing=false,hasSig=false;
+  canvas.style.touchAction='none';
+  function pos(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};return{x:e.offsetX,y:e.offsetY};}
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
+  canvas.addEventListener('mouseup',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseleave',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=pos(e);ctx.lineWidth=parseInt(document.getElementById('sigPenSize')?.value||2);ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
+  canvas.addEventListener('touchend',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('touchmove',e=>{if(!drawing)return;e.preventDefault();const p=pos(e);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
+  const clearBtn=document.getElementById('clearSigCanvas');if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;};
+  const form=document.getElementById('orderForm');if(form)form.addEventListener('submit',()=>{document.getElementById('signatureCanvasImage').value=hasSig?canvas.toDataURL('image/png'):'';});
+})();
 </script>
 {% endblock %}

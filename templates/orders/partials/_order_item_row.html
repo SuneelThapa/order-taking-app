@@ -1,18 +1,17 @@
 {% comment %}
-  One order-item row. Used both in the initial loop (is_new=False, a real formset
-  form with id + DELETE) and returned standalone by order_item_row (is_new=True).
+  One order-item row.
+  Always renders the id and DELETE fields so removeItem() can work correctly
+  for both existing (DB) and brand-new (HTMX-fetched) rows.
 {% endcomment %}
 <div class="item-row border rounded p-3 mb-3 bg-light">
 
-  {% if not is_new %}
-    {{ item_form.id }}
-    {# DELETE checkbox kept hidden; removeItem() ticks it for existing rows #}
-    <span class="d-none">{{ item_form.DELETE }}</span>
-  {% endif %}
+  {{item_form.id}}
+  <span class="d-none">{{ item_form.DELETE }}</span>
 
   <div class="d-flex justify-content-between align-items-start mb-2">
     <span class="fw-semibold text-muted small">Item</span>
-    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(this)" title="Remove item">
+    <button type="button" class="btn btn-sm btn-outline-danger"
+            onclick="removeItem(this)" title="Remove item">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
@@ -37,13 +36,12 @@
       {{ item_form.quantity }}
     </div>
     <div class="col-md-2">
-      <label class="form-label small mb-1">Price</label>
+      <label class="form-label small mb-1">Price <span class="text-muted">(optional)</span></label>
       {{ item_form.price }}
-      {% if item_form.price.errors %}<div class="text-danger small">{{ item_form.price.errors|striptags }}</div>{% endif %}
     </div>
   </div>
 
-  <!-- Measurement slot (htmx fills this when product type changes) -->
+  <!-- Measurement slot -->
   <div class="mt-3" id="measurement-container-{{ item_form.prefix }}">
     {% if measurement_form %}
       <div class="border rounded p-2 bg-white">
@@ -56,23 +54,23 @@
   <!-- Item photos -->
   <div class="mt-3">
     <label class="form-label small mb-1">Item photos</label>
-
     {% if existing_photos %}
     <div class="d-flex flex-wrap gap-2 mb-2">
       {% for photo in existing_photos %}
       <div class="text-center">
-        <img src="{{ photo.image.url }}" alt="" style="width:72px;height:72px;object-fit:cover" class="rounded border">
+        <img src="{{ photo.image.url }}" alt=""
+             style="width:72px;height:72px;object-fit:cover"
+             class="rounded border">
         <div class="form-check small">
           <input class="form-check-input" type="checkbox"
-                 name="delete_item_photos_{{ item_form.prefix }}" value="{{ photo.id }}"
-                 id="del-photo-{{ photo.id }}">
+                 name="delete_item_photos_{{ item_form.prefix }}"
+                 value="{{ photo.id }}" id="del-photo-{{ photo.id }}">
           <label class="form-check-label text-danger" for="del-photo-{{ photo.id }}">Delete</label>
         </div>
       </div>
       {% endfor %}
     </div>
     {% endif %}
-
     <input type="file" class="form-control" multiple accept="image/*"
            name="item_photos_{{ item_form.prefix }}">
     <div class="form-text">Select one or more photos for this item.</div>

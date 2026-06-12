@@ -19,8 +19,17 @@ docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python
 
 docker compose -f docker-compose.yml -f docker-compose.local.yml run --rm web python manage.py collectstatic --noinput
 
+docker-compose -f docker-compose.yml -f docker-compose.local.yml restart web
 
-docker-compose -f docker-compose.yml -f docker-compose.local.yml down
+
+docker-compose -f docker-compose.yml -f docker-compose.local.yml down --remove-orphans
+
+docker compose -f docker-compose.yml -f docker-compose.local.yml exec web bash
+
+
+
+
+
 
 #prod run
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
