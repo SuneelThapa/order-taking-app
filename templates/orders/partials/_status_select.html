@@ -10,8 +10,10 @@
         hx-swap="outerHTML"
         {% if order.status == 'canceled' %}disabled{% endif %}>
   {% for value, label in status_choices %}
+  {% if value != 'canceled' %}
   <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>
     {{ label }}
   </option>
+  {% endif %}
   {% endfor %}
 </select>

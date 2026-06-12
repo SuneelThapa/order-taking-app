@@ -17,13 +17,14 @@ from django.forms import modelform_factory
 from .models import (
     Order, Client, ProductType, BaseMeasurement,
     OrderItemPhoto, ScratchNote, Delivery, Payment,
-    OrderStaff, ClientSignature,
+    OrderStaff, ClientSignature, CancellationRecord,
 )
 from .forms import (
     ClientForm, OrderForm, OrderItemFormSet,
     ClientPhotoFormSet, DeliveryForm,
     PaymentForm, PaymentCreateFormSet,
     OrderStaffFormSet, get_measurement_form,
+    CancellationForm,
 )
 
 
@@ -97,8 +98,15 @@ def dashboard(request):
     tenant = getattr(request, "tenant", None)
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
-    return render(request, "admin_dashboard/dashboard.html",
-                  {"cards": _build_cards(_get_counts(tenant))})
+    pending_refunds = CancellationRecord.objects.filter(
+        resolution="partial_refund",
+        approved_by=None,
+        order__tenant=tenant,
+    ).select_related("order__client", "canceled_by").order_by("-order__created_at")
+    return render(request, "admin_dashboard/dashboard.html", {
+        "cards":           _build_cards(_get_counts(tenant)),
+        "pending_refunds": pending_refunds,
+    })
 
 
 @user_passes_test(staff_check)
@@ -225,6 +233,11 @@ def order_form_view(request, pk=None):
 
     is_edit   = pk is not None
     edit_order = get_object_or_404(Order, pk=pk, tenant=tenant) if is_edit else None
+
+    # Canceled orders cannot be edited — use Cancel order button flow
+    if edit_order and edit_order.status == "canceled":
+        messages.error(request, f"Order #{edit_order.order_number} is canceled and cannot be edited.")
+        return redirect("orders:dashboard")
     existing_delivery = getattr(edit_order, "delivery", None) if edit_order else None
 
     if request.method == "POST":
@@ -592,7 +605,7 @@ def order_detail(request, pk):
     try:
         for item in order.items.select_related("product_type").all():
             try:
-                photos = list(item.photos.all())
+                photos = [p for p in item.photos.all() if p.image and p.image.name]
             except Exception:
                 photos = []
             items_with_measurements.append({
@@ -640,7 +653,7 @@ def order_quick_status(request, pk):
         return HttpResponse(status=405)
 
     new_status    = request.POST.get("status", "")
-    valid_choices = [s[0] for s in Order.STATUS_CHOICES]
+    valid_choices = [s[0] for s in Order.STATUS_CHOICES if s[0] != "canceled"]
     if new_status in valid_choices and order.status != "canceled":
         order.status = new_status
         order.save()
@@ -672,7 +685,31 @@ def order_add_payment(request, pk):
     form.fields["original_amount"].required = True
 
     if form.is_valid():
-        cd = form.cleaned_data
+        cd       = form.cleaned_data
+        ptype    = cd.get("type") or "deposit"
+
+        # ── Refund guard ───────────────────────────────────────────
+        # Block negative amounts AND explicit Refund type unless owner approved
+        amount = cd.get("original_amount")
+        if ptype == "refund" or (amount is not None and amount < 0):
+            approved = False
+            try:
+                record = order.cancellation
+                approved = bool(record.approved_by_id)
+                print(f"DEBUG refund guard: order={order.pk} "
+                      f"record={record.pk} approved_by_id={record.approved_by_id}")
+            except Exception as e:
+                print(f"DEBUG refund guard: no cancellation_record for order {order.pk}: {e}")
+
+            if not approved:
+                return render(request, "orders/partials/_payment_history.html",
+                              {"order": order,
+                               "payments": order.payments.select_related("recorded_by").all(),
+                               "quick_pay_form": PaymentForm(prefix="qp"),
+                               "pay_form_error": "Refund not allowed — "
+                                                 "owner must approve the cancellation first."})
+        # ───────────────────────────────────────────────────────────
+
         Payment.objects.create(
             order                = order,
             recorded_by          = request.user,
@@ -680,7 +717,7 @@ def order_add_payment(request, pk):
             currency             = cd.get("currency")             or "THB",
             exchange_rate_to_thb = cd.get("exchange_rate_to_thb") or 1,
             method               = cd.get("method")               or "cash",
-            type                 = cd.get("type")                 or "deposit",
+            type                 = ptype,
             notes                = cd.get("notes")                or "",
         )
         payments = order.payments.select_related("recorded_by").all()
@@ -691,8 +728,128 @@ def order_add_payment(request, pk):
         return response
 
     # Return form with validation errors
+    print(f"DEBUG add_payment form invalid for order {pk}: {dict(form.errors)}")
+    print(f"DEBUG add_payment POST: { {k:v for k,v in request.POST.items() if 'csrf' not in k} }")
     return render(request, "orders/partials/_payment_history.html",
                   {"order": order,
                    "payments": order.payments.select_related("recorded_by").all(),
                    "quick_pay_form": form,
                    "pay_form_open": True})
+
+
+# ─────────────────────────────────────────────────────────
+# Cancellation flow
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_cancel(request, pk):
+    from django.utils import timezone
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    order = get_object_or_404(Order, pk=pk, tenant=tenant)
+
+    # Already canceled — show info only
+    if order.status == "canceled":
+        try:
+            record = order.cancellation
+        except Exception:
+            record = None
+        return render(request, "orders/partials/_cancel_form.html", {
+            "order":            order,
+            "record":           record,
+            "already_canceled": True,
+        })
+
+    if request.method == "GET":
+        form = CancellationForm()
+        return render(request, "orders/partials/_cancel_form.html", {
+            "order": order,
+            "form":  form,
+        })
+
+    # POST — process cancellation
+    form = CancellationForm(request.POST)
+    if not form.is_valid():
+        print(f"DEBUG cancel form errors for order {pk}: {dict(form.errors)}")
+        print(f"DEBUG POST data: { {k: v for k, v in request.POST.items() if k != 'csrfmiddlewaretoken'} }")
+        # HX-Retarget overrides hx-swap="none" so validation errors are shown in modal
+        response = render(request, "orders/partials/_cancel_form.html", {
+            "order": order,
+            "form":  form,
+        })
+        response["HX-Retarget"] = "#cancel-modal-body"
+        response["HX-Reswap"]   = "innerHTML"
+        return response
+
+    cancellation              = form.save(commit=False)
+    cancellation.order        = order
+    cancellation.canceled_by  = request.user
+    cancellation.save()
+
+    order.status = "canceled"
+    order.save()
+    cache.delete(f"order_status_counts_{tenant.id}")
+
+    # hx-swap="none" keeps the button in the DOM so HX-Trigger bubbles correctly
+    response = HttpResponse("")
+    response["HX-Trigger"] = json.dumps({
+        "orderCanceled": {"pk": order.pk, "orderNumber": order.order_number},
+    })
+    return response
+
+
+# ─────────────────────────────────────────────────────────
+# Owner: approve or reject a partial refund
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_approve_refund(request, pk):
+    from django.utils import timezone
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    order        = get_object_or_404(Order, pk=pk, tenant=tenant)
+    cancellation = get_object_or_404(CancellationRecord, order=order)
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    action = request.POST.get("action", "")
+    if action == "approve" and not cancellation.approved_by:
+        cancellation.approved_by = request.user
+        cancellation.resolved_at = timezone.now()
+        cancellation.save()
+    elif action == "reject":
+        cancellation.resolution      = "none"
+        cancellation.resolution_notes = (
+            (cancellation.resolution_notes or "") +
+            f"\n[Rejected by {request.user.username}]"
+        ).strip()
+        cancellation.save()
+
+    # Return updated approvals banner
+    pending_refunds = CancellationRecord.objects.filter(
+        resolution="partial_refund",
+        approved_by=None,
+        order__tenant=tenant,
+    ).select_related("order__client", "canceled_by")
+    response = render(request, "admin_dashboard/partials/_pending_approvals.html",
+                      {"pending_refunds": pending_refunds})
+    response["HX-Trigger"] = json.dumps({"refreshDashboard": True})
+    return response
+
+
+# ─────────────────────────────────────────────────────────
+# Pending approvals — refreshed from dashboard JS
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def pending_approvals(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("")
+    pending_refunds = CancellationRecord.objects.filter(
+        resolution="partial_refund",
+        approved_by=None,
+        order__tenant=tenant,
+    ).select_related("order__client", "canceled_by").order_by("-order__created_at")
+    return render(request, "admin_dashboard/partials/_pending_approvals.html",
+                  {"pending_refunds": pending_refunds})

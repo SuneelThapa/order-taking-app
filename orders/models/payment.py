@@ -19,6 +19,7 @@ class Payment(models.Model):
         ('redeposit', 'Re-deposit'),
         ('balance',   'Balance'),
         ('full',      'Full Payment'),
+        ('refund',    'Refund'),
     ]
 
     order = models.ForeignKey(
@@ -71,7 +72,7 @@ class Payment(models.Model):
 
     @property
     def is_refund(self):
-        return self.original_amount < 0
+        return self.type == "refund" or self.original_amount < 0
 
     def __str__(self):
         direction = "Refund" if self.is_refund else "Payment"

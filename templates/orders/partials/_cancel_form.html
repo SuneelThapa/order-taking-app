@@ -1,0 +1,127 @@
+{% comment %}Cancel order form — loaded into #cancel-modal-body{% endcomment %}
+
+{% if already_canceled %}
+<div class="modal-header border-bottom">
+  <h5 class="modal-title text-muted">
+    <i class="bi bi-x-circle me-2"></i>Order #{{ order.order_number }} — already canceled
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+  <div class="alert alert-secondary mb-0">
+    {% if record %}
+    <div class="small">
+      <div><span class="text-muted">Type:</span> {{ record.get_cancellation_type_display }}</div>
+      <div><span class="text-muted">Reason:</span> {{ record.cancel_reason }}</div>
+      <div><span class="text-muted">Resolution:</span> {{ record.get_resolution_display }}
+        {% if record.resolution == 'partial_refund' %}
+          — {% if record.approved_by %}
+            <span class="text-success">Approved by {{ record.approved_by.username }}</span>
+          {% else %}
+            <span class="text-warning">Pending owner approval</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    This order has already been canceled.
+    {% endif %}
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+</div>
+
+{% elif cancel_success %}
+{# ── Success — briefly shown while JS refreshes everything ── #}
+<div class="modal-header border-bottom">
+  <h5 class="modal-title text-success">
+    <i class="bi bi-check-circle me-2"></i>Order #{{ order.order_number }} canceled
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body text-center py-4">
+  <i class="bi bi-check-circle-fill text-success" style="font-size:3rem"></i>
+  <div class="h6 mt-3 text-muted">Updating dashboard…</div>
+</div>
+
+{% else %}
+{# ── Cancel form ── #}
+<div class="modal-header border-bottom">
+  <h5 class="modal-title text-danger">
+    <i class="bi bi-x-circle me-2"></i>Cancel order #{{ order.order_number }}
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+  <div class="alert alert-warning d-flex gap-2 align-items-start mb-3">
+    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+    <div>
+      <strong>This cannot be undone.</strong>
+      Once canceled the order is permanently closed and cannot be reopened.
+      All commissions earned before cancellation are retained.
+    </div>
+  </div>
+
+  {# Plain HTML form — no HTMX attrs here, the submit button below carries them #}
+  <form id="cancelOrderForm-{{ order.pk }}">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label">{{ form.cancellation_type.label }}</label>
+      {{ form.cancellation_type }}
+      {% if form.cancellation_type.errors %}
+        <div class="text-danger small">{{ form.cancellation_type.errors|striptags }}</div>
+      {% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">{{ form.cancel_reason.label }} *</label>
+      {{ form.cancel_reason }}
+      {% if form.cancel_reason.errors %}
+        <div class="text-danger small">{{ form.cancel_reason.errors|striptags }}</div>
+      {% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">{{ form.resolution.label }}</label>
+      {{ form.resolution }}
+      {% if form.resolution.errors %}
+        <div class="text-danger small">{{ form.resolution.errors|striptags }}</div>
+      {% endif %}
+    </div>
+
+    {# Listen for change events bubbling up — no x-init needed #}
+    <div x-data="{ res: 'none' }"
+         @change="if($event.target.name === 'resolution') res = $event.target.value">
+      <div x-show="res === 'partial_refund'" x-cloak class="alert alert-info small mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Partial refunds require <strong>owner approval</strong> before being processed.
+        The order will be canceled now; an approval request will appear on the dashboard.
+      </div>
+    </div>
+
+    <div class="mb-1">
+      <label class="form-label">{{ form.resolution_notes.label }}</label>
+      {{ form.resolution_notes }}
+    </div>
+  </form>
+</div>
+
+{# ── Footer: button carries HTMX attrs directly — no form submit chain needed ── #}
+<div class="modal-footer border-top">
+  <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+    Go back
+  </button>
+  <button type="button"
+          class="btn btn-danger btn-sm"
+          hx-post="{% url 'orders:order_cancel' order.pk %}"
+          hx-include="#cancelOrderForm-{{ order.pk }}"
+          hx-swap="none"
+          hx-disabled-elt="this">
+    <i class="bi bi-x-circle me-1"></i> Confirm cancellation
+  </button>
+</div>
+
+{% endif %}

@@ -136,10 +136,12 @@
             {% if row.photos %}
             <div class="px-3 pb-2 d-flex flex-wrap gap-2">
               {% for photo in row.photos %}
+              {% if photo.image %}
               <a href="{{ photo.image.url }}" target="_blank">
                 <img src="{{ photo.image.url }}" alt=""
                      style="width:56px;height:56px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6">
               </a>
+              {% endif %}
               {% endfor %}
             </div>
             {% endif %}
@@ -217,10 +219,12 @@
           <div class="d-flex gap-2">
             {% for photo in order.client_photos.all %}
             <div class="text-center">
+              {% if photo.image %}
               <a href="{{ photo.image.url }}" target="_blank">
                 <img src="{{ photo.image.url }}" alt="{{ photo.photo_type }}"
                      style="width:80px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6">
               </a>
+              {% endif %}
               <div class="small text-muted mt-1">{{ photo.photo_type|capfirst }}</div>
             </div>
             {% endfor %}
@@ -234,10 +238,12 @@
           <div class="fw-semibold mb-2">Scratch notes</div>
           <div class="d-flex flex-wrap gap-2">
             {% for note in order.scratch_notes.all %}
+            {% if note.image %}
             <a href="{{ note.image.url }}" target="_blank">
               <img src="{{ note.image.url }}" alt=""
                    style="max-width:130px;border-radius:6px;border:1px solid #dee2e6">
             </a>
+              {% endif %}
             {% endfor %}
           </div>
         </div>
@@ -273,12 +279,14 @@
        class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-pencil"></i> Edit
     </a>
+    {% if order.status != "canceled" %}
     <button type="button" class="btn btn-sm btn-outline-danger"
-            hx-get="{% url 'orders:order_detail' order.pk %}?cancel=1"
-            hx-target="#order-detail-modal-body"
+            hx-get="{% url 'orders:order_cancel' order.pk %}"
+            hx-target="#cancel-modal-body"
             hx-swap="innerHTML">
       <i class="bi bi-x-circle"></i> Cancel order
     </button>
+    {% endif %}
     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
       Close
     </button>

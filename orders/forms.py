@@ -68,6 +68,10 @@ class OrderForm(StyledModelForm):
         current = self.instance.status if self.instance and self.instance.pk else default
 
         if "status" in self.fields:
+            # 'canceled' is only reachable via the Cancel order button — never via edit form
+            self.fields["status"].choices = [
+                (v, l) for v, l in self.fields["status"].choices if v != "canceled"
+            ]
             if user and getattr(user, "is_tenant", False):
                 self.fields["status"].widget = forms.TextInput(attrs={
                     "class": "form-control",
@@ -147,6 +151,20 @@ class PaymentForm(StyledModelForm):
         self.fields["method"].initial               = "cash"
         self.fields["type"].initial                 = "deposit"
         self.fields["exchange_rate_to_thb"].initial = 1
+
+    def clean(self):
+        cleaned  = super().clean()
+        ptype    = cleaned.get("type")
+        amount   = cleaned.get("original_amount")
+        currency = cleaned.get("currency")
+        if ptype == "refund":
+            if amount is not None and amount >= 0:
+                self.add_error("original_amount",
+                               "Refund amount must be negative (e.g. -200).")
+            if currency and currency != "THB":
+                self.add_error("currency",
+                               "Refunds must always be in THB.")
+        return cleaned
 
 
 # Non-inline formset — saved manually after the order is created
@@ -262,3 +280,31 @@ def get_measurement_form(product_type):
     if not model:
         return None
     return get_measurement_modelform(model)
+
+
+# =====================================================
+# CANCELLATION FORM
+# =====================================================
+from .models import CancellationRecord
+
+class CancellationForm(StyledModelForm):
+
+    class Meta:
+        model  = CancellationRecord
+        fields = ["cancellation_type", "cancel_reason", "resolution", "resolution_notes"]
+        widgets = {
+            "cancel_reason":    forms.Textarea(attrs={"rows": 3,
+                "placeholder": "Describe the reason for cancellation…"}),
+            "resolution_notes": forms.Textarea(attrs={"rows": 2,
+                "placeholder": "Optional notes on the resolution…"}),
+        }
+        labels = {
+            "cancellation_type": "Cancellation type",
+            "cancel_reason":     "Reason",
+            "resolution":        "Resolution",
+            "resolution_notes":  "Resolution notes",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["resolution_notes"].required = False

@@ -66,12 +66,5 @@ class CancellationRecord(models.Model):
         verbose_name = 'Cancellation Record'
         verbose_name_plural = 'Cancellation Records'
 
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        if self.resolution == 'partial_refund' and not self.approved_by_id:
-            raise ValidationError(
-                "Partial refund resolution requires owner approval (approved_by must be set)."
-            )
-
     def __str__(self):
         return f"Cancellation — {self.order.order_number}"

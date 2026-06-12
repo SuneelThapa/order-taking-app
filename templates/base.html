@@ -112,6 +112,18 @@
 
   {% block extra_js %}{% endblock %}
 
+{# ── Cancel order modal (opens on top of order detail modal) ── #}
+<div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true" style="z-index:1060">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:500px">
+    <div class="modal-content" id="cancel-modal-body">
+      <div class="modal-body text-center py-4">
+        <div class="spinner-border text-danger spinner-border-sm"></div>
+        <div class="mt-2 text-muted small">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ── Global order detail modal — loaded by HTMX on row click ── #}
 <div class="modal fade" id="orderDetailModal" tabindex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
