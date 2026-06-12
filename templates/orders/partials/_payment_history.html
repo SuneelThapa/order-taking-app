@@ -1,0 +1,95 @@
+{% comment %}
+  Partial: payment history + inline add form.
+  Target id: #payment-history-{{ order.pk }}
+{% endcomment %}
+<div class="mb-4" x-data="{ showPayForm: {% if pay_form_open %}true{% else %}false{% endif %} }">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="fw-semibold">Payments</div>
+    <div class="text-end">
+      <div class="small text-muted">Balance</div>
+      <div class="fw-bold {% if order.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+        ฿{{ order.balance_due|floatformat:0 }}
+      </div>
+    </div>
+  </div>
+
+  {% if payments %}
+  <div class="mb-2">
+    {% for p in payments %}
+    <div class="d-flex justify-content-between align-items-center border rounded px-3 py-2 mb-1 {% if p.is_refund %}bg-danger bg-opacity-10{% else %}bg-white{% endif %}">
+      <div>
+        <span class="badge {% if p.is_refund %}text-bg-danger{% else %}text-bg-success{% endif %} me-1">
+          {{ p.get_type_display }}
+        </span>
+        <span class="fw-semibold">
+          {% if p.is_refund %}&minus;{% endif %}{{ p.original_amount|floatformat:0 }} {{ p.currency }}
+        </span>
+        {% if p.currency != "THB" %}
+        <span class="text-muted small"> = ฿{{ p.thb_equivalent|floatformat:0 }}</span>
+        {% endif %}
+        <span class="text-muted small ms-2">{{ p.get_method_display }}</span>
+      </div>
+      <div class="text-end">
+        <div class="small text-muted">{{ p.created_at|date:"d M" }}</div>
+        <div class="small text-muted">{{ p.recorded_by.get_full_name|default:p.recorded_by.username }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-muted small mb-2">No payments recorded yet.</div>
+  {% endif %}
+
+  {# ── Add payment toggle ── #}
+  <button type="button" class="btn btn-outline-primary btn-sm w-100"
+          @click="showPayForm = !showPayForm">
+    <i class="bi bi-plus-lg"></i>
+    <span x-text="showPayForm ? 'Cancel' : 'Add payment'">Add payment</span>
+  </button>
+
+  {# ── Inline payment form ── #}
+  <div x-show="showPayForm" x-cloak class="border rounded p-3 mt-2 bg-light">
+    <form hx-post="{% url 'orders:order_add_payment' order.pk %}"
+          hx-target="#payment-history-{{ order.pk }}"
+          hx-swap="innerHTML"
+          hx-indicator="#pay-spinner-{{ order.pk }}">
+      {% csrf_token %}
+      <div class="row g-2">
+        <div class="col-6">
+          <label class="form-label small mb-1">Amount *</label>
+          {{ quick_pay_form.original_amount }}
+          {% if quick_pay_form.original_amount.errors %}
+          <div class="text-danger small">{{ quick_pay_form.original_amount.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="col-6">
+          <label class="form-label small mb-1">Currency</label>
+          {{ quick_pay_form.currency }}
+        </div>
+        <div class="col-6">
+          <label class="form-label small mb-1">Rate to THB</label>
+          {{ quick_pay_form.exchange_rate_to_thb }}
+        </div>
+        <div class="col-6">
+          <label class="form-label small mb-1">Method</label>
+          {{ quick_pay_form.method }}
+        </div>
+        <div class="col-12">
+          <label class="form-label small mb-1">Type</label>
+          {{ quick_pay_form.type }}
+        </div>
+        <div class="col-12">
+          <label class="form-label small mb-1">Notes</label>
+          {{ quick_pay_form.notes }}
+        </div>
+        <div class="col-12 d-flex gap-2 align-items-center">
+          <button type="submit" class="btn btn-primary btn-sm">
+            Save payment
+          </button>
+          <span id="pay-spinner-{{ order.pk }}"
+                class="htmx-indicator spinner-border spinner-border-sm text-primary"></span>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard
+
+
+{% endblock %}
 
 {% block content %}
 
@@ -32,4 +35,27 @@
     </div>
   </div>
 
+
+{% block extra_js %}{{ block.super }}
+<script>
+// Show order detail modal after HTMX loads content into it
+document.body.addEventListener('htmx:afterSettle', function(e) {
+  if (e.detail.target && e.detail.target.id === 'order-detail-modal-body') {
+    var modalEl = document.getElementById('orderDetailModal');
+    if (modalEl) {
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+  }
+});
+
+// Refresh stat cards and table when status changes or payment added inside modal
+document.body.addEventListener('statusChanged', function() {
+  htmx.ajax('GET', "{% url 'orders:stat_cards' %}", {target:'#stat-cards', swap:'innerHTML'});
+  htmx.ajax('GET', "{% url 'orders:orders_table' %}", {target:'#orders-region', swap:'outerHTML'});
+});
+document.body.addEventListener('paymentAdded', function() {
+  htmx.ajax('GET', "{% url 'orders:stat_cards' %}", {target:'#stat-cards', swap:'innerHTML'});
+});
+</script>
+{% endblock %}
 {% endblock %}

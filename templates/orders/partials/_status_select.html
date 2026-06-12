@@ -1,0 +1,17 @@
+{% comment %}
+  Quick status change select.
+  hx-swap="outerHTML" so the response replaces this element.
+{% endcomment %}
+<select name="status"
+        class="form-select form-select-sm"
+        style="width:auto"
+        hx-post="{% url 'orders:order_quick_status' order.pk %}"
+        hx-trigger="change"
+        hx-swap="outerHTML"
+        {% if order.status == 'canceled' %}disabled{% endif %}>
+  {% for value, label in status_choices %}
+  <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>
+    {{ label }}
+  </option>
+  {% endfor %}
+</select>

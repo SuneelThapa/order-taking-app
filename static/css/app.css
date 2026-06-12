@@ -185,3 +185,12 @@ body { background: var(--bg); color: var(--ink); }
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0,0,0,.2);
 }
+
+/* ── Order status badges ── */
+.status-badge-new        { background:#cfe2ff; color:#084298; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-badge-pending    { background:#fff3cd; color:#664d03; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-badge-processing { background:#d1ecf1; color:#0c5460; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-badge-ready      { background:#d4edda; color:#155724; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-badge-alterations{ background:#e2d9f3; color:#432874; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-badge-delivered  { background:#d3d3d3; color:#333;    font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-badge-canceled   { background:#f8d7da; color:#721c24; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; text-decoration:line-through; }

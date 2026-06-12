@@ -547,3 +547,152 @@ def load_measurement_form(request):
     form = MeasurementForm(prefix=f"measure-{prefix}")
     return render(request, "admin_dashboard/partials/_dynamic_measurement.html",
                   {"form": form, "product_type": product_type})
+
+
+# ─────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────
+def _get_measurement_fields(item):
+    """Return [(label, value), …] for the item's linked measurement record."""
+    try:
+        base  = item.measurement          # BaseMeasurement OneToOne
+        model = apps.get_model("orders", item.product_type.measurement_model)
+        m     = model.objects.filter(base=base).first()
+        if not m:
+            return []
+        fields = []
+        for f in m._meta.get_fields():
+            if f.name in ("id", "base") or f.is_relation:
+                continue
+            val = getattr(m, f.name, None)
+            if val not in (None, "", 0):
+                fields.append((f.verbose_name.title(), val))
+        return fields
+    except Exception:
+        return []
+
+
+# ─────────────────────────────────────────────────────────
+# Order detail modal
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_detail(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    order = get_object_or_404(
+        Order.objects
+        .select_related("client", "delivery", "tenant")
+        .filter(tenant=tenant),
+        pk=pk,
+    )
+
+    # Build measurement data per item — lazy access with full exception guards
+    items_with_measurements = []
+    try:
+        for item in order.items.select_related("product_type").all():
+            try:
+                photos = list(item.photos.all())
+            except Exception:
+                photos = []
+            items_with_measurements.append({
+                "item":   item,
+                "photos": photos,
+                "fields": _get_measurement_fields(item),
+            })
+    except Exception as _items_err:
+        print(f"DEBUG order_detail items error: {_items_err}")
+
+    # Existing signature
+    try:
+        signature = order.signature
+    except Exception:
+        signature = None
+
+    try:
+        payments = list(order.payments.select_related("recorded_by").all())
+    except Exception as _e:
+        print(f"DEBUG order_detail payments error: {_e}")
+        payments = []
+
+    context = {
+        "order":                   order,
+        "items_with_measurements": items_with_measurements,
+        "payments":                payments,
+        "signature":               signature,
+        "status_choices":          Order.STATUS_CHOICES,
+        "quick_pay_form":          PaymentForm(prefix="qp"),
+    }
+    print(f"DEBUG order_detail: rendering for order {order.pk}, {len(items_with_measurements)} items, {len(payments)} payments")
+    return render(request, "orders/partials/_order_detail_modal.html", context)
+
+
+# ─────────────────────────────────────────────────────────
+# Quick status change
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_quick_status(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    order = get_object_or_404(Order, pk=pk, tenant=tenant)
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    new_status    = request.POST.get("status", "")
+    valid_choices = [s[0] for s in Order.STATUS_CHOICES]
+    if new_status in valid_choices and order.status != "canceled":
+        order.status = new_status
+        order.save()
+        cache.delete(f"order_status_counts_{tenant.id}")
+
+    # Return updated select so it reflects the saved value
+    response = render(request, "orders/partials/_status_select.html",
+                      {"order": order, "status_choices": Order.STATUS_CHOICES})
+    response["HX-Trigger"] = json.dumps({
+        "statusChanged": {"orderId": order.pk, "status": order.status}
+    })
+    return response
+
+
+# ─────────────────────────────────────────────────────────
+# Add payment (from order detail modal)
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_add_payment(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    order = get_object_or_404(Order, pk=pk, tenant=tenant)
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    form = PaymentForm(request.POST, prefix="qp")
+    # Make original_amount required for this inline form
+    form.fields["original_amount"].required = True
+
+    if form.is_valid():
+        cd = form.cleaned_data
+        Payment.objects.create(
+            order                = order,
+            recorded_by          = request.user,
+            original_amount      = cd["original_amount"],
+            currency             = cd.get("currency")             or "THB",
+            exchange_rate_to_thb = cd.get("exchange_rate_to_thb") or 1,
+            method               = cd.get("method")               or "cash",
+            type                 = cd.get("type")                 or "deposit",
+            notes                = cd.get("notes")                or "",
+        )
+        payments = order.payments.select_related("recorded_by").all()
+        response = render(request, "orders/partials/_payment_history.html",
+                          {"order": order, "payments": payments,
+                           "quick_pay_form": PaymentForm(prefix="qp")})
+        response["HX-Trigger"] = json.dumps({"paymentAdded": True})
+        return response
+
+    # Return form with validation errors
+    return render(request, "orders/partials/_payment_history.html",
+                  {"order": order,
+                   "payments": order.payments.select_related("recorded_by").all(),
+                   "quick_pay_form": form,
+                   "pay_form_open": True})

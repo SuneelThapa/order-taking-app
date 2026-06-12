@@ -1,134 +1,178 @@
 {% comment %}
-  Orders table partial. Everything targets #orders-region and pulls the current
-  filter/search from #orders-filter so state survives sorts and pagination.
-  status + q live in the form; sort + page are carried explicitly on each link.
+  Partial: orders table with filter/sort/paginate.
+  HTMX target: #orders-region
 {% endcomment %}
 
-<!-- Filter + search -->
-<form id="orders-filter" class="d-flex flex-wrap gap-2 p-3 border-bottom"
-      onsubmit="return false">
-  <select class="form-select form-select-sm" style="max-width: 12rem"
-          name="status"
-          hx-get="{% url 'orders:orders_table' %}"
-          hx-target="#orders-region"
-          hx-trigger="change"
-          hx-include="#orders-filter">
-    <option value="">All statuses</option>
-    <option value="new"         {% if current_status == "new" %}selected{% endif %}>New</option>
-    <option value="pending"     {% if current_status == "pending" %}selected{% endif %}>Pending</option>
-    <option value="in_progress" {% if current_status == "in_progress" %}selected{% endif %}>In progress</option>
-    <option value="ready"       {% if current_status == "ready" %}selected{% endif %}>Ready</option>
-    <option value="delivered"   {% if current_status == "delivered" %}selected{% endif %}>Delivered</option>
-  </select>
+{% if oob_cards %}
+<div id="stat-cards" hx-swap-oob="true">
+  {% include "admin_dashboard/partials/_stat_cards.html" %}
+</div>
+{% endif %}
 
-  <input type="search" name="q" value="{{ current_q }}"
-         class="form-control form-control-sm" style="max-width: 18rem"
-         placeholder="Search order #, name, phone…"
+<div id="orders-region">
+
+  {# Filter bar #}
+  <form id="orders-filter"
+        hx-get="{% url 'orders:orders_table' %}"
+        hx-trigger="submit, change delay:300ms"
+        hx-target="#orders-region"
+        hx-push-url="false">
+    <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+
+      <input type="text" name="q" value="{{ current_q }}"
+             class="form-control form-control-sm" style="max-width:220px"
+             placeholder="Search name, phone, order #"
+             hx-get="{% url 'orders:orders_table' %}"
+             hx-trigger="keyup changed delay:400ms"
+             hx-target="#orders-region">
+
+      <select name="status" class="form-select form-select-sm" style="width:auto">
+        <option value="">All statuses</option>
+        <option value="new"        {% if current_status == 'new' %}selected{% endif %}>New</option>
+        <option value="pending"    {% if current_status == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="processing" {% if current_status == 'processing' %}selected{% endif %}>Processing</option>
+        <option value="ready"      {% if current_status == 'ready' %}selected{% endif %}>Ready</option>
+        <option value="alterations"{% if current_status == 'alterations' %}selected{% endif %}>Alterations</option>
+        <option value="delivered"  {% if current_status == 'delivered' %}selected{% endif %}>Delivered</option>
+        <option value="canceled"   {% if current_status == 'canceled' %}selected{% endif %}>Canceled</option>
+      </select>
+
+      {% if current_q or current_status %}
+      <a href="{% url 'orders:orders_table' %}"
          hx-get="{% url 'orders:orders_table' %}"
          hx-target="#orders-region"
-         hx-trigger="keyup changed delay:350ms, search"
-         hx-include="#orders-filter">
-</form>
+         class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-x"></i> Clear
+      </a>
+      {% endif %}
 
-<div class="table-responsive">
-  <table class="table table-hover align-middle mb-0">
-    <thead class="table-light">
-      <tr>
-        <th class="th-sort" hx-get="{% url 'orders:orders_table' %}?sort=order_number"
-            hx-target="#orders-region" hx-include="#orders-filter">Order&nbsp;#</th>
-        <th>Customer</th>
-        <th class="d-none d-md-table-cell">Email</th>
-        <th class="d-none d-md-table-cell">Phone</th>
-        <th class="text-center">Urgent</th>
-        <th class="th-sort" hx-get="{% url 'orders:orders_table' %}?sort=status"
-            hx-target="#orders-region" hx-include="#orders-filter">Status</th>
-        <th class="th-sort text-end" hx-get="{% url 'orders:orders_table' %}?sort=total_amount"
-            hx-target="#orders-region" hx-include="#orders-filter">Total</th>
-        <th class="th-sort d-none d-lg-table-cell" hx-get="{% url 'orders:orders_table' %}?sort=-created_at"
-            hx-target="#orders-region" hx-include="#orders-filter">Created</th>
-        <th class="text-end">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for order in page_obj %}
-      <tr class="{% if order.is_urgent %}table-danger{% endif %}">
-        <td class="fw-semibold">{{ order.order_number }}</td>
-        <td>{{ order.first_name }} {{ order.last_name }}</td>
-        <td class="d-none d-md-table-cell">{{ order.email }}</td>
-        <td class="d-none d-md-table-cell">{{ order.phone }}</td>
-        <td class="text-center">
-          {% if order.is_urgent %}
-            <i class="bi bi-exclamation-triangle-fill text-danger"></i>
-          {% else %}
-            <span class="text-muted">—</span>
-          {% endif %}
-        </td>
-        <td>
-          <span class="badge badge-status badge-{{ order.status }}">
-            {{ order.get_status_display }}
-          </span>
-        </td>
-        <td class="text-end">${{ order.total_amount }}</td>
-        <td class="d-none d-lg-table-cell">{{ order.created_at|date:"Y-m-d" }}</td>
-        <td class="text-end text-nowrap">
+      <span class="text-muted small ms-auto">{{ page_obj.paginator.count }} order{{ page_obj.paginator.count|pluralize }}</span>
+    </div>
+  </form>
 
-          <!-- View → drawer -->
-          <button class="btn btn-sm btn-outline-secondary"
-                  hx-get="{% url 'orders:order_detail' order.id %}"
-                  hx-target="#drawer-body"
-                  data-bs-toggle="offcanvas" data-bs-target="#app-drawer"
-                  data-drawer-title="Order #{{ order.order_number }}">
-            <i class="bi bi-eye"></i>
-          </button>
+  {# Table #}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="th-sort" style="cursor:pointer"
+              hx-get="{% url 'orders:orders_table' %}?sort={% if current_sort == 'order_number' %}-{% endif %}order_number"
+              hx-target="#orders-region" hx-include="#orders-filter">
+            Order&nbsp;#
+            {% if current_sort == 'order_number' %}<i class="bi bi-caret-up-fill ms-1 small"></i>
+            {% elif current_sort == '-order_number' %}<i class="bi bi-caret-down-fill ms-1 small"></i>{% endif %}
+          </th>
+          <th>Client</th>
+          <th class="d-none d-md-table-cell">Hotel / Departure</th>
+          <th class="text-center">Status</th>
+          <th class="text-center d-none d-lg-table-cell">Ready date</th>
+          <th class="text-center">Urgent</th>
+          <th class="text-end">Total</th>
+          <th class="text-end">Balance</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in page_obj %}
+        <tr class="{% if order.is_urgent %}table-danger{% endif %}"
+            style="cursor:pointer"
+            hx-get="{% url 'orders:order_detail' order.pk %}"
+            hx-target="#order-detail-modal-body"
+            hx-swap="innerHTML">
 
-          {% if not request.user.is_tenant %}
-          <!-- Edit → full page (rebuilt into the drawer next) -->
-          <a class="btn btn-sm btn-outline-primary" href="{% url 'orders:order_edit' order.id %}">
-            <i class="bi bi-pencil"></i>
-          </a>
+          <td class="fw-semibold">{{ order.order_number }}</td>
 
-          <!-- Delete → htmx, refreshes table + cards -->
-          <button class="btn btn-sm btn-outline-danger"
-                  hx-delete="{% url 'orders:order_delete' order.id %}"
-                  hx-target="#orders-region"
-                  hx-swap="innerHTML"
-                  hx-confirm="Delete order #{{ order.order_number }}? This cannot be undone.">
-            <i class="bi bi-trash"></i>
-          </button>
-          {% endif %}
+          <td>
+            <div class="fw-semibold">{{ order.client.name }}</div>
+            <div class="small text-muted">{{ order.client.phone }}</div>
+          </td>
 
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="9" class="text-center text-muted py-5">
-          No orders match this view. Try clearing the filter, or
-          {% if not request.user.is_tenant %}<a href="{% url 'orders:order_add' %}">add a new order</a>.{% else %}check back later.{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+          <td class="d-none d-md-table-cell small text-muted">
+            {% if order.hotel_name %}
+              <i class="bi bi-building me-1"></i>{{ order.hotel_name }}
+              {% if order.room_number %} · {{ order.room_number }}{% endif %}
+              {% if order.departure_date %}
+              <div>Dep: {{ order.departure_date|date:"d M" }}</div>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
 
-{% if page_obj.paginator.num_pages > 1 %}
-<div class="d-flex align-items-center justify-content-between p-3 border-top">
-  <span class="small text-muted">
-    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-    · {{ page_obj.paginator.count }} order{{ page_obj.paginator.count|pluralize }}
-  </span>
-  <div class="btn-group">
-    <button class="btn btn-sm btn-outline-secondary" {% if not page_obj.has_previous %}disabled{% endif %}
-            hx-get="{% url 'orders:orders_table' %}?page={{ page_obj.previous_page_number }}&sort={{ current_sort }}"
-            hx-target="#orders-region" hx-include="#orders-filter">Previous</button>
-    <button class="btn btn-sm btn-outline-secondary" {% if not page_obj.has_next %}disabled{% endif %}
-            hx-get="{% url 'orders:orders_table' %}?page={{ page_obj.next_page_number }}&sort={{ current_sort }}"
-            hx-target="#orders-region" hx-include="#orders-filter">Next</button>
+          <td class="text-center">
+            <span class="badge status-badge-{{ order.status }}">
+              {{ order.get_status_display }}
+            </span>
+          </td>
+
+          <td class="text-center d-none d-lg-table-cell small text-muted">
+            {% if order.ready_date %}{{ order.ready_date|date:"d M" }}{% else %}—{% endif %}
+          </td>
+
+          <td class="text-center">
+            {% if order.is_urgent %}
+              <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+            {% else %}—{% endif %}
+          </td>
+
+          <td class="text-end fw-semibold">
+            {{ order.total_amount|floatformat:0 }}
+            <span class="text-muted small">{{ order.total_currency }}</span>
+          </td>
+
+          <td class="text-end {% if order.balance_due > 0 %}text-danger{% else %}text-success{% endif %} fw-semibold">
+            ฿{{ order.balance_due|floatformat:0 }}
+          </td>
+
+          <td class="text-end" onclick="event.stopPropagation()">
+            <button class="btn btn-sm btn-outline-danger"
+                    hx-delete="{% url 'orders:order_delete' order.pk %}"
+                    hx-confirm="Delete order #{{ order.order_number }}? This cannot be undone."
+                    hx-target="#orders-region"
+                    hx-swap="outerHTML">
+              <i class="bi bi-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-5">
+            <i class="bi bi-inbox display-6 d-block mb-2"></i>
+            No orders found
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-</div>
-{% endif %}
 
-{% comment %} After a delete, the view re-renders the cards out-of-band. {% endcomment %}
-{% if oob_cards %}
-  {% include "admin_dashboard/partials/_stat_cards.html" with oob=True %}
-{% endif %}
+  {# Pagination #}
+  {% if page_obj.has_other_pages %}
+  <div class="d-flex justify-content-center mt-3">
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link"
+             hx-get="{% url 'orders:orders_table' %}?page={{ page_obj.previous_page_number }}&q={{ current_q }}&status={{ current_status }}&sort={{ current_sort }}"
+             hx-target="#orders-region">
+            &laquo;
+          </a>
+        </li>
+        {% endif %}
+        <li class="page-item disabled">
+          <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        </li>
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link"
+             hx-get="{% url 'orders:orders_table' %}?page={{ page_obj.next_page_number }}&q={{ current_q }}&status={{ current_status }}&sort={{ current_sort }}"
+             hx-target="#orders-region">
+            &raquo;
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+
+</div>

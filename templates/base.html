@@ -111,5 +111,18 @@
   </script>
 
   {% block extra_js %}{% endblock %}
+
+{# ── Global order detail modal — loaded by HTMX on row click ── #}
+<div class="modal fade" id="orderDetailModal" tabindex="-1" aria-labelledby="orderDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" id="order-detail-modal-body">
+      <div class="modal-body text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="mt-2 text-muted small">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
