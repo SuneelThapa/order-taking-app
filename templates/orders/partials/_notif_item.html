@@ -1,0 +1,49 @@
+{% comment %}Single reminder item — included by _notifications_dropdown{% endcomment %}
+<div class="px-3 py-2 border-bottom">
+  <div class="d-flex justify-content-between align-items-start mb-1">
+    <div>
+      <span class="fw-semibold small me-1">#{{ order.order_number }}</span>
+      <span class="badge {{ badge_class }} small">{{ order.get_status_display }}</span>
+    </div>
+    <div class="text-muted" style="font-size:0.72rem">
+      {% if order.departure_date %}🛫 {{ order.departure_date|date:"d M" }}{% endif %}
+      {% if order.fitting_date %} ✂ {{ order.fitting_date|date:"d M" }}{% endif %}
+    </div>
+  </div>
+  <div class="small text-truncate mb-1">{{ order.client.name }}</div>
+  {% if order.hotel_name %}
+  <div class="text-muted" style="font-size:0.72rem">
+    🏨 {{ order.hotel_name }}{% if order.room_number %} · Rm {{ order.room_number }}{% endif %}
+  </div>
+  {% endif %}
+  <div class="d-flex gap-1 mt-1">
+    {# WhatsApp #}
+    {% if order.client.phone %}
+    <a href="{{ order.contact_urls.wa_url }}" target="_blank"
+       class="btn btn-success btn-sm py-0 px-2" style="font-size:0.72rem"
+       title="WhatsApp">
+      <i class="bi bi-whatsapp"></i> WA
+    </a>
+    {# Line #}
+    <a href="{{ order.contact_urls.line_url }}" target="_blank"
+       class="btn btn-sm py-0 px-2" style="font-size:0.72rem;background:#06C755;color:#fff"
+       title="Line">
+      <i class="bi bi-chat-dots"></i> Line
+    </a>
+    {# SMS #}
+    <a href="{{ order.contact_urls.sms_url }}"
+       class="btn btn-secondary btn-sm py-0 px-2" style="font-size:0.72rem"
+       title="SMS">
+      <i class="bi bi-chat-left-text"></i> SMS
+    </a>
+    {% endif %}
+    {# Open order detail #}
+    <button type="button"
+            class="btn btn-outline-secondary btn-sm py-0 px-2 ms-auto" style="font-size:0.72rem"
+            hx-get="{% url 'orders:order_detail' order.pk %}"
+            hx-target="#order-detail-modal-body"
+            hx-swap="innerHTML">
+      View
+    </button>
+  </div>
+</div>

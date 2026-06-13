@@ -1,0 +1,90 @@
+{% comment %}Notification dropdown — loaded when bell is clicked{% endcomment %}
+{% load static %}
+
+{# ── Header with days selector ── #}
+<div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
+  <span class="fw-semibold small">
+    <i class="bi bi-bell me-1 text-primary"></i>Reminders
+    {% if total_count %}
+    <span class="badge text-bg-danger ms-1">{{ total_count }}</span>
+    {% endif %}
+  </span>
+  <div class="d-flex align-items-center gap-2">
+    <label class="small text-muted mb-0">Next</label>
+    <select class="form-select form-select-sm py-0" style="width:68px"
+            hx-get="{% url 'orders:notifications_list' %}"
+            hx-trigger="change"
+            hx-target="#notif-body"
+            hx-swap="outerHTML"
+            hx-include="this">
+      {% for opt in days_options %}
+      <option value="{{ opt }}" {% if opt == days %}selected{% endif %}>{{ opt }}d</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+{# ── Reminder list ── #}
+<div id="notif-body">
+{% if not total_count %}
+  <div class="text-center py-4 text-muted small">
+    <i class="bi bi-check-circle text-success d-block mb-2" style="font-size:1.8rem"></i>
+    All clear for the next {{ days }} day{{ days|pluralize }}
+  </div>
+
+{% else %}
+
+  {# 1. Departing today/tomorrow — red #}
+  {% if departing_urgent %}
+  <div class="px-3 py-1 bg-danger bg-opacity-10 border-bottom">
+    <span class="small fw-semibold text-danger">
+      <i class="bi bi-airplane-engines me-1"></i>
+      Departing today / tomorrow
+    </span>
+  </div>
+  {% for o in departing_urgent %}
+  {% include "orders/partials/_notif_item.html" with order=o badge_class="text-bg-danger" %}
+  {% endfor %}
+  {% endif %}
+
+  {# 2. Fitting today — yellow #}
+  {% if fitting_today %}
+  <div class="px-3 py-1 bg-warning bg-opacity-10 border-bottom border-top">
+    <span class="small fw-semibold text-warning">
+      <i class="bi bi-scissors me-1"></i>
+      Fitting today
+    </span>
+  </div>
+  {% for o in fitting_today %}
+  {% include "orders/partials/_notif_item.html" with order=o badge_class="text-bg-warning" %}
+  {% endfor %}
+  {% endif %}
+
+  {# 3. Ready but overdue — orange #}
+  {% if ready_overdue %}
+  <div class="px-3 py-1 bg-danger bg-opacity-10 border-bottom border-top">
+    <span class="small fw-semibold" style="color:#b45309">
+      <i class="bi bi-hourglass-split me-1"></i>
+      Ready but overdue
+    </span>
+  </div>
+  {% for o in ready_overdue %}
+  {% include "orders/partials/_notif_item.html" with order=o badge_class="text-bg-warning" %}
+  {% endfor %}
+  {% endif %}
+
+  {# 4. Departing soon — blue #}
+  {% if departing_soon %}
+  <div class="px-3 py-1 bg-info bg-opacity-10 border-bottom border-top">
+    <span class="small fw-semibold text-info">
+      <i class="bi bi-calendar-check me-1"></i>
+      Departing in {{ days }} days
+    </span>
+  </div>
+  {% for o in departing_soon %}
+  {% include "orders/partials/_notif_item.html" with order=o badge_class="text-bg-info" %}
+  {% endfor %}
+  {% endif %}
+
+{% endif %}
+</div>

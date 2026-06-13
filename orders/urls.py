@@ -10,6 +10,8 @@ from .views import (
     client_profile, client_edit,
     order_delivery_proof,
     export_csv,
+    notifications_count,
+    notifications_list,
 )
 
 app_name = "orders"
@@ -36,4 +38,6 @@ urlpatterns = [
     path("payment-row/",             payment_row,           name="payment_row"),
     path("load-measurement-form/",   load_measurement_form, name="load_measurement_form"),
     path("export-csv/",                export_csv,            name="export_csv"),
+    path("notifications/",             notifications_list,    name="notifications_list"),
+    path("notifications/count/",       notifications_count,   name="notifications_count"),
 ]

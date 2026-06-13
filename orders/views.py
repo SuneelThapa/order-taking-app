@@ -1114,3 +1114,146 @@ def export_csv(request):
         ])
 
     return response
+
+
+# ─────────────────────────────────────────────────────────
+# Notifications / Reminders
+# ─────────────────────────────────────────────────────────
+from datetime import date as _date, timedelta as _timedelta
+from urllib.parse import quote as _quote
+
+REMINDER_DAYS_OPTIONS = [1, 3, 7, 14]
+
+
+def _build_contact(order, message):
+    phone = (order.client.phone or "").replace("+", "").replace(" ", "")
+    raw   = order.client.phone or ""
+    msg   = _quote(message)
+    return {
+        "wa_url":   f"https://wa.me/{phone}?text={msg}",
+        "line_url": f"https://line.me/R/ti/p/+{phone}",
+        "sms_url":  f"sms:{raw}?body={msg}",
+    }
+
+
+def _get_reminders(tenant, today, days):
+    future = today + _timedelta(days=days)
+    active = ["new", "pending", "processing", "ready", "alterations"]
+
+    # 1. Departing today or tomorrow — highest priority
+    departing_urgent = list(
+        Order.objects.filter(
+            tenant=tenant,
+            hotel_name__isnull=False,
+            departure_date__gte=today,
+            departure_date__lte=today + _timedelta(days=1),
+            status__in=active,
+        ).select_related("client").order_by("departure_date")
+    )
+    for o in departing_urgent:
+        msg = (
+            f"Hello {o.client.name}! Your order #{o.order_number} is ready. "
+            f"We will deliver to {o.hotel_name or ''}"
+            f"{', Room ' + o.room_number if o.room_number else ''} "
+            f"before your departure on "
+            f"{o.departure_date.strftime('%d %b') if o.departure_date else ''}. "
+            f"Please confirm delivery time. Thank you! 🙏"
+        )
+        o.contact_urls = _build_contact(o, msg)
+
+    # 2. Fitting today
+    fitting_today = list(
+        Order.objects.filter(
+            tenant=tenant,
+            fitting_date=today,
+            status__in=active,
+        ).select_related("client").order_by("order_number")
+    )
+    for o in fitting_today:
+        msg = (
+            f"Hello {o.client.name}! Just a reminder that your fitting "
+            f"for order #{o.order_number} is scheduled today. "
+            f"Please visit us at your convenience. Thank you! 🙏"
+        )
+        o.contact_urls = _build_contact(o, msg)
+
+    # 3. Ready but overdue — past delivery or departure date
+    ready_overdue = list(
+        Order.objects.filter(
+            tenant=tenant,
+            status="ready",
+        ).filter(
+            Q(delivery_date__lt=today) | Q(departure_date__lt=today)
+        ).select_related("client").order_by("ready_date")
+    )
+    for o in ready_overdue:
+        msg = (
+            f"Hello {o.client.name}! Your order #{o.order_number} has been "
+            f"ready and is waiting for you. "
+            f"Please let us know when you would like to collect it. Thank you! 🙏"
+        )
+        o.contact_urls = _build_contact(o, msg)
+
+    # 4. Departing within N days (after tomorrow)
+    departing_soon = list(
+        Order.objects.filter(
+            tenant=tenant,
+            hotel_name__isnull=False,
+            departure_date__gt=today + _timedelta(days=1),
+            departure_date__lte=future,
+            status__in=active,
+        ).select_related("client").order_by("departure_date")
+    )
+    for o in departing_soon:
+        msg = (
+            f"Hello {o.client.name}! Your order #{o.order_number} will be "
+            f"ready before your departure on "
+            f"{o.departure_date.strftime('%d %b') if o.departure_date else ''}. "
+            f"We will deliver to {o.hotel_name or ''}"
+            f"{', Room ' + o.room_number if o.room_number else ''}. "
+            f"Thank you for choosing us! 🙏"
+        )
+        o.contact_urls = _build_contact(o, msg)
+
+    total = (len(departing_urgent) + len(fitting_today) +
+             len(ready_overdue) + len(departing_soon))
+    return {
+        "departing_urgent": departing_urgent,
+        "fitting_today":    fitting_today,
+        "ready_overdue":    ready_overdue,
+        "departing_soon":   departing_soon,
+        "total_count":      total,
+    }
+
+
+@user_passes_test(staff_check)
+def notifications_count(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("")
+    today = _date.today()
+    days  = int(request.session.get("reminder_days", 3))
+    data  = _get_reminders(tenant, today, days)
+    count = data["total_count"]
+    if count:
+        return HttpResponse(str(count))
+    return HttpResponse("")
+
+
+@user_passes_test(staff_check)
+def notifications_list(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    today = _date.today()
+    days  = int(request.GET.get("days", request.session.get("reminder_days", 3)))
+    if days not in REMINDER_DAYS_OPTIONS:
+        days = 3
+    request.session["reminder_days"] = days
+    data  = _get_reminders(tenant, today, days)
+    return render(request, "orders/partials/_notifications_dropdown.html", {
+        **data,
+        "days":         days,
+        "days_options": REMINDER_DAYS_OPTIONS,
+        "today":        today,
+    })

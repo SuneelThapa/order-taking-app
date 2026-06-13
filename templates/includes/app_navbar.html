@@ -12,6 +12,33 @@
 
   <div class="ms-auto d-flex align-items-center gap-3">
     {% if request.user.is_authenticated %}
+
+      {# ── Notification bell ── #}
+      {# hx-trigger on the .dropdown div so show.bs.dropdown can bubble up to it #}
+      <div class="dropdown"
+           hx-get="{% url 'orders:notifications_list' %}"
+           hx-trigger="show.bs.dropdown"
+           hx-target="#notif-dropdown-content"
+           hx-swap="innerHTML">
+        <a href="#" class="position-relative text-body text-decoration-none"
+           data-bs-toggle="dropdown"
+           aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span id="notif-badge"
+                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style="font-size:0.6rem"
+                hx-get="{% url 'orders:notifications_count' %}"
+                hx-trigger="load, every 120s"
+                hx-swap="innerHTML"></span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end p-0 shadow"
+             style="width:380px;max-height:80vh;overflow-y:auto">
+          <div id="notif-dropdown-content" class="text-center py-3 text-muted small">
+            <div class="spinner-border spinner-border-sm"></div>
+          </div>
+        </div>
+      </div>
+
       <span class="text-muted small">
         <i class="bi bi-person-circle"></i> {{ request.user.username }}
       </span>
