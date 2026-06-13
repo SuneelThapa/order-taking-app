@@ -1,0 +1,57 @@
+{% comment %}Delivery proof upload form — loaded into cancel-modal-body{% endcomment %}
+{% load static %}
+
+<div class="modal-header border-bottom">
+  <h5 class="modal-title">
+    <i class="bi bi-camera me-2 text-primary"></i>
+    Delivery proof — #{{ order.order_number }}
+  </h5>
+  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body">
+
+  {% if saved %}
+  <div class="alert alert-success d-flex gap-2 align-items-center">
+    <i class="bi bi-check-circle-fill"></i>
+    Proof image saved successfully.
+  </div>
+  {% endif %}
+
+  {% if delivery.proof_image %}
+  <div class="mb-3">
+    <div class="fw-semibold small text-muted mb-1">Current proof image</div>
+    <a href="{{ delivery.proof_image.url }}" target="_blank">
+      <img src="{{ delivery.proof_image.url }}" alt="Delivery proof"
+           class="img-thumbnail" style="max-height:200px">
+    </a>
+  </div>
+  {% endif %}
+
+  <form hx-post="{% url 'orders:order_delivery_proof' order.pk %}"
+        hx-target="#cancel-modal-body"
+        hx-swap="innerHTML"
+        hx-encoding="multipart/form-data"
+        novalidate>
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label fw-semibold">
+        {% if delivery.proof_image %}Replace proof image{% else %}Upload proof image{% endif %}
+      </label>
+      <input type="file" name="proof_image" accept="image/*"
+             class="form-control" {% if not delivery.proof_image %}required{% endif %}>
+      <div class="form-text">
+        Photo of handover, hotel delivery receipt, or shipping label.
+        Protects against chargebacks.
+      </div>
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="button" class="btn btn-secondary btn-sm"
+              data-bs-dismiss="modal">Close</button>
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-cloud-upload me-1"></i>Save proof
+      </button>
+    </div>
+  </form>
+
+</div>

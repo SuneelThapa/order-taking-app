@@ -68,14 +68,23 @@ _ALLOWED_SORTS = {
 
 
 def _orders_table_context(request, tenant):
-    status = request.GET.get("status") or ""
-    q      = (request.GET.get("q") or "").strip()
-    sort   = request.GET.get("sort") or "-created_at"
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    status     = request.GET.get("status")    or ""
+    q          = (request.GET.get("q") or "").strip()
+    sort       = request.GET.get("sort")      or "-created_at"
+    from_date  = request.GET.get("from_date") or ""
+    to_date    = request.GET.get("to_date")   or ""
+    staff_id   = request.GET.get("staff_id")  or ""
+    urgent     = request.GET.get("urgent")    or ""
+
     if sort not in _ALLOWED_SORTS:
         sort = "-created_at"
     page = request.GET.get("page", 1)
 
-    orders = Order.objects.filter(tenant=tenant).select_related("client")
+    orders = Order.objects.filter(tenant=tenant).select_related("client", "delivery")
+
     if status:
         orders = orders.filter(status=status)
     if q:
@@ -85,10 +94,35 @@ def _orders_table_context(request, tenant):
             | Q(client__phone__icontains=q)
             | Q(client__email__icontains=q)
         )
+    if from_date:
+        orders = orders.filter(created_at__date__gte=from_date)
+    if to_date:
+        orders = orders.filter(created_at__date__lte=to_date)
+    if staff_id:
+        orders = orders.filter(staff_assignments__user_id=staff_id).distinct()
+    if urgent:
+        orders = orders.filter(is_urgent=True)
+
+    # Staff list for the filter dropdown
+    staff_users = User.objects.filter(
+        staff_profile__isnull=False
+    ).order_by("first_name", "last_name", "username")
+
+    has_filters = any([status, q, from_date, to_date, staff_id, urgent])
 
     paginator = Paginator(orders.order_by(sort), 10)
-    return {"page_obj": paginator.get_page(page),
-            "current_status": status, "current_sort": sort, "current_q": q}
+    return {
+        "page_obj":        paginator.get_page(page),
+        "current_status":  status,
+        "current_sort":    sort,
+        "current_q":       q,
+        "current_from":    from_date,
+        "current_to":      to_date,
+        "current_staff":   staff_id,
+        "current_urgent":  urgent,
+        "staff_users":     staff_users,
+        "has_filters":     has_filters,
+    }
 
 
 # ─────────────────────────────────────────────────────────
@@ -492,10 +526,20 @@ def order_form_view(request, pk=None):
         ):
             first_error_step = 6
 
+    # Staff lock: on NEW orders anyone can add staff.
+    # On EDIT, only owner/manager can change assignments.
+    try:
+        user_role = request.user.staff_profile.role
+    except Exception:
+        # Superusers without a StaffProfile get owner access
+        user_role = "owner" if request.user.is_superuser else "staff"
+    can_edit_staff = (not is_edit) or (user_role in ("owner", "manager"))
+
     context = {
         "is_edit":              is_edit,
         "edit_order":           edit_order,
         "order_form":           order_form,
+        "can_edit_staff":       can_edit_staff,
         "item_formset":         item_formset,
         "item_rows":            item_rows,
         "client_photo_formset": client_photo_formset,
@@ -681,7 +725,7 @@ def order_add_payment(request, pk):
     if request.method != "POST":
         return HttpResponse(status=405)
 
-    form = PaymentForm(request.POST, prefix="qp")
+    form = PaymentForm(request.POST, request.FILES, prefix="qp")
     # Make original_amount required for this inline form
     form.fields["original_amount"].required = True
 
@@ -720,6 +764,7 @@ def order_add_payment(request, pk):
             method               = cd.get("method")               or "cash",
             type                 = ptype,
             notes                = cd.get("notes")                or "",
+            proof_image          = cd.get("proof_image")          or None,
         )
         payments = order.payments.select_related("recorded_by").all()
         response = render(request, "orders/partials/_payment_history.html",
@@ -769,6 +814,20 @@ def order_cancel(request, pk):
         })
 
     # POST — process cancellation
+    # Guard: CancellationRecord may already exist from a previously failed attempt
+    # (record committed but order.status never saved). Resolve the inconsistency.
+    existing = CancellationRecord.objects.filter(order=order).first()
+    if existing:
+        if order.status != "canceled":
+            order.status = "canceled"
+            order.save()
+            cache.delete(f"order_status_counts_{tenant.id}")
+        response = HttpResponse("")
+        response["HX-Trigger"] = json.dumps({
+            "orderCanceled": {"pk": order.pk, "orderNumber": order.order_number},
+        })
+        return response
+
     form = CancellationForm(request.POST)
     if not form.is_valid():
         print(f"DEBUG cancel form errors for order {pk}: {dict(form.errors)}")
@@ -911,4 +970,147 @@ def client_edit(request, pk):
     })
     response["HX-Retarget"] = "#client-profile-modal-body"
     response["HX-Reswap"]   = "innerHTML"
+    return response
+
+
+# ─────────────────────────────────────────────────────────
+# Delivery proof upload
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_delivery_proof(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    order = get_object_or_404(Order, pk=pk, tenant=tenant)
+
+    try:
+        delivery = order.delivery
+    except Exception:
+        return HttpResponse("No delivery record for this order.", status=400)
+
+    if request.method == "GET":
+        return render(request, "orders/partials/_delivery_proof_form.html", {
+            "order":    order,
+            "delivery": delivery,
+        })
+
+    if request.method == "POST":
+        image = request.FILES.get("proof_image")
+        if image:
+            delivery.proof_image = image
+            delivery.save()
+        response = render(request, "orders/partials/_delivery_proof_form.html", {
+            "order":    order,
+            "delivery": delivery,
+            "saved":    True,
+        })
+        response["HX-Trigger"] = json.dumps({"deliveryProofSaved": {"pk": order.pk}})
+        return response
+
+    return HttpResponse(status=405)
+
+
+# ─────────────────────────────────────────────────────────
+# CSV Export
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def export_csv(request):
+    import csv
+    from django.http import HttpResponse
+    from django.db.models import Sum
+
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    # Apply same filters as orders_table
+    ctx    = _orders_table_context(request, tenant)
+    # Get ALL matching orders (no pagination)
+    status     = request.GET.get("status")    or ""
+    q          = (request.GET.get("q") or "").strip()
+    from_date  = request.GET.get("from_date") or ""
+    to_date    = request.GET.get("to_date")   or ""
+    staff_id   = request.GET.get("staff_id")  or ""
+    urgent     = request.GET.get("urgent")    or ""
+
+    orders = Order.objects.filter(tenant=tenant)\
+        .select_related("client", "delivery")\
+        .prefetch_related(
+            "items__product_type",
+            "staff_assignments__user",
+            "payments",
+        ).order_by("-created_at")
+
+    if status:    orders = orders.filter(status=status)
+    if q:         orders = orders.filter(Q(order_number__icontains=q)|Q(client__name__icontains=q)|Q(client__phone__icontains=q))
+    if from_date: orders = orders.filter(created_at__date__gte=from_date)
+    if to_date:   orders = orders.filter(created_at__date__lte=to_date)
+    if staff_id:  orders = orders.filter(staff_assignments__user_id=staff_id).distinct()
+    if urgent:    orders = orders.filter(is_urgent=True)
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+    response["Content-Disposition"] = 'attachment; filename="orders_export.csv"'
+    response.write("\ufeff")  # UTF-8 BOM for Excel
+
+    writer = csv.writer(response)
+    writer.writerow([
+        "Order #", "Created", "Status", "Urgent",
+        "Client", "Phone", "Email",
+        "Total Amount", "Currency", "Balance Due (THB)",
+        "Fitting Date", "Ready Date", "Delivery Date",
+        "Delivery Type", "Hotel", "Room",
+        "Items", "Staff",
+        "Payments", "Total Collected (THB)",
+    ])
+
+    for order in orders:
+        # Items
+        items_str = "; ".join(
+            f"{i.product_type.name if i.product_type else '?'} ×{i.quantity}"
+            for i in order.items.all()
+        )
+        # Staff
+        staff_str = "; ".join(
+            f"{s.user.get_full_name() or s.user.username} ({s.get_role_display()})"
+            for s in order.staff_assignments.all()
+        )
+        # Payments
+        payments_str = "; ".join(
+            f"{p.get_type_display()} {p.original_amount} {p.currency} ({p.get_method_display()})"
+            for p in order.payments.all()
+        )
+        total_collected = sum(
+            (p.thb_equivalent or 0) for p in order.payments.all()
+        )
+        # Delivery
+        delivery_type = hotel = room = ""
+        if hasattr(order, "delivery") and order.delivery:
+            delivery_type = order.delivery.get_type_display()
+            hotel         = order.delivery.hotel_name    or ""
+            room          = order.delivery.room_number   or ""
+
+        try:
+            balance = order.balance_due
+        except Exception:
+            balance = ""
+
+        writer.writerow([
+            order.order_number,
+            order.created_at.strftime("%Y-%m-%d"),
+            order.get_status_display(),
+            "Yes" if order.is_urgent else "No",
+            order.client.name,
+            order.client.phone or "",
+            order.client.email or "",
+            order.total_amount,
+            order.total_currency,
+            balance,
+            order.fitting_date.strftime("%Y-%m-%d") if order.fitting_date else "",
+            order.ready_date.strftime("%Y-%m-%d")   if order.ready_date   else "",
+            order.delivery_date.strftime("%Y-%m-%d")if order.delivery_date else "",
+            delivery_type, hotel, room,
+            items_str, staff_str,
+            payments_str, total_collected,
+        ])
+
     return response

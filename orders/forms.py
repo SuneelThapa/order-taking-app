@@ -131,7 +131,7 @@ class PaymentForm(StyledModelForm):
         model = Payment
         fields = [
             "original_amount", "currency",
-            "exchange_rate_to_thb", "method", "type", "notes",
+            "exchange_rate_to_thb", "method", "type", "notes", "proof_image",
         ]
         widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
         help_texts = {
@@ -151,6 +151,8 @@ class PaymentForm(StyledModelForm):
         self.fields["method"].initial               = "cash"
         self.fields["type"].initial                 = "deposit"
         self.fields["exchange_rate_to_thb"].initial = 1
+        self.fields["proof_image"].required = False
+        self.fields["proof_image"].label    = "Proof image (optional)"
 
     def clean(self):
         cleaned  = super().clean()

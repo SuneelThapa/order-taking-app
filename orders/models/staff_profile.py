@@ -4,6 +4,12 @@ from django.conf import settings
 
 class StaffProfile(models.Model):
 
+    ROLE_CHOICES = [
+        ('owner',   'Owner'),
+        ('manager', 'Manager'),
+        ('staff',   'Staff'),
+    ]
+
     EMPLOYMENT_TYPES = [
         ('full_time', 'Full-time'),
         ('part_time', 'Part-time'),
@@ -40,6 +46,12 @@ class StaffProfile(models.Model):
         max_length=20,
         choices=EMPLOYMENT_TYPES,
         default='full_time'
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='staff',
+        help_text="Owner and Manager can modify staff assignments and approve refunds."
     )
     join_date = models.DateField(blank=True, null=True)
 

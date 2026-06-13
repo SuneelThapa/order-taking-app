@@ -29,6 +29,13 @@ class Delivery(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Proof of delivery/shipment — protects against chargebacks
+    proof_image = models.ImageField(
+        upload_to='delivery_proofs/',
+        null=True, blank=True,
+        help_text="Photo proof of delivery or shipping receipt"
+    )
+
     class Meta:
         verbose_name = 'Delivery'
         verbose_name_plural = 'Deliveries'

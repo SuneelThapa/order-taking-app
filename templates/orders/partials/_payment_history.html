@@ -21,6 +21,13 @@
         <span class="badge {% if p.is_refund %}text-bg-danger{% else %}text-bg-success{% endif %} me-1">
           {{ p.get_type_display }}
         </span>
+        {% if p.proof_image %}
+        <a href="{{ p.proof_image.url }}" target="_blank"
+           class="ms-1" title="View proof">
+          <img src="{{ p.proof_image.url }}" alt="proof"
+               class="rounded" style="height:24px;width:24px;object-fit:cover;border:1px solid #dee2e6">
+        </a>
+        {% endif %}
         <span class="fw-semibold">
           {% if p.is_refund %}&minus;{% endif %}{{ p.original_amount|floatformat:0 }} {{ p.currency }}
         </span>
@@ -57,8 +64,11 @@
   <div x-show="showPayForm" x-cloak class="border rounded p-3 mt-2 bg-light">
     <form hx-post="{% url 'orders:order_add_payment' order.pk %}"
           hx-target="#payment-history-{{ order.pk }}"
-          hx-swap="innerHTML"
-          hx-indicator="#pay-spinner-{{ order.pk }}">
+          hx-swap="outerHTML"
+          hx-encoding="multipart/form-data"
+          hx-indicator="#pay-spinner-{{ order.pk }}"
+          x-data="{ ptype: 'deposit' }"
+          @change="if($event.target.name && $event.target.name.includes('type')) ptype = $event.target.value">
       {% csrf_token %}
       <div class="row g-2">
         <div class="col-6">
@@ -87,6 +97,15 @@
         <div class="col-12">
           <label class="form-label small mb-1">Notes</label>
           {{ quick_pay_form.notes }}
+        </div>
+        {# Proof image — shown when type=Refund #}
+        <div x-show="ptype === 'refund'" x-cloak class="mt-2">
+            <label class="form-label form-label-sm">
+              {{ quick_pay_form.proof_image.label }}
+            </label>
+            <input type="file" name="{{ quick_pay_form.proof_image.html_name }}"
+                   accept="image/*" class="form-control form-control-sm">
+            <div class="form-text small">Receipt or bank transfer screenshot.</div>
         </div>
         <div class="col-12 d-flex gap-2 align-items-center">
           <button type="submit" class="btn btn-primary btn-sm">

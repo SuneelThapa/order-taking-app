@@ -175,6 +175,24 @@
             {% if order.delivery.delivery_notes %}
             <div class="small text-muted mt-1">{{ order.delivery.delivery_notes }}</div>
             {% endif %}
+            {% if order.delivery.proof_image %}
+            <div class="mt-2">
+              <a href="{{ order.delivery.proof_image.url }}" target="_blank"
+                 class="d-inline-flex align-items-center gap-1 small text-success">
+                <i class="bi bi-check-circle-fill"></i> Proof uploaded
+                <img src="{{ order.delivery.proof_image.url }}" alt="proof"
+                     class="ms-1 rounded" style="height:32px;width:32px;object-fit:cover">
+              </a>
+            </div>
+            {% endif %}
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm mt-2"
+                    hx-get="{% url 'orders:order_delivery_proof' order.pk %}"
+                    hx-target="#cancel-modal-body"
+                    hx-swap="innerHTML">
+              <i class="bi bi-camera me-1"></i>
+              {% if order.delivery.proof_image %}Replace proof{% else %}Upload delivery proof{% endif %}
+            </button>
           </div>
         </div>
         {% endif %}

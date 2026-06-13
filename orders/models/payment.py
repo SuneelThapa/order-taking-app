@@ -59,6 +59,11 @@ class Payment(models.Model):
         on_delete=models.PROTECT, related_name='payments_recorded'
     )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    proof_image = models.ImageField(
+        upload_to='payment_proofs/',
+        null=True, blank=True,
+        help_text="Proof of payment/refund (receipt, bank transfer screenshot, etc.)"
+    )
 
     class Meta:
         ordering = ['created_at']
