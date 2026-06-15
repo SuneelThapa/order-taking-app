@@ -43,6 +43,19 @@
 
 {% block extra_js %}{{ block.super }}
 <script>
+// Auto-open order detail if redirected from production bill page
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var openPk = params.get('open_order');
+  if (openPk) {
+    history.replaceState(null, '', window.location.pathname);
+    htmx.ajax('GET', '/' + openPk + '/detail/', {
+      target: '#order-detail-modal-body',
+      swap:   'innerHTML'
+    });
+  }
+})();
+
 // Show order detail modal after HTMX loads content into it
 document.body.addEventListener('htmx:afterSettle', function(e) {
   if (!e.detail.target) return;

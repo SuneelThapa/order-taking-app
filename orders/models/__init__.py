@@ -55,3 +55,14 @@ from .belt import *
 
 # Item photos — depends on order_item
 from .order_item_photo import *
+
+# ── Production bill models ──────────────────────────────
+# No external dependencies
+from .target_item import *
+from .variation_type import *
+
+# Depends on ProductType
+from .fabric_zone import *
+
+# Depends on OrderItem, VariationType, VariationOption, FabricZone
+from .production_bill import *

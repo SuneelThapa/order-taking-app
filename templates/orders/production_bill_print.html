@@ -1,0 +1,293 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Production Bill — #{{ order.order_number }}</title>
+  <link href="/static/plugins/bootstrap5/css/bootstrap.min.css" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { margin: 0; padding: 0; }
+      .page { page-break-after: always; }
+    }
+    body { font-size: 12px; background: #fff; }
+    .bill-header { border-bottom: 2px solid #000; margin-bottom: 8px; padding-bottom: 6px; }
+    .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase;
+                     letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+    .diagram-box { border: 1px solid #ccc; border-radius: 4px;
+                   padding: 4px; text-align: center; width: 90px; }
+    .diagram-box img { max-height: 60px; max-width: 80px; object-fit: contain; }
+    .diagram-label { font-size: 9px; color: #555; margin-top: 2px; }
+    .measure-row { display: flex; justify-content: space-between;
+                   border-bottom: 1px dotted #ddd; padding: 1px 0; font-size: 11px; }
+    .fabric-sample { border: 1px dashed #999; border-radius: 4px;
+                     height: 50px; display: flex; align-items: center;
+                     justify-content: center; font-size: 9px; color: #aaa;
+                     margin-bottom: 6px; }
+    .zone-row { font-size: 10px; margin-bottom: 3px; }
+    .zone-label { color: #666; font-weight: 600; }
+    .mono-row { font-size: 10px; margin-top: 4px;
+                padding-top: 4px; border-top: 1px dotted #ddd; }
+  </style>
+</head>
+<body>
+
+<div class="no-print p-3 d-flex gap-2 align-items-center border-bottom mb-3">
+  <button onclick="window.print()" class="btn btn-primary btn-sm">
+    <i class="bi bi-printer me-1"></i>Print
+  </button>
+  <a href="{% url 'orders:production_bill' order_pk=order.pk item_pk=item.pk %}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil me-1"></i>Edit bill
+  </a>
+  <a href="{% url 'orders:dashboard' %}?open_order={{ order.pk }}"
+     class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Back to order
+  </a>
+  <div class="ms-auto">
+    {% if bill.sent_to_factory %}
+    <div id="factory-badge" class="d-flex align-items-center gap-2">
+      <span class="badge text-bg-success">
+        <i class="bi bi-check-circle me-1"></i>Sent to factory
+      </span>
+      <span class="text-muted" style="font-size:0.72rem">
+        {{ bill.sent_to_factory_at|date:"d M Y H:i" }}
+        {% if bill.sent_to_factory_by %}· {{ bill.sent_to_factory_by.get_full_name }}{% endif %}
+      </span>
+      <button class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.72rem"
+              hx-post="{% url 'orders:bill_toggle_sent' pk=bill.pk %}"
+              hx-target="#factory-badge" hx-swap="outerHTML"
+              hx-confirm="Undo sent-to-factory mark?">
+        Undo
+      </button>
+    </div>
+    {% else %}
+    <div id="factory-badge">
+      <button class="btn btn-sm btn-success py-0 px-2" style="font-size:0.72rem"
+              hx-post="{% url 'orders:bill_toggle_sent' pk=bill.pk %}"
+              hx-target="#factory-badge" hx-swap="outerHTML">
+        <i class="bi bi-send me-1"></i>Mark as sent to factory
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="page px-4 py-3">
+
+  {# ── Bill header ── #}
+  <div class="bill-header d-flex justify-content-between align-items-start">
+    <div>
+      <div style="font-size:18px;font-weight:700;">Emporium Armani</div>
+      <div style="font-size:11px;color:#555;">Production Bill</div>
+    </div>
+    <div style="text-align:right;font-size:11px;">
+      <div><strong>Order #{{ order.order_number }}</strong></div>
+      <div>Date: {{ order.created_at|date:"d M Y" }}</div>
+      <div>Fitting: {{ item.order.fitting_date|date:"d M Y"|default:"—" }}</div>
+      <div>Ready: {{ item.order.ready_date|date:"d M Y"|default:"—" }}</div>
+      <div>Created by: {{ bill.created_by.get_full_name|default:bill.created_by.username }}</div>
+    </div>
+  </div>
+
+  {# ── Sub-header: product + gender ── #}
+  <div class="d-flex gap-4 mb-2" style="font-size:11px;">
+    <div><strong>Product:</strong> {{ item.product_type.name|default:"—" }}
+      {% if item.quantity > 1 %} × {{ item.quantity }}{% endif %}
+    </div>
+    <div><strong>Gender:</strong> {{ bill.get_gender_display }}</div>
+    <div><strong>Client:</strong> {{ order.client.name }}</div>
+  </div>
+
+  {# ── Style diagrams + measurements in 2 columns ── #}
+  <div class="row g-2 mb-2">
+
+    <div class="col-6">
+      <div class="section-title">Style diagrams</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for sel in style_selections %}
+        <div class="diagram-box">
+          {% if sel.chosen_option.image %}
+          <img src="{{ sel.chosen_option.image.url }}" alt="{{ sel.chosen_option.name }}">
+          {% else %}
+          <div style="height:60px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:9px;">No image</div>
+          {% endif %}
+          <div class="diagram-label">
+            <div>{{ sel.variation_type.name }}</div>
+            <div style="font-weight:600;color:#333;">{{ sel.chosen_option.name }}</div>
+          </div>
+        </div>
+        {% empty %}
+        <div style="font-size:10px;color:#aaa;">No style selections recorded.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-6">
+      <div class="section-title">Measurements</div>
+      {% if measurement_fields %}
+      <div style="columns:2;column-gap:12px;">
+        {% for label, value in measurement_fields %}
+        <div class="measure-row">
+          <span style="color:#666;">{{ label }}</span>
+          <span style="font-weight:600;">{{ value }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:10px;color:#aaa;">No measurements recorded.</div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  {# ── Reference photos — selectable before print ── #}
+  {% if client_photos or item_photos or scratch_notes %}
+
+  {# Alpine state initialised via script — avoids template-tag-in-x-data issues #}
+  <script>
+    function photoSelector() {
+      return {
+        cp: Array({{ client_photos|length }}).fill(true),
+        ip: Array({{ item_photos|length }}).fill(true),
+        sn: Array({{ scratch_notes|length }}).fill(true),
+      };
+    }
+  </script>
+
+  <div x-data="photoSelector()" class="mb-2">
+
+    {# Controls — hidden when printing #}
+    <div class="no-print mb-1 p-2 border rounded bg-light d-flex flex-wrap gap-3 align-items-center" style="font-size:11px;">
+      <span style="font-weight:600;color:#555;">Select photos to print:</span>
+      {% if client_photos %}
+      <span style="color:#888;">Body —</span>
+      {% for photo in client_photos %}
+      <label style="cursor:pointer;user-select:none;">
+        <input type="checkbox" :checked="cp[{{ forloop.counter0 }}]"
+               @change="cp[{{ forloop.counter0 }}] = $event.target.checked">
+        {{ photo.photo_type|capfirst }}
+      </label>
+      {% endfor %}
+      {% endif %}
+      {% if item_photos %}
+      <span style="color:#888;">Design —</span>
+      {% for photo in item_photos %}
+      <label style="cursor:pointer;user-select:none;">
+        <input type="checkbox" :checked="ip[{{ forloop.counter0 }}]"
+               @change="ip[{{ forloop.counter0 }}] = $event.target.checked">
+        Photo {{ forloop.counter }}
+      </label>
+      {% endfor %}
+      {% endif %}
+      {% if scratch_notes %}
+      <span style="color:#888;">Sketches —</span>
+      {% for note in scratch_notes %}
+      <label style="cursor:pointer;user-select:none;">
+        <input type="checkbox" :checked="sn[{{ forloop.counter0 }}]"
+               @change="sn[{{ forloop.counter0 }}] = $event.target.checked">
+        Sketch {{ forloop.counter }}
+      </label>
+      {% endfor %}
+      {% endif %}
+    </div>
+
+    {# Photos row #}
+    <div class="d-flex gap-3 flex-wrap">
+      {% for photo in client_photos %}
+      <div x-show="cp[{{ forloop.counter0 }}]" class="text-center">
+        <img src="{{ photo.image.url }}"
+             style="height:110px;width:80px;object-fit:cover;border:1px solid #ccc;border-radius:3px">
+        <div style="font-size:9px;color:#666;margin-top:2px;">{{ photo.photo_type|capfirst }}</div>
+      </div>
+      {% endfor %}
+
+      {% for photo in item_photos %}
+      <div x-show="ip[{{ forloop.counter0 }}]" class="text-center">
+        <img src="{{ photo.image.url }}"
+             style="height:110px;width:110px;object-fit:cover;border:1px solid #ccc;border-radius:3px">
+        <div style="font-size:9px;color:#666;margin-top:2px;">Design {{ forloop.counter }}</div>
+      </div>
+      {% endfor %}
+
+      {% for note in scratch_notes %}
+      <div x-show="sn[{{ forloop.counter0 }}]" class="text-center">
+        <img src="{{ note.image.url }}"
+             style="height:110px;width:110px;object-fit:cover;border:1px solid #ccc;border-radius:3px">
+        <div style="font-size:9px;color:#666;margin-top:2px;">Sketch {{ forloop.counter }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Fabric sets — side by side ── #}
+  <div class="section-title">Fabric details</div>
+  <div class="row g-2 mb-2"
+       style="display:grid;grid-template-columns:repeat({{ fabric_sets|length }},1fr);gap:8px;">
+    {% for fset in fabric_sets %}
+    <div style="border:1px solid #ccc;border-radius:4px;padding:8px;">
+
+      <div style="font-weight:600;font-size:11px;margin-bottom:4px;">
+        Piece {{ fset.piece_number }}
+        {% if fset.label %}<span style="font-weight:400;color:#666;">({{ fset.label }})</span>{% endif %}
+      </div>
+
+      <div class="fabric-sample">Stick fabric sample here</div>
+
+      {% for entry in fset.zone_entries.all %}
+      <div class="zone-row">
+        <span class="zone-label">{{ entry.display_zone }}:</span>
+        {% if entry.fabric_code %}{{ entry.fabric_code }}{% endif %}
+        {% if entry.color %} · {{ entry.color }}{% endif %}
+        {% if entry.notes %}<div style="font-size:9px;color:#888;">{{ entry.notes }}</div>{% endif %}
+      </div>
+      {% endfor %}
+
+      {% if fset.monogram %}
+      <div class="mono-row">
+        <span class="zone-label">Monogram:</span>
+        {{ fset.monogram.text }}
+        {% if fset.monogram.style %} · {{ fset.monogram.style.name }}{% endif %}
+        {% if fset.monogram.color %} · {{ fset.monogram.color }}{% endif %}
+        {% if fset.monogram.position %} · {{ fset.monogram.position }}{% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Notes ── #}
+  {% if bill.notes %}
+  <div class="mb-2">
+    <div class="section-title">Factory notes</div>
+    <div style="font-size:11px;border:1px solid #ccc;border-radius:4px;padding:6px;">
+      {{ bill.notes }}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Footer ── #}
+  <div style="border-top:1px solid #ccc;margin-top:8px;padding-top:6px;
+              font-size:9px;color:#aaa;display:flex;justify-content:space-between;">
+    <span>
+      Bill #{{ bill.pk }} · {{ bill.confirmed_at|date:"d M Y H:i"|default:"Draft" }}
+      {% if bill.sent_to_factory %}
+      &nbsp;·&nbsp;
+      <span style="color:#2d6a4f;font-weight:600;">
+        ⚑ Sent to factory {{ bill.sent_to_factory_at|date:"d M Y H:i" }}
+        {% if bill.sent_to_factory_by %}· {{ bill.sent_to_factory_by.get_full_name|default:bill.sent_to_factory_by.username }}{% endif %}
+        — REPRINT
+      </span>
+      {% endif %}
+    </span>
+    <span>Emporium Armani · emporiumarmani.com</span>
+  </div>
+
+</div>
+
+</body>
+</html>

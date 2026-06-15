@@ -63,3 +63,20 @@ git push
 
 # to check repo link for github
 git remote -v
+
+
+
+
+
+What's set up in admin:
+TargetItem — simple list, add Jacket, Shirt, Pants, Coat, Dress, Vest etc. here first.
+VariationType — shows which target items it applies to. Has VariationOption inline with image preview and upload. Use filter_horizontal widget to assign target items visually. Add your style categories here (Lapel Style → Peak, Notch, Shawl with diagram images).
+VariationOption — standalone view with image preview grid for quick browsing.
+FabricZone — standalone list. Also appears as inline under each ProductType in the ProductType admin — easiest way to set up default zones per garment type.
+ProductionBill — shows all bills with lock status. Has style selection and fabric set inlines. Click into a FabricSet to manage zone entries and monogram.
+Recommended setup order in admin:
+
+Add TargetItem entries (Jacket, Shirt, Pants etc.)
+Add VariationType entries + assign target items + upload option images
+Go to ProductType admin → add FabricZone defaults per product
+Then we're ready to build the bill creation UI

@@ -74,8 +74,21 @@
         </select>
       </div>
 
-      {# Urgent + Clear + Export #}
-      <div class="col-md-1 d-flex gap-3 align-items-center flex-wrap">
+      {# Amount range #}
+      <div class="col-md-2">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text small text-muted px-2">฿</span>
+          <input type="number" name="min_amount" value="{{ current_min_amount }}"
+                 class="form-control form-control-sm"
+                 placeholder="Min amount" min="0" step="1000">
+          <input type="number" name="max_amount" value="{{ current_max_amount }}"
+                 class="form-control form-control-sm"
+                 placeholder="Max" min="0" step="1000">
+        </div>
+      </div>
+
+      {# Urgent #}
+      <div class="col-auto d-flex align-items-center">
         <div class="form-check mb-0">
           <input type="checkbox" name="urgent" value="1" id="urgent-chk"
                  class="form-check-input" {% if current_urgent %}checked{% endif %}>
@@ -102,10 +115,122 @@
           <i class="bi bi-x-circle me-1"></i>Clear
         </a>
         {% endif %}
-        <a href="{% url 'orders:export_csv' %}?{{ request.GET.urlencode }}"
-           class="btn btn-sm btn-success">
-          <i class="bi bi-download me-1"></i>Export CSV
-        </a>
+        {# ── CSV export — default exports all, arrow opens column picker ── #}
+        <div class="btn-group" x-data="csvPicker()" @click.outside="open = false" style="position:relative">
+
+          <a :href="defaultUrl()" class="btn btn-sm btn-success">
+            <i class="bi bi-download me-1"></i>Export CSV
+          </a>
+
+          <button type="button"
+                  class="btn btn-sm btn-success dropdown-toggle dropdown-toggle-split px-2"
+                  @click.stop="open = !open" title="Choose columns">
+          </button>
+
+          <div x-show="open" x-cloak
+               @change.stop
+               class="shadow rounded border bg-white p-3"
+               style="position:absolute;top:110%;right:0;z-index:1060;width:290px;max-height:420px;overflow-y:auto;">
+            <div class="fw-semibold small mb-2">Select columns to export</div>
+            <template x-for="(group, gi) in groups" :key="gi">
+              <div class="mb-2">
+                <div class="text-muted small fw-semibold mb-1" x-text="group.label"></div>
+                <template x-for="col in group.cols" :key="col.key">
+                  <div class="form-check">
+                    <input type="checkbox" class="form-check-input"
+                           :id="'col-' + col.key"
+                           x-model="sel[col.key]"
+                           :disabled="col.key === 'order_number'">
+                    <label class="form-check-label small" :for="'col-' + col.key"
+                           x-text="col.label"></label>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <div class="d-flex gap-2 mt-2 pt-2 border-top">
+              <button @click="selectAll()"
+                      class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.72rem">All</button>
+              <button @click="selectNone()"
+                      class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.72rem">None</button>
+              <a :href="exportUrl()" @click="open = false"
+                 class="btn btn-success btn-sm flex-fill" style="font-size:0.72rem">
+                <i class="bi bi-download me-1"></i>Export
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <script>
+        if (!window.CSV_COLS) { window.CSV_COLS = [
+          { key: 'order_number',    label: 'Order #',               group: 'Order'     },
+          { key: 'created',         label: 'Created',               group: 'Order'     },
+          { key: 'status',          label: 'Status',                group: 'Order'     },
+          { key: 'urgent',          label: 'Urgent',                group: 'Order'     },
+          { key: 'client_name',     label: 'Client name',           group: 'Client'    },
+          { key: 'phone',           label: 'Phone',                 group: 'Client'    },
+          { key: 'email',           label: 'Email',                 group: 'Client'    },
+          { key: 'hotel',           label: 'Hotel (order)',         group: 'Client'    },
+          { key: 'room',            label: 'Room (order)',          group: 'Client'    },
+          { key: 'fitting_date',    label: 'Fitting date',          group: 'Dates'     },
+          { key: 'ready_date',      label: 'Ready date',            group: 'Dates'     },
+          { key: 'departure_date',  label: 'Departure date',        group: 'Dates'     },
+          { key: 'delivery_date',   label: 'Delivery date',         group: 'Dates'     },
+          { key: 'total_amount',    label: 'Total amount',          group: 'Financial' },
+          { key: 'currency',        label: 'Currency',              group: 'Financial' },
+          { key: 'balance_due',     label: 'Balance due (THB)',     group: 'Financial' },
+          { key: 'hotel_delivery',  label: 'Hotel (delivery)',      group: 'Financial' },
+          { key: 'room_delivery',   label: 'Room (delivery)',       group: 'Financial' },
+          { key: 'items',           label: 'Items',                 group: 'Details'   },
+          { key: 'staff',           label: 'Staff',                 group: 'Details'   },
+          { key: 'payments',        label: 'Payments',              group: 'Details'   },
+          { key: 'total_collected', label: 'Total collected (THB)', group: 'Details'   },
+        ];
+        window.CSV_GROUPS = ['Order','Client','Dates','Financial','Details']; }
+
+        function csvPicker() {
+          // Default: all selected
+          const defaultSel = Object.fromEntries(window.CSV_COLS.map(c => [c.key, true]));
+
+          // Restore from localStorage if available
+          let savedSel = defaultSel;
+          try {
+            const raw = localStorage.getItem('csvPickerSel');
+            if (raw) savedSel = { ...defaultSel, ...JSON.parse(raw) };
+          } catch(e) {}
+
+          const BASE    = '{% url "orders:export_csv" %}';
+          const FILTERS = '{{ request.GET.urlencode|escapejs }}';
+
+          return {
+            open: false,
+            sel:  { ...savedSel },
+            groups: window.CSV_GROUPS.map(g => ({
+              label: g,
+              cols:  window.CSV_COLS.filter(c => c.group === g),
+            })),
+            init() {
+              // Persist whenever sel changes
+              this.$watch('sel', val => {
+                try { localStorage.setItem('csvPickerSel', JSON.stringify(val)); } catch(e) {}
+              });
+            },
+            selectAll()  { window.CSV_COLS.forEach(c => { this.sel[c.key] = true; }); },
+            selectNone() { window.CSV_COLS.forEach(c => { this.sel[c.key] = c.key === 'order_number'; }); },
+            _buildUrl(cols) {
+              const p = new URLSearchParams(FILTERS);
+              cols.forEach(c => p.append('cols', c));
+              return BASE + '?' + p.toString();
+            },
+            exportUrl() {
+              const cols = window.CSV_COLS.map(c => c.key).filter(k => this.sel[k]);
+              return this._buildUrl(cols);
+            },
+            defaultUrl() {
+              return BASE + (FILTERS ? '?' + FILTERS : '');
+            },
+          };
+        }
+        </script>
       </div>
     </div>
 

@@ -16,28 +16,43 @@
     🏨 {{ order.hotel_name }}{% if order.room_number %} · Rm {{ order.room_number }}{% endif %}
   </div>
   {% endif %}
+
+  {# ── Staff names ── #}
+  {% with order.staff_assignments.all as staff_list %}
+  {% if staff_list %}
+  <div class="text-muted mt-1" style="font-size:0.72rem">
+    {% for sa in staff_list %}
+    <span class="me-2">
+      {% if sa.role == 'salesman' %}
+      <i class="bi bi-person-badge"></i>
+      {% else %}
+      <i class="bi bi-person"></i>
+      {% endif %}
+      {{ sa.user.get_full_name|default:sa.user.username }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
   <div class="d-flex gap-1 mt-1">
-    {# WhatsApp #}
     {% if order.client.phone %}
     <a href="{{ order.contact_urls.wa_url }}" target="_blank"
        class="btn btn-success btn-sm py-0 px-2" style="font-size:0.72rem"
        title="WhatsApp">
       <i class="bi bi-whatsapp"></i> WA
     </a>
-    {# Line #}
     <a href="{{ order.contact_urls.line_url }}" target="_blank"
        class="btn btn-sm py-0 px-2" style="font-size:0.72rem;background:#06C755;color:#fff"
        title="Line">
       <i class="bi bi-chat-dots"></i> Line
     </a>
-    {# SMS #}
     <a href="{{ order.contact_urls.sms_url }}"
        class="btn btn-secondary btn-sm py-0 px-2" style="font-size:0.72rem"
        title="SMS">
       <i class="bi bi-chat-left-text"></i> SMS
     </a>
     {% endif %}
-    {# Open order detail #}
     <button type="button"
             class="btn btn-outline-secondary btn-sm py-0 px-2 ms-auto" style="font-size:0.72rem"
             hx-get="{% url 'orders:order_detail' order.pk %}"

@@ -11,6 +11,10 @@ from .models import (
     ShirtMeasurement, PantsMeasurement, ShortsMeasurement,
     VestMeasurement, SkirtMeasurement, DressMeasurement,
     BlouseMeasurement, NoMeasurement, ShoesMeasurement, BeltMeasurement,
+    # Production bill models
+    TargetItem, VariationType, VariationOption,
+    FabricZone, ProductionBill, FabricSet,
+    FabricZoneEntry, BillStyleSelection, Monogram,
 )
 
 
@@ -158,10 +162,18 @@ class EmailLogAdmin(admin.ModelAdmin):
 
 
 # -------------------------------------------------------
+class FabricZoneInline(admin.TabularInline):
+    model   = FabricZone
+    extra   = 1
+    fields  = ('name', 'order')
+    ordering = ('order', 'name')
+
+
 @admin.register(ProductType)
 class ProductTypeAdmin(admin.ModelAdmin):
     list_display = ('name', 'measurement_model')
     search_fields = ('name',)
+    inlines = [FabricZoneInline]
 
 
 # -------------------------------------------------------
@@ -190,3 +202,115 @@ for model in measurement_models:
     @admin.register(model)
     class MeasurementAdmin(admin.ModelAdmin):
         list_display = ('base',)
+
+
+# ═══════════════════════════════════════════════════════
+# PRODUCTION BILL ADMIN
+# ═══════════════════════════════════════════════════════
+
+@admin.register(TargetItem)
+class TargetItemAdmin(admin.ModelAdmin):
+    list_display  = ('name', 'order')
+    search_fields = ('name',)
+    ordering      = ('order', 'name')
+
+
+class VariationOptionInline(admin.TabularInline):
+    model          = VariationOption
+    extra          = 1
+    fields         = ('name', 'description', 'image', 'preview', 'order')
+    readonly_fields = ('preview',)
+    ordering       = ('order', 'name')
+
+    def preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="60" style="border-radius:4px"/>', obj.image.url)
+        return '—'
+    preview.short_description = 'Preview'
+
+
+@admin.register(VariationType)
+class VariationTypeAdmin(admin.ModelAdmin):
+    list_display   = ('name', 'target_items_list', 'order')
+    search_fields  = ('name',)
+    filter_horizontal = ('target_items',)
+    ordering       = ('order', 'name')
+    inlines        = [VariationOptionInline]
+
+    def target_items_list(self, obj):
+        return ', '.join(obj.target_items.values_list('name', flat=True))
+    target_items_list.short_description = 'Applies to'
+
+
+@admin.register(VariationOption)
+class VariationOptionAdmin(admin.ModelAdmin):
+    list_display  = ('name', 'type', 'preview', 'order')
+    list_filter   = ('type',)
+    search_fields = ('name', 'type__name')
+    ordering      = ('type', 'order', 'name')
+
+    def preview(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" width="60" style="border-radius:4px"/>', obj.image.url)
+        return '—'
+    preview.short_description = 'Image'
+
+
+@admin.register(FabricZone)
+class FabricZoneAdmin(admin.ModelAdmin):
+    list_display  = ('name', 'product_type', 'order')
+    list_filter   = ('product_type',)
+    search_fields = ('name', 'product_type__name')
+    ordering      = ('product_type', 'order', 'name')
+
+
+# ── ProductionBill with all related inlines ──────────────────
+class BillStyleSelectionInline(admin.TabularInline):
+    model   = BillStyleSelection
+    extra   = 1
+    fields  = ('variation_type', 'chosen_option')
+
+
+class FabricZoneEntryInline(admin.TabularInline):
+    model   = FabricZoneEntry
+    extra   = 1
+    fields  = ('zone', 'zone_label', 'fabric_code', 'color', 'notes', 'order')
+
+
+class MonogramInline(admin.StackedInline):
+    model      = Monogram
+    extra      = 0
+    max_num    = 1
+    fields     = ('text', 'style', 'color', 'position')
+    can_delete = True
+
+
+class FabricSetInline(admin.StackedInline):
+    model   = FabricSet
+    extra   = 0
+    fields  = ('piece_number', 'label')
+    show_change_link = True
+
+
+@admin.register(FabricSet)
+class FabricSetAdmin(admin.ModelAdmin):
+    list_display  = ('bill', 'piece_number', 'label')
+    search_fields = ('bill__order_item__order__order_number',)
+    inlines       = [FabricZoneEntryInline, MonogramInline]
+
+
+@admin.register(ProductionBill)
+class ProductionBillAdmin(admin.ModelAdmin):
+    list_display    = (
+        'order_item', 'gender', 'status',
+        'created_by', 'created_at', 'is_locked'
+    )
+    list_filter     = ('status', 'gender')
+    search_fields   = ('order_item__order__order_number',)
+    readonly_fields = ('created_at', 'confirmed_at', 'is_locked')
+    inlines         = [BillStyleSelectionInline, FabricSetInline]
+
+    def is_locked(self, obj):
+        return obj.is_locked
+    is_locked.boolean     = True
+    is_locked.short_description = 'Locked'
