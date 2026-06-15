@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from .client import Client
@@ -75,6 +76,14 @@ class Order(models.Model):
     total_currency = models.CharField(
         max_length=10, choices=CURRENCY_CHOICES, default='THB',
         help_text="Currency of the quoted total amount"
+    )
+    total_locked    = models.BooleanField(default=False)
+    total_locked_at = models.DateTimeField(null=True, blank=True)
+    total_locked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='locked_orders',
     )
 
     # Notes

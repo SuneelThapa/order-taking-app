@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Receipt — #{{ order.order_number }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; background:#fff; padding: 52px 40px 32px; }
+
+  /* Header */
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; padding-bottom:14px; border-bottom:2px solid #111; }
+  .shop-name { font-size:22px; font-weight:700; }
+  .shop-sub  { font-size:11px; color:#555; margin-top:3px; }
+  .doc-info  { text-align:right; }
+  .doc-title { font-size:18px; font-weight:700; color:#111; }
+  .doc-meta  { font-size:11px; color:#555; margin-top:4px; line-height:1.7; }
+
+  /* Two-col layout */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:20px; }
+  .section-title { font-size:9px; font-weight:700; letter-spacing:.08em; color:#888; text-transform:uppercase; margin-bottom:6px; }
+  .info-line { font-size:12px; line-height:1.7; }
+
+  /* Table */
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+  th { background:#f3f3f3; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:7px 10px; text-align:left; border-bottom:1px solid #ddd; }
+  td { padding:7px 10px; border-bottom:1px solid #eee; font-size:12px; vertical-align:top; }
+  .text-right { text-align:right; }
+  .total-row td { font-weight:700; border-top:2px solid #111; border-bottom:none; font-size:13px; }
+  .balance-row td { font-weight:700; color: {% if order.balance_due > 0 %}#c0392b{% else %}#27ae60{% endif %}; border-bottom:none; }
+
+  /* Payments */
+  .payment-row td { font-size:11px; }
+  .badge { display:inline-block; padding:2px 7px; border-radius:10px; font-size:9px; font-weight:700; text-transform:uppercase; }
+  .badge-deposit  { background:#dbeafe; color:#1d4ed8; }
+  .badge-balance  { background:#dcfce7; color:#166534; }
+  .badge-full     { background:#f0fdf4; color:#166534; }
+  .badge-refund   { background:#fee2e2; color:#991b1b; }
+  .badge-redeposit{ background:#ede9fe; color:#5b21b6; }
+
+  /* Signature */
+  .agreement { border:1px solid #ccc; border-radius:6px; padding:16px; margin-top:20px; break-inside:avoid; page-break-inside:avoid; }
+  .agreement-title { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#555; margin-bottom:12px; }
+  .sig-grid { display:grid; grid-template-columns:200px 1fr; gap:20px; align-items:start; }
+  .sig-img  { border:1px solid #ddd; border-radius:4px; background:#fafafa; padding:4px; min-height:70px; display:flex; align-items:center; justify-content:center; }
+  .sig-img img { max-height:70px; max-width:180px; object-fit:contain; }
+  .sig-empty { font-size:10px; color:#bbb; }
+  .legal { font-size:10px; line-height:1.7; color:#444; }
+  .signed-at { font-size:9px; color:#aaa; margin-top:4px; }
+
+  /* Footer */
+  .footer { margin-top:24px; padding-top:10px; border-top:1px solid #ddd; display:flex; justify-content:space-between; font-size:9px; color:#aaa; }
+
+  @media print {
+    body { padding: 20px 28px; }
+    @page { size: A4; margin: 12mm; }
+    .no-print { display:none; }
+    .agreement { break-inside:avoid; }
+  }
+  .print-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #111; color: #fff;
+    padding: 8px 20px;
+    display: flex; justify-content: flex-end; align-items: center;
+    z-index: 9999;
+    gap: 10px;
+  }
+  .print-bar button {
+    background: #fff; color: #111;
+    border: none; border-radius: 4px;
+    padding: 5px 16px; cursor: pointer; font-size: 13px; font-weight: 600;
+  }
+  @media print {
+    .print-bar { display: none; }
+    body { padding-top: 32px !important; }
+  }
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <button onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+
+
+
+{# ── Header ── #}
+<div class="header">
+  <div>
+    <div class="shop-name">{{ tenant.name }}</div>
+    <div class="shop-sub">
+      {% if tenant.address %}{{ tenant.address }}<br>{% endif %}
+      {% if tenant.phone %}{{ tenant.phone }}{% endif %}
+      {% if tenant.email %} · {{ tenant.email }}{% endif %}
+    </div>
+  </div>
+  <div class="doc-info">
+    <div class="doc-title">ORDER RECEIPT</div>
+    <div class="doc-meta">
+      #{{ order.order_number }}<br>
+      Date: {{ order.created_at|date:"d M Y" }}<br>
+      {% if order.departure_date %}Departure: {{ order.departure_date|date:"d M Y" }}<br>{% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── Client + Order Info ── #}
+<div class="two-col">
+  <div>
+    <div class="section-title">Client</div>
+    <div class="info-line">
+      <strong>{{ order.client.name }}</strong><br>
+      {% if order.client.phone %}{{ order.client.phone }}<br>{% endif %}
+      {% if order.client.email %}{{ order.client.email }}<br>{% endif %}
+      {% if order.hotel_name %}{{ order.hotel_name }}{% if order.room_number %}, Room {{ order.room_number }}{% endif %}<br>{% endif %}
+    </div>
+  </div>
+  <div>
+    <div class="section-title">Order Dates</div>
+    <div class="info-line">
+      {% if order.fitting_date %}Fitting: {{ order.fitting_date|date:"d M Y" }}<br>{% endif %}
+      {% if order.ready_date %}Ready: {{ order.ready_date|date:"d M Y" }}<br>{% endif %}
+      {% if order.departure_date %}Departure: {{ order.departure_date|date:"d M Y" }}<br>{% endif %}
+    </div>
+  </div>
+</div>
+
+{# ── Items ── #}
+<div class="section-title">Items Ordered</div>
+<table>
+  <thead>
+    <tr>
+      <th>Product</th>
+      <th>Description</th>
+      <th class="text-right">Qty</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td>{{ item.product_type.name|default:"—" }}</td>
+      <td>{{ item.product_name|default:"—" }}</td>
+      <td class="text-right">{{ item.quantity }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# ── Payments ── #}
+<div class="section-title">Payments</div>
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Type</th>
+      <th>Method</th>
+      <th class="text-right">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in payments %}
+    <tr class="payment-row">
+      <td>{{ p.created_at|date:"d M Y" }}</td>
+      <td><span class="badge badge-{{ p.type }}">{{ p.get_type_display }}</span></td>
+      <td>{{ p.get_method_display }}</td>
+      <td class="text-right">{{ p.thb_equivalent|floatformat:0 }} THB</td>
+    </tr>
+    {% endfor %}
+    {% for p in refunds %}
+    <tr class="payment-row">
+      <td>{{ p.created_at|date:"d M Y" }}</td>
+      <td><span class="badge badge-refund">Refund</span></td>
+      <td>{{ p.get_method_display }}</td>
+      <td class="text-right" style="color:#c0392b;">-{{ p.thb_equivalent|floatformat:0 }} THB</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="3">Total Quoted <em style="font-size:10px;font-weight:400;">({{ order.total_currency }})</em></td>
+      <td class="text-right">{{ order.total_amount|floatformat:0 }} {{ order.total_currency }}</td>
+    </tr>
+    <tr>
+      <td colspan="3">Total Collected (THB)</td>
+      <td class="text-right">{{ collected_thb|floatformat:0 }} THB</td>
+    </tr>
+    <tr class="balance-row">
+      <td colspan="3">Balance Due</td>
+      <td class="text-right">{{ order.balance_due|floatformat:0 }} THB</td>
+    </tr>
+  </tfoot>
+</table>
+
+{# ── Client Agreement + Signature ── #}
+<div class="agreement">
+  <div class="agreement-title">Client Agreement</div>
+  <div class="sig-grid">
+    <div>
+      <div style="font-size:10px;color:#666;margin-bottom:4px;">Client signature</div>
+      <div class="sig-img">
+        {% if signature and signature.image %}
+        <img src="{{ signature.image.url }}" alt="Signature">
+        {% else %}
+        <span class="sig-empty">No signature on file</span>
+        {% endif %}
+      </div>
+      {% if signature %}
+      <div class="signed-at">
+        Signed {{ signature.signed_at|date:"d M Y H:i" }}
+        {% if signature.ip_address %} · IP {{ signature.ip_address }}{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="legal">
+      I, <strong>{{ order.client.name }}</strong>, confirm that I have reviewed and
+      agreed to the items listed above and the total amount of
+      <strong>{{ order.total_amount|floatformat:0 }} {{ order.total_currency }}</strong>.<br><br>
+      I understand that completed garments are <strong>non-refundable</strong> unless
+      a manufacturing defect is identified and reported within 7 days of collection.
+      Alterations are covered at no charge within 30 days of collection.<br><br>
+      This receipt serves as proof of payment and agreement between the client
+      and {{ tenant.name }}.
+    </div>
+  </div>
+</div>
+
+{# ── Footer ── #}
+<div class="footer">
+  <span>Order #{{ order.order_number }} · Generated {{ "now"|date:"d M Y H:i" }}</span>
+  <span>{{ tenant.name }}{% if tenant.domain %} · {{ tenant.domain }}{% endif %}</span>
+</div>
+
+</body>
+</html>

@@ -23,14 +23,16 @@ from .models import (
     OrderItem, TargetItem, VariationType, VariationOption,
     FabricZone, ProductionBill, FabricSet,
     FabricZoneEntry, BillStyleSelection, Monogram,
+    BodyMeasurement, ClientPhoto, TempPhoto,
 )
 from .forms import (
     ClientForm, OrderForm, OrderItemFormSet,
-    ClientPhotoFormSet, DeliveryForm,
+    DeliveryForm,
     PaymentForm, PaymentCreateFormSet,
     OrderStaffFormSet, get_measurement_form,
     CancellationForm,
     ClientEditForm,
+    BodyMeasurementForm,
 )
 
 
@@ -232,6 +234,22 @@ def order_delete(request, pk):
         return HttpResponse("Tenant not found", status=404)
     if request.method != "DELETE":
         return HttpResponse(status=405)
+
+    # Only owner / manager / superuser may delete orders
+    try:
+        user_role = request.user.staff_profile.role
+    except Exception:
+        user_role = "owner" if request.user.is_superuser else "staff"
+
+    if user_role not in ("owner", "manager") and not request.user.is_superuser:
+        return HttpResponse(
+            '<div class="alert alert-danger m-3">'
+            '<i class="bi bi-shield-lock me-2"></i>'
+            'Only owner or manager can delete orders.'
+            '</div>',
+            status=403,
+        )
+
     order = get_object_or_404(Order, pk=pk, tenant=tenant)
     order.delete()
     cache.delete(f"order_status_counts_{tenant.id}")
@@ -314,6 +332,12 @@ def order_form_view(request, pk=None):
     is_edit   = pk is not None
     edit_order = get_object_or_404(Order, pk=pk, tenant=tenant) if is_edit else None
 
+    # Resolve user role once — used for permissions throughout the view
+    try:
+        user_role = request.user.staff_profile.role
+    except Exception:
+        user_role = "owner" if request.user.is_superuser else "staff"
+
     if edit_order and edit_order.status == "canceled":
         messages.error(request, f"Order #{edit_order.order_number} is canceled and cannot be edited.")
         return redirect("orders:dashboard")
@@ -323,8 +347,6 @@ def order_form_view(request, pk=None):
         order_form           = OrderForm(request.POST, instance=edit_order,
                                          user=request.user, tenant=tenant)
         item_formset         = OrderItemFormSet(request.POST, request.FILES, instance=edit_order)
-        client_photo_formset = ClientPhotoFormSet(request.POST, request.FILES,
-                                                   instance=edit_order, prefix="client_photos")
         staff_formset        = OrderStaffFormSet(request.POST, instance=edit_order, prefix="staff")
         delivery_form        = DeliveryForm(request.POST, instance=existing_delivery, prefix="delivery")
         payment_formset      = PaymentCreateFormSet(request.POST, prefix="payments")
@@ -344,7 +366,6 @@ def order_form_view(request, pk=None):
             client_obj is not None
             and order_form.is_valid()
             and item_formset.is_valid()
-            and client_photo_formset.is_valid()
             and staff_formset.is_valid()
             and delivery_form.is_valid()
         )
@@ -382,8 +403,52 @@ def order_form_view(request, pk=None):
                 except Exception:
                     pass
 
-            client_photo_formset.instance = order
-            client_photo_formset.save()
+            # ── Client photos — multi-person ──────────────────
+            person_count = int(request.POST.get('person_count', 1))
+            photo_types  = ['front', 'side', 'back']
+            for pnum in range(1, person_count + 1):
+                for ptype in photo_types:
+                    del_key  = f'delete_person_{pnum}_{ptype}'
+                    file_key = f'person_{pnum}_{ptype}'
+                    temp_key = f'temp_person_{pnum}_{ptype}'
+                    if request.POST.get(del_key):
+                        ClientPhoto.objects.filter(
+                            order=order,
+                            person_number=pnum,
+                            photo_type=ptype,
+                        ).delete()
+                    if file_key in request.FILES:
+                        # Fresh upload takes priority
+                        existing = ClientPhoto.objects.filter(
+                            order=order, person_number=pnum, photo_type=ptype,
+                        ).first()
+                        if existing:
+                            existing.image = request.FILES[file_key]
+                            existing.save()
+                        else:
+                            ClientPhoto.objects.create(
+                                order=order, person_number=pnum,
+                                photo_type=ptype,
+                                image=request.FILES[file_key],
+                            )
+                    elif request.POST.get(temp_key):
+                        # Use pre-uploaded temp photo if no fresh file
+                        try:
+                            temp = TempPhoto.objects.get(uuid=request.POST[temp_key])
+                            existing = ClientPhoto.objects.filter(
+                                order=order, person_number=pnum, photo_type=ptype,
+                            ).first()
+                            if existing:
+                                existing.image = temp.image
+                                existing.save()
+                            else:
+                                ClientPhoto.objects.create(
+                                    order=order, person_number=pnum,
+                                    photo_type=ptype, image=temp.image,
+                                )
+                            temp.delete()
+                        except TempPhoto.DoesNotExist:
+                            pass
 
             item_formset.instance = order
             item_formset.save(commit=False)
@@ -396,8 +461,33 @@ def order_form_view(request, pk=None):
                 item.save()
                 total += getattr(item, "total_price", 0)
 
+                # Body measurement — save per item
+                body_inst = BodyMeasurement.objects.filter(order_item=item).first()
+                body_form = BodyMeasurementForm(
+                    request.POST,
+                    instance=body_inst,
+                    prefix=f"body-{form.prefix}",
+                )
+                if body_form.is_valid():
+                    bm = body_form.save(commit=False)
+                    bm.order_item = item
+                    bm.save()
+
                 for uploaded in request.FILES.getlist(f"item_photos_{form.prefix}"):
                     OrderItemPhoto.objects.create(order_item=item, image=uploaded)
+                # Also process any temp-uploaded item photos
+                idx = 0
+                while True:
+                    temp_uuid = request.POST.get(f"temp_item_photo_{form.prefix}_{idx}")
+                    if not temp_uuid:
+                        break
+                    try:
+                        tmp = TempPhoto.objects.get(uuid=temp_uuid)
+                        OrderItemPhoto.objects.create(order_item=item, image=tmp.image)
+                        tmp.delete()
+                    except TempPhoto.DoesNotExist:
+                        pass
+                    idx += 1
                 for del_id in request.POST.getlist(f"delete_item_photos_{form.prefix}"):
                     OrderItemPhoto.objects.filter(id=del_id, order_item=item).delete()
 
@@ -487,25 +577,84 @@ def order_form_view(request, pk=None):
         order_form           = OrderForm(instance=edit_order, user=request.user,
                                          tenant=tenant, initial=initial)
         item_formset         = OrderItemFormSet(instance=edit_order)
-        client_photo_formset = ClientPhotoFormSet(instance=edit_order, prefix="client_photos")
         staff_formset        = OrderStaffFormSet(instance=edit_order, prefix="staff")
         delivery_form        = DeliveryForm(instance=existing_delivery, prefix="delivery")
         payment_formset      = PaymentCreateFormSet(prefix="payments")
 
     post = request.POST if request.method == "POST" else None
+
+    # Scratch note + signature canvas — restore on POST error
+    scratch_canvas_data   = request.POST.get('scratch_canvas_image',   '') if request.method == 'POST' else ''
+    signature_canvas_data = request.POST.get('signature_canvas_image', '') if request.method == 'POST' else ''
+
+    # Temp item photos — collect for re-render on error
+    temp_item_photos = {}  # prefix → [{'uuid':..,'url':..}, ...]
+    if request.method == 'POST':
+        for key, val in request.POST.items():
+            if key.startswith('temp_item_photo_'):
+                # key format: temp_item_photo_items-N_M
+                parts = key[len('temp_item_photo_'):]
+                # parts = 'items-N_M', prefix = 'items-N'
+                idx = parts.rfind('_')
+                if idx >= 0:
+                    prefix = parts[:idx]
+                    try:
+                        tmp = TempPhoto.objects.get(uuid=val)
+                        temp_item_photos.setdefault(prefix, []).append(
+                            {'uuid': val, 'url': tmp.image.url}
+                        )
+                    except TempPhoto.DoesNotExist:
+                        pass
+
+    # Lock total_amount + currency for EVERYONE when locked
+    # Even owners must unlock first — prevents accidental edits
+    amount_locked = bool(edit_order and edit_order.total_locked)
+    can_lock = user_role in ("owner", "manager") or request.user.is_superuser
+    if amount_locked:
+        order_form.fields["total_amount"].disabled  = True
+        order_form.fields["total_currency"].disabled = True
+        if can_lock:
+            order_form.fields["total_amount"].help_text = "🔒 Locked — click Unlock below to edit"
+        else:
+            order_form.fields["total_amount"].help_text = "🔒 Locked — contact owner/manager to unlock"
+
     item_rows = []
     for form in item_formset.forms:
         item = form.instance
         existing_photos  = list(item.photos.all()) if item.pk else []
         measurement_form = None
+        # For saved items — load from DB instance
         if item.pk and item.product_type_id:
             model  = apps.get_model("orders", item.product_type.measurement_model)
             base   = BaseMeasurement.objects.filter(order_item=item).first()
             m_inst = model.objects.filter(base=base).first() if base else None
             MForm  = modelform_factory(model, exclude=("base",))
             measurement_form = MForm(post, instance=m_inst, prefix=f"measure-{form.prefix}")
-        item_rows.append({"form": form, "measurement_form": measurement_form,
-                          "existing_photos": existing_photos})
+        # For new items on POST error — load from product_type in POST data
+        elif post and not item.pk:
+            pt_id = post.get(f"{form.prefix}-product_type", "").strip()
+            if pt_id:
+                try:
+                    pt = ProductType.objects.get(pk=pt_id)
+                    model = apps.get_model("orders", pt.measurement_model)
+                    MForm = modelform_factory(model, exclude=("base",))
+                    measurement_form = MForm(post, prefix=f"measure-{form.prefix}")
+                except (ProductType.DoesNotExist, LookupError):
+                    pass
+        # Load existing body measurement
+        body_inst = BodyMeasurement.objects.filter(order_item=item).first() if item.pk else None
+        body_form_inst = BodyMeasurementForm(
+            post,
+            instance=body_inst,
+            prefix=f"body-{form.prefix}",
+        )
+        item_rows.append({
+            "form":             form,
+            "measurement_form": measurement_form,
+            "existing_photos":  existing_photos,
+            "body_form":        body_form_inst,
+            "temp_photos":      temp_item_photos.get(form.prefix, []),
+        })
 
     selected_client = None
     if edit_order:
@@ -534,14 +683,69 @@ def order_form_view(request, pk=None):
         user_role = "owner" if request.user.is_superuser else "staff"
     can_edit_staff = (not is_edit) or (user_role in ("owner", "manager"))
 
+    # Group existing client photos by person_number for template
+    from collections import defaultdict
+
+    class _TempProxy:
+        """Wraps a TempPhoto to look like a ClientPhoto for template use."""
+        is_temp = True
+        def __init__(self, uuid_str, url):
+            self.temp_uuid = uuid_str
+            class _Img:
+                def __init__(self, u): self.url = u
+            self.image = _Img(url)
+
+    grouped_photos = defaultdict(dict)
+    if edit_order:
+        for photo in edit_order.client_photos.order_by('person_number', 'photo_type'):
+            grouped_photos[photo.person_number][photo.photo_type] = photo
+
+    # On POST, honour person_count from form (may be more than saved)
+    post_person_count = int(request.POST.get('person_count', 1)) if request.method == 'POST' else 1
+    initial_persons = max(
+        max(grouped_photos.keys()) if grouped_photos else 1,
+        post_person_count,
+    )
+
+    persons_photos = [
+        {
+            'num':   pnum,
+            'front': grouped_photos[pnum].get('front'),
+            'side':  grouped_photos[pnum].get('side'),
+            'back':  grouped_photos[pnum].get('back'),
+        }
+        for pnum in range(1, initial_persons + 1)
+    ]
+
+    # On POST with validation errors — supplement with temp-uploaded photos
+    if request.method == 'POST':
+        for p in persons_photos:
+            pnum = p['num']
+            for ptype in ('front', 'side', 'back'):
+                if p.get(ptype):
+                    continue  # Real photo already there
+                uuid_str = request.POST.get(f'temp_person_{pnum}_{ptype}')
+                if uuid_str:
+                    try:
+                        tmp = TempPhoto.objects.get(uuid=uuid_str)
+                        p[ptype] = _TempProxy(uuid_str, tmp.image.url)
+                    except TempPhoto.DoesNotExist:
+                        pass
+
     context = {
         "is_edit":              is_edit,
         "edit_order":           edit_order,
         "order_form":           order_form,
+        "amount_locked":        amount_locked,
+        "can_lock":             can_lock,
         "can_edit_staff":       can_edit_staff,
         "item_formset":         item_formset,
         "item_rows":            item_rows,
-        "client_photo_formset": client_photo_formset,
+        "persons_photos":       persons_photos,
+        "initial_persons":      initial_persons,
+        "scratch_canvas_data":   scratch_canvas_data,
+        "signature_canvas_data": signature_canvas_data,
+        "temp_item_photos":     temp_item_photos,
         "staff_formset":        staff_formset,
         "delivery_form":        delivery_form,
         "payment_formset":      payment_formset,
@@ -571,8 +775,11 @@ def order_item_row(request):
     from .forms import OrderItemForm
     form = OrderItemForm(prefix=f"items-{index}")
     return render(request, "orders/partials/_order_item_row.html", {
-        "item_form": form, "measurement_form": None,
-        "existing_photos": [], "is_new": True,
+        "item_form":        form,
+        "measurement_form": None,
+        "existing_photos":  [],
+        "is_new":           True,
+        "body_form":        BodyMeasurementForm(prefix=f"body-items-{index}"),
     })
 
 
@@ -609,23 +816,132 @@ def load_measurement_form(request):
 # ─────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────
+# Fields that live on BodyMeasurement (to avoid duplication in garment section)
+BODY_FIELD_NAMES = frozenset([
+    'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
+    'waist', 'hips', 'height', 'weight',
+    'high_chest', 'upper_hips', 'deep_front', 'deep_back',
+    'shoulder_to_middle_breast', 'shoulder_to_under_breast',
+    'middle_breast_to_middle_breast',
+])
+
+BODY_FIELD_ORDER_MEN = [
+    'neck', 'shoulder', 'sleeve', 'biceps',
+    'chest', 'stomach', 'waist', 'hips',
+    'height', 'weight',
+]
+BODY_FIELD_ORDER_LADIES = [
+    'neck', 'shoulder', 'sleeve', 'biceps',
+    'high_chest', 'chest', 'upper_hips', 'waist', 'hips',
+    'deep_front', 'deep_back',
+    'shoulder_to_middle_breast', 'shoulder_to_under_breast',
+    'middle_breast_to_middle_breast',
+    'height', 'weight',
+]
+
+# Explicit display order per measurement model
+_MEAS_FIELD_ORDER = {
+    "JacketMeasurement": [
+        "shoulder", "sleeve", "biceps", "chest", "stomach",
+        "hips", "front", "back", "length",
+    ],
+    "ShirtMeasurement": [
+        "neck", "shoulder", "sleeve", "biceps", "chest", "stomach",
+        "hips", "front", "back", "length",
+    ],
+    "PantsMeasurement": [
+        "waist", "belly", "hips", "crotch", "thigh", "knee", "cuff", "length",
+    ],
+    "VestMeasurement": [
+        "shoulder", "chest", "stomach", "hips", "front", "back", "length",
+    ],
+    "CoatMeasurement": [
+        "shoulder", "sleeve", "biceps", "chest", "stomach",
+        "hips", "front", "back", "length",
+    ],
+    "SuitMeasurement": [
+        "shoulder", "sleeve", "biceps", "chest", "stomach", "hips",
+        "front", "back", "waist", "belly", "crotch", "thigh", "knee", "cuff", "length",
+    ],
+    "ShortsMeasurement": [
+        "waist", "belly", "hips", "crotch", "thigh", "knee", "cuff", "length",
+    ],
+    "DressMeasurement": [
+        "neck", "shoulder", "sleeve", "biceps", "high_chest", "chest",
+        "upper_hips", "hips", "waist", "front", "back",
+        "deep_front", "deep_back",
+        "shoulder_to_middle_breast", "shoulder_to_under_breast",
+        "middle_breast_to_middle_breast", "length",
+    ],
+    "BlouseMeasurement": [
+        "neck", "shoulder", "sleeve", "biceps", "high_chest", "chest",
+        "upper_hips", "hips", "waist", "front", "back",
+        "shoulder_to_middle_breast", "shoulder_to_under_breast",
+        "middle_breast_to_middle_breast", "length",
+    ],
+    "SkirtMeasurement": [
+        "waist", "hips", "length",
+    ],
+    "ShoesMeasurement": [
+        "foot_length", "foot_width", "foot_instep",
+    ],
+    "BeltMeasurement": [
+        "belt_waist",
+    ],
+}
+
+
 def _get_measurement_fields(item):
+    """
+    Return [(label, value), ...] in display order.
+    Body measurements (BodyMeasurement) come first, then garment-specific
+    fields from the existing per-item measurement model.
+    """
+    result = []
     try:
+        # ── Part 1: Body measurements ────────────────────
+        try:
+            bm = item.body_measurement
+            field_order = (BODY_FIELD_ORDER_LADIES
+                           if bm.gender == 'ladies'
+                           else BODY_FIELD_ORDER_MEN)
+            for fname in field_order:
+                val = getattr(bm, fname, None)
+                if val not in (None, "", 0):
+                    label = bm._meta.get_field(fname).verbose_name.title()
+                    result.append((label, val))
+        except Exception:
+            pass  # No body measurement yet
+
+        # ── Part 2: Garment-specific measurements ────────
         base  = item.measurement
         model = apps.get_model("orders", item.product_type.measurement_model)
         m     = model.objects.filter(base=base).first()
-        if not m:
-            return []
-        fields = []
-        for f in m._meta.get_fields():
-            if f.name in ("id", "base") or f.is_relation:
-                continue
-            val = getattr(m, f.name, None)
-            if val not in (None, "", 0):
-                fields.append((f.verbose_name.title(), val))
-        return fields
+        if m:
+            all_vals = {}
+            for f in m._meta.get_fields():
+                if f.name in ("id", "base") or f.is_relation:
+                    continue
+                if f.name in BODY_FIELD_NAMES:
+                    continue  # Already shown in body section
+                val = getattr(m, f.name, None)
+                if val not in (None, "", 0):
+                    all_vals[f.name] = (f.verbose_name.title(), val)
+
+            order = _MEAS_FIELD_ORDER.get(model.__name__, [])
+            for fname in order:
+                if fname in all_vals and fname not in BODY_FIELD_NAMES:
+                    result.append(all_vals[fname])
+            known = set(order)
+            for fname, pair in all_vals.items():
+                if fname not in known:
+                    result.append(pair)
+
     except Exception:
-        return []
+        pass
+
+    return result
+
 
 
 # ─────────────────────────────────────────────────────────
@@ -699,6 +1015,15 @@ def order_add_payment(request, pk):
             notes                = cd.get("notes")                or "",
             proof_image          = cd.get("proof_image")          or None,
         )
+
+        # Auto-lock total on first payment
+        if not order.total_locked and ptype not in ("refund",):
+            from django.utils import timezone
+            order.total_locked    = True
+            order.total_locked_at = timezone.now()
+            order.total_locked_by = request.user
+            order.save(update_fields=["total_locked", "total_locked_at", "total_locked_by"])
+
         payments = order.payments.select_related("recorded_by").all()
         response = render(request, "orders/partials/_payment_history.html",
                           {"order": order, "payments": payments,
@@ -1160,6 +1485,9 @@ def notifications_count(request):
     return HttpResponse("")
 
 
+REMINDER_DAYS_OPTIONS = [1, 3, 7, 14]
+
+
 @user_passes_test(staff_check)
 def notifications_list(request):
     tenant = getattr(request, "tenant", None)
@@ -1170,7 +1498,17 @@ def notifications_list(request):
     if days not in REMINDER_DAYS_OPTIONS:
         days = 3
     request.session["reminder_days"] = days
-    data  = _get_reminders(tenant, today, days)
+    try:
+        data = _get_reminders(tenant, today, days)
+    except Exception as e:
+        print(f"ERROR notifications_list: {type(e).__name__}: {e}")
+        return HttpResponse(
+            f'<div class="px-3 py-4 text-center text-muted small">'
+            f'<i class="bi bi-exclamation-circle text-warning d-block mb-2" style="font-size:1.5rem"></i>'
+            f'Could not load reminders.<br>'
+            f'<span style="font-size:0.7rem">{type(e).__name__}: {e}</span>'
+            f'</div>'
+        )
     return render(request, "orders/partials/_notifications_dropdown.html", {
         **data,
         "days":         days,
@@ -1240,7 +1578,7 @@ def production_bill_view(request, order_pk, item_pk):
 
     if request.method == "GET":
         measurement_fields = _get_measurement_fields(item)
-        client_photos  = list(order.client_photos.exclude(image='').order_by('photo_type'))
+        client_photos  = list(order.client_photos.exclude(image='').order_by('person_number', 'photo_type'))
         item_photos    = list(item.photos.exclude(image='').order_by('pk'))
         scratch_notes  = list(order.scratch_notes.exclude(image='').order_by('created_at'))
         return render(request, "orders/production_bill.html", {
@@ -1347,6 +1685,7 @@ def production_bill_print(request, pk):
         ProductionBill.objects
         .select_related(
             "order_item__order__client",
+            "order_item__order__signature",
             "order_item__product_type",
             "order_item__measurement",
             "confirmed_by",
@@ -1371,9 +1710,12 @@ def production_bill_print(request, pk):
         bill.save(update_fields=["status", "confirmed_at", "confirmed_by"])
 
     measurement_fields = _get_measurement_fields(bill.order_item)
-    client_photos  = list(bill.order_item.order.client_photos.exclude(image='').order_by('photo_type'))
+    client_photos  = list(bill.order_item.order.client_photos.exclude(image='').order_by('person_number', 'photo_type'))
     item_photos    = list(bill.order_item.photos.exclude(image='').order_by('pk'))
     scratch_notes  = list(bill.order_item.order.scratch_notes.exclude(image='').order_by('created_at'))
+
+    # sig=1 → client bill with signature, sig=0 → factory bill without
+    show_signature = request.GET.get("sig", "1") == "1"
 
     return render(request, "orders/production_bill_print.html", {
         "bill":               bill,
@@ -1385,6 +1727,7 @@ def production_bill_print(request, pk):
         "client_photos":      client_photos,
         "item_photos":        item_photos,
         "scratch_notes":      scratch_notes,
+        "show_signature":     show_signature,
     })
 
 
@@ -1434,3 +1777,208 @@ def bill_toggle_sent(request, pk):
             f'</div>'
         )
     return HttpResponse(html)
+
+
+# ─────────────────────────────────────────────────────────
+# Total amount lock / unlock
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_toggle_lock(request, pk):
+    from django.utils import timezone
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    order = get_object_or_404(Order, pk=pk, tenant=tenant)
+
+    # Only owner/manager can lock or unlock
+    try:
+        user_role = request.user.staff_profile.role
+    except Exception:
+        user_role = "owner" if request.user.is_superuser else "staff"
+
+    if user_role not in ("owner", "manager") and not request.user.is_superuser:
+        return HttpResponse(
+            '<div class="alert alert-danger py-2 small mb-0">'
+            'Only owner or manager can lock / unlock the total amount.'
+            '</div>',
+            status=403
+        )
+
+    if order.total_locked:
+        # Unlock
+        order.total_locked    = False
+        order.total_locked_at = None
+        order.total_locked_by = None
+    else:
+        # Lock
+        order.total_locked    = True
+        order.total_locked_at = timezone.now()
+        order.total_locked_by = request.user
+
+    order.save(update_fields=["total_locked", "total_locked_at", "total_locked_by"])
+
+    # Redirect to refresh — include ?step= so wizard stays on correct step
+    from_step = request.POST.get("from_step", "")
+    if from_step:
+        # Coming from edit form — redirect back to same step
+        redirect_url = f"/{order.pk}/edit/?step={from_step}"
+    else:
+        # Coming from order detail modal — just refresh page
+        redirect_url = None
+
+    response = HttpResponse("")
+    if redirect_url:
+        response["HX-Redirect"] = redirect_url
+    else:
+        response["HX-Refresh"] = "true"
+    return response
+
+
+# ─────────────────────────────────────────────────────────
+# Reorder — create a new order linked to a previous one
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def order_reorder(request, pk):
+    """
+    Create a new order pre-filled with the same client + items
+    from an existing order. Sets parent_order FK to link them.
+    Measurements are NOT copied — staff takes fresh measurements.
+    Redirects to the new order's edit form.
+    """
+    from django.db import transaction
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    original = get_object_or_404(Order, pk=pk, tenant=tenant)
+
+    with transaction.atomic():
+        # Create new order linked to original
+        new_order = Order.objects.create(
+            tenant        = tenant,
+            client        = original.client,
+            parent_order  = original,
+            status        = "new",
+            total_amount  = original.total_amount,
+            total_currency = original.total_currency,
+            # Copy address snapshot
+            street_address = original.street_address,
+            city           = original.city,
+            state          = original.state,
+            postcode       = original.postcode,
+            country        = original.country,
+            note           = original.note or "",
+        )
+        cache.delete(f"order_status_counts_{tenant.id}")
+
+        # Copy items (product type + name + quantity + price)
+        # Measurements NOT copied — tailor takes fresh ones
+        for item in original.items.select_related("product_type").all():
+            OrderItem.objects.create(
+                order        = new_order,
+                product_type = item.product_type,
+                product_name = item.product_name,
+                quantity     = item.quantity,
+                price        = item.price,
+            )
+
+    messages.success(
+        request,
+        f"Reorder created as #{new_order.order_number} "
+        f"— linked to original #{original.order_number}."
+    )
+    # Use HX-Redirect so HTMX does a full page navigation instead of a content swap
+    from django.urls import reverse
+    response = HttpResponse("")
+    response["HX-Redirect"] = reverse("orders:order_edit", kwargs={"pk": new_order.pk})
+    return response
+
+
+# ─────────────────────────────────────────────────────────
+# Temp photo upload — called immediately when file selected
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def upload_temp_photo(request):
+    """Immediately store an uploaded file; returns {uuid, url}."""
+    from django.http import JsonResponse
+    if request.method != "POST" or "file" not in request.FILES:
+        return JsonResponse({"error": "No file"}, status=400)
+    temp = TempPhoto(image=request.FILES["file"])
+    temp.save()
+    return JsonResponse({"uuid": str(temp.uuid), "url": temp.image.url})
+
+
+# ─────────────────────────────────────────────────────────
+# Documents — Receipt, Invoice, Shipping Label
+# ─────────────────────────────────────────────────────────
+def _order_doc_context(pk, tenant):
+    """Shared queryset for all three document views."""
+    from django.shortcuts import get_object_or_404
+    order = get_object_or_404(
+        Order.objects
+        .select_related(
+            "client", "tenant",
+            "signature",
+        )
+        .prefetch_related(
+            "items__product_type",
+            "payments__recorded_by",
+            "delivery",
+        ),
+        pk=pk, tenant=tenant,
+    )
+    items    = list(order.items.select_related("product_type").all())
+    payments = list(order.payments.exclude(type="refund").order_by("created_at"))
+    refunds  = list(order.payments.filter(type="refund").order_by("created_at"))
+    collected = sum(p.thb_equivalent or 0 for p in payments)
+    refunded  = sum(abs(p.thb_equivalent or 0) for p in refunds)
+    has_individual = any(item.price for item in items)
+    delivery = getattr(order, "delivery", None)
+    try:
+        signature = order.signature
+    except Exception:
+        signature = None
+    return {
+        "order":           order,
+        "tenant":          tenant,
+        "items":           items,
+        "payments":        payments,
+        "refunds":         refunds,
+        "collected_thb":   collected,
+        "refunded_thb":    refunded,
+        "has_individual":  has_individual,
+        "delivery":        delivery,
+        "signature":       signature,
+    }
+
+
+@user_passes_test(staff_check)
+def order_receipt_view(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    ctx = _order_doc_context(pk, tenant)
+    return render(request, "orders/docs/receipt.html", ctx)
+
+
+@user_passes_test(staff_check)
+def order_invoice_view(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    ctx = _order_doc_context(pk, tenant)
+    return render(request, "orders/docs/invoice.html", ctx)
+
+
+@user_passes_test(staff_check)
+def order_shipping_label_view(request, pk):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+    ctx = _order_doc_context(pk, tenant)
+    return render(request, "orders/docs/shipping_label.html", ctx)

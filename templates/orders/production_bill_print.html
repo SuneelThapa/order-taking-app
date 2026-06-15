@@ -94,9 +94,8 @@
 
   {# ── Sub-header: product + gender ── #}
   <div class="d-flex gap-4 mb-2" style="font-size:11px;">
-    <div><strong>Product:</strong> {{ item.product_type.name|default:"—" }}
-      {% if item.quantity > 1 %} × {{ item.quantity }}{% endif %}
-    </div>
+    <div><strong>Product:</strong> {{ item.product_type.name|default:"—" }}</div>
+    <div><strong>Qty:</strong> {{ item.quantity }} piece{{ item.quantity|pluralize }}</div>
     <div><strong>Gender:</strong> {{ bill.get_gender_display }}</div>
     <div><strong>Client:</strong> {{ order.client.name }}</div>
   </div>
@@ -168,7 +167,7 @@
       <label style="cursor:pointer;user-select:none;">
         <input type="checkbox" :checked="cp[{{ forloop.counter0 }}]"
                @change="cp[{{ forloop.counter0 }}] = $event.target.checked">
-        {{ photo.photo_type|capfirst }}
+        P{{ photo.person_number }} {{ photo.photo_type|capfirst }}
       </label>
       {% endfor %}
       {% endif %}
@@ -196,18 +195,29 @@
 
     {# Photos row #}
     <div class="d-flex gap-3 flex-wrap">
-      {% for photo in client_photos %}
-      <div x-show="cp[{{ forloop.counter0 }}]" class="text-center">
-        <img src="{{ photo.image.url }}"
-             style="height:110px;width:80px;object-fit:cover;border:1px solid #ccc;border-radius:3px">
-        <div style="font-size:9px;color:#666;margin-top:2px;">{{ photo.photo_type|capfirst }}</div>
+      {# Client photos grouped by person #}
+      {% regroup client_photos by person_number as cp_groups %}
+      {% for group in cp_groups %}
+      <div class="me-2">
+        <div style="font-size:9px;font-weight:600;color:#555;margin-bottom:3px;">
+          Person {{ group.grouper }}
+        </div>
+        <div class="d-flex gap-1">
+          {% for photo in group.list %}
+          <div x-show="cp[{{ forloop.parentloop.counter0|add:forloop.counter0 }}]" class="text-center">
+            <img src="{{ photo.image.url }}"
+                 style="height:140px;width:105px;object-fit:contain;background:#f8f9fa;border:1px solid #ccc;border-radius:3px">
+            <div style="font-size:9px;color:#666;margin-top:2px;">{{ photo.photo_type|capfirst }}</div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
       {% endfor %}
 
       {% for photo in item_photos %}
       <div x-show="ip[{{ forloop.counter0 }}]" class="text-center">
         <img src="{{ photo.image.url }}"
-             style="height:110px;width:110px;object-fit:cover;border:1px solid #ccc;border-radius:3px">
+             style="height:140px;width:140px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
         <div style="font-size:9px;color:#666;margin-top:2px;">Design {{ forloop.counter }}</div>
       </div>
       {% endfor %}
@@ -215,7 +225,7 @@
       {% for note in scratch_notes %}
       <div x-show="sn[{{ forloop.counter0 }}]" class="text-center">
         <img src="{{ note.image.url }}"
-             style="height:110px;width:110px;object-fit:cover;border:1px solid #ccc;border-radius:3px">
+             style="height:140px;width:140px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
         <div style="font-size:9px;color:#666;margin-top:2px;">Sketch {{ forloop.counter }}</div>
       </div>
       {% endfor %}
@@ -270,9 +280,50 @@
   </div>
   {% endif %}
 
+  {# ── Client signature (client bill only) ── #}
+  {% if show_signature %}
+  <div class="mb-3 mt-3" style="border:1px solid #ccc;border-radius:4px;padding:10px;
+                                  break-inside:avoid;page-break-inside:avoid;">
+    <div class="section-title mb-2">Client agreement</div>
+    <div class="d-flex gap-4 align-items-start">
+      {% with sig=order.signature %}
+      {% if sig and sig.image %}
+      <div class="text-center">
+        <div style="font-size:9px;color:#666;margin-bottom:4px;">Client signature</div>
+        <img src="{{ sig.image.url }}"
+             style="height:70px;max-width:180px;object-fit:contain;border:1px solid #eee;border-radius:3px;background:#fafafa">
+        <div style="font-size:8px;color:#aaa;margin-top:2px;">
+          Signed {{ sig.signed_at|date:"d M Y H:i" }}
+        </div>
+      </div>
+      {% else %}
+      <div style="width:200px;height:70px;border:1px solid #ccc;border-radius:3px;
+                  display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:9px;color:#aaa;">Client signature</span>
+      </div>
+      {% endif %}
+      {% endwith %}
+      <div style="flex:1;">
+        <div style="font-size:9px;color:#555;line-height:1.6;">
+          I, <strong>{{ order.client.name }}</strong>, confirm the above specifications
+          and agree to the quoted total of
+          <strong>{{ order.total_amount|floatformat:0 }} {{ order.total_currency }}</strong>.
+          Completed garments are non-refundable unless a production defect is found.
+        </div>
+        <div class="mt-2" style="border-top:1px solid #bbb;padding-top:6px;">
+          <div style="font-size:9px;color:#aaa;">
+            Date: {{ bill.confirmed_at|date:"d M Y"|default:"___________" }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Footer ── #}
   <div style="border-top:1px solid #ccc;margin-top:8px;padding-top:6px;
-              font-size:9px;color:#aaa;display:flex;justify-content:space-between;">
+              font-size:9px;color:#aaa;display:flex;justify-content:space-between;
+              break-inside:avoid;page-break-inside:avoid;">
     <span>
       Bill #{{ bill.pk }} · {{ bill.confirmed_at|date:"d M Y H:i"|default:"Draft" }}
       {% if bill.sent_to_factory %}

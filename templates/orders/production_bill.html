@@ -155,7 +155,9 @@
                 <img src="{{ photo.image.url }}"
                      style="height:90px;width:70px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6">
               </a>
-              <div class="small text-muted mt-1">{{ photo.photo_type|capfirst }}</div>
+              <div class="small text-muted mt-1">
+                P{{ photo.person_number }} {{ photo.photo_type|capfirst }}
+              </div>
             </div>
             {% endif %}
             {% endfor %}
@@ -329,9 +331,13 @@
         <i class="bi bi-floppy me-1"></i>Save draft
       </button>
       {% if bill %}
-      <a href="{% url 'orders:production_bill_print' pk=bill.pk %}"
+      <a href="{% url 'orders:production_bill_print' pk=bill.pk %}?sig=0"
+         class="btn btn-outline-secondary">
+        <i class="bi bi-printer me-1"></i>Print for Factory
+      </a>
+      <a href="{% url 'orders:production_bill_print' pk=bill.pk %}?sig=1"
          class="btn btn-success">
-        <i class="bi bi-printer me-1"></i>Print
+        <i class="bi bi-printer me-1"></i>Print for Shop <span style="font-size:0.75rem">(+ signature)</span>
       </a>
       {% endif %}
     </div>

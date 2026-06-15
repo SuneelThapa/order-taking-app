@@ -1,0 +1,22 @@
+{% comment %}Lock/unlock badge for total amount. Swapped in-place via HTMX.{% endcomment %}
+<div id="total-lock-badge" class="d-flex align-items-center gap-2">
+          {% if order.total_locked %}
+          <span class="badge text-bg-warning" title="Locked {{ order.total_locked_at|date:'d M Y H:i' }}">
+            <i class="bi bi-lock-fill me-1"></i>Amount locked
+          </span>
+          {% if request.user.is_superuser or request.user.staff_profile.role == 'owner' or request.user.staff_profile.role == 'manager' %}
+          <button class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.72rem"
+                  hx-post="{% url 'orders:order_toggle_lock' order.pk %}"
+                  hx-target="#total-lock-badge" hx-swap="outerHTML"
+                  hx-confirm="Unlock total amount?">Unlock</button>
+          {% endif %}
+          {% else %}
+          <span class="text-muted small"><i class="bi bi-unlock me-1"></i>Not locked</span>
+          {% if request.user.is_superuser or request.user.staff_profile.role == 'owner' or request.user.staff_profile.role == 'manager' %}
+          <button class="btn btn-outline-warning btn-sm py-0 px-2" style="font-size:0.72rem"
+                  hx-post="{% url 'orders:order_toggle_lock' order.pk %}"
+                  hx-target="#total-lock-badge" hx-swap="outerHTML">
+            <i class="bi bi-lock me-1"></i>Lock</button>
+          {% endif %}
+          {% endif %}
+</div>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shipping Label — #{{ order.order_number }}</title>
+<style>
+  @page {
+    size: 105mm 148mm;   /* A6 */
+    margin: 4mm;
+  }
+  .print-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: #111; padding: 8px 16px;
+    display: flex; justify-content: flex-end;
+    z-index: 9999;
+  }
+  .print-bar button {
+    background: #fff; color: #111;
+    border: none; border-radius: 4px;
+    padding: 5px 16px; cursor: pointer; font-size: 13px; font-weight: 600;
+  }
+  @media print {
+    .print-bar { display: none; }
+    body { padding-top: 0 !important; }
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    color: #000;
+    background: #fff;
+    width: 93mm;
+    padding-top: 48px;
+  }
+
+  .outer-border {
+    border: 2px solid #000;
+    border-radius: 3mm;
+    overflow: hidden;
+  }
+
+  /* FROM */
+  .from-block {
+    padding: 5mm 5mm 4mm;
+    border-bottom: 1.5px solid #000;
+    background: #f5f5f5;
+  }
+  .from-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 3px;
+  }
+  .from-name  { font-size: 12px; font-weight: 700; }
+  .from-addr  { font-size: 10px; color: #333; line-height: 1.6; margin-top: 2px; }
+
+  /* TO */
+  .to-block {
+    padding: 5mm 5mm 4mm;
+    border-bottom: 1.5px solid #000;
+  }
+  .to-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #333;
+    margin-bottom: 4px;
+  }
+  .to-name  { font-size: 16px; font-weight: 700; line-height: 1.3; }
+  .to-addr  { font-size: 11px; line-height: 1.7; margin-top: 4px; }
+  .to-phone { font-size: 12px; font-weight: 600; margin-top: 4px; }
+
+  /* Order info */
+  .order-block {
+    padding: 4mm 5mm;
+    background: #000;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .order-num  { font-size: 15px; font-weight: 700; letter-spacing: .05em; }
+  .order-date { font-size: 9px; color: #ccc; margin-top: 2px; }
+  .pkg-count  { font-size: 12px; font-weight: 700; text-align: right; }
+  .pkg-label  { font-size: 8px; color: #aaa; text-align: right; }
+
+  /* Items */
+  .items-block {
+    padding: 3mm 5mm 4mm;
+    border-top: 1px solid #ddd;
+  }
+  .items-label { font-size: 8px; font-weight: 700; letter-spacing:.08em; text-transform:uppercase; color:#888; margin-bottom:3px; }
+  .item-line   { font-size: 11px; line-height: 1.6; }
+
+  /* Barcode placeholder */
+  .barcode-block {
+    padding: 3mm 5mm;
+    border-top: 1px solid #eee;
+    text-align: center;
+  }
+  .order-barcode {
+    font-family: 'Courier New', monospace;
+    font-size: 22px;
+    letter-spacing: .15em;
+    line-height: 1;
+    color: #000;
+  }
+  .barcode-num { font-size: 9px; color: #555; letter-spacing:.1em; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="print-bar"><button onclick="window.print()">🖨 Print / Save PDF</button></div>
+
+<div class="outer-border">
+
+  {# ── FROM ── #}
+  <div class="from-block">
+    <div class="from-label">From</div>
+    <div class="from-name">{{ tenant.name }}</div>
+    <div class="from-addr">
+      {% if tenant.address %}{{ tenant.address }}<br>{% endif %}
+      {% if tenant.phone %}Tel: {{ tenant.phone }}{% endif %}
+    </div>
+  </div>
+
+  {# ── TO ── #}
+  <div class="to-block">
+    <div class="to-label">Ship To</div>
+    <div class="to-name">{{ order.client.name }}</div>
+    <div class="to-addr">
+      {% if delivery %}
+        {% if delivery.type == 'hotel' %}
+          {% if delivery.hotel_name %}{{ delivery.hotel_name }}<br>{% endif %}
+          {% if delivery.room_number %}Room {{ delivery.room_number }}<br>{% endif %}
+        {% elif delivery.type == 'ship' %}
+          {% if delivery.street %}{{ delivery.street }}<br>{% endif %}
+          {% if delivery.city %}{{ delivery.city }}
+            {% if delivery.state %}, {{ delivery.state }}{% endif %}<br>
+          {% endif %}
+          {% if delivery.postcode %}{{ delivery.postcode }}<br>{% endif %}
+          {% if delivery.country %}<strong>{{ delivery.country }}</strong><br>{% endif %}
+        {% else %}
+          In-store Pickup
+        {% endif %}
+      {% elif order.hotel_name %}
+        {# Fall back to order-level hotel #}
+        {{ order.hotel_name }}<br>
+        {% if order.room_number %}Room {{ order.room_number }}<br>{% endif %}
+      {% endif %}
+    </div>
+    {% if order.client.phone %}
+    <div class="to-phone">📞 {{ order.client.phone }}</div>
+    {% endif %}
+  </div>
+
+  {# ── Order band ── #}
+  <div class="order-block">
+    <div>
+      <div class="order-num">#{{ order.order_number }}</div>
+      <div class="order-date">{{ order.created_at|date:"d M Y" }}</div>
+    </div>
+    <div>
+      <div class="pkg-count">{{ items|length }} item{{ items|length|pluralize }}</div>
+      <div class="pkg-label">Package</div>
+    </div>
+  </div>
+
+  {# ── Items ── #}
+  <div class="items-block">
+    <div class="items-label">Contents</div>
+    {% for item in items %}
+    <div class="item-line">
+      {{ item.product_type.name|default:"Item" }}
+      {% if item.product_name %} — {{ item.product_name }}{% endif %}
+      {% if item.quantity > 1 %} × {{ item.quantity }}{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# ── Pseudo-barcode from order number ── #}
+  <div class="barcode-block">
+    <div class="order-barcode">{{ order.order_number }}</div>
+    <div class="barcode-num">{{ order.order_number }}</div>
+  </div>
+
+</div>
+
+</body>
+</html>

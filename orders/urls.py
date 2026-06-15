@@ -12,6 +12,12 @@ from .views import (
     notifications_count, notifications_list,
     production_bill_view, production_bill_print,
     bill_toggle_sent,
+    order_toggle_lock,
+    order_reorder,
+    upload_temp_photo,
+    order_receipt_view,
+    order_invoice_view,
+    order_shipping_label_view,
 )
 
 app_name = "orders"
@@ -33,6 +39,12 @@ urlpatterns = [
                                           production_bill_view,   name="production_bill"),
     path("bill/<int:pk>/print/",          production_bill_print,  name="production_bill_print"),
     path("bill/<int:pk>/sent/",           bill_toggle_sent,       name="bill_toggle_sent"),
+    path("<int:pk>/lock-amount/",         order_toggle_lock,      name="order_toggle_lock"),
+    path("<int:pk>/reorder/",             order_reorder,          name="order_reorder"),
+    path("upload-temp-photo/",            upload_temp_photo,      name="upload_temp_photo"),
+    path("<int:pk>/receipt/",             order_receipt_view,     name="order_receipt"),
+    path("<int:pk>/invoice/",             order_invoice_view,     name="order_invoice"),
+    path("<int:pk>/shipping-label/",      order_shipping_label_view, name="order_shipping_label"),
     path("pending-approvals/",            pending_approvals,      name="pending_approvals"),
     path("client/search/",                client_search,          name="client_search"),
     path("client/create-inline/",         client_create_inline,   name="client_create_inline"),

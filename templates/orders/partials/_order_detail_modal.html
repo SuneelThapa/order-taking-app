@@ -54,10 +54,42 @@
     {% endif %}
     {% endwith %}
   </div>
-  <div class="d-flex gap-2 flex-shrink-0 align-items-center">
+  <div class="d-flex gap-2 flex-shrink-0 align-items-center flex-wrap">
     <a href="{% url 'orders:order_edit' order.pk %}" class="btn btn-sm btn-outline-primary">
       <i class="bi bi-pencil"></i> Edit
     </a>
+    <button type="button" class="btn btn-sm btn-outline-success"
+            hx-post="{% url 'orders:order_reorder' order.pk %}"
+            hx-confirm="Create a reorder from #{{ order.order_number }}? Items will be copied, measurements won't.">
+      <i class="bi bi-arrow-repeat"></i> Reorder
+    </button>
+    {# ── Documents dropdown ── #}
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+              data-bs-toggle="dropdown">
+        <i class="bi bi-file-earmark-text me-1"></i>Docs
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">Client Documents</h6></li>
+        <li>
+          <a class="dropdown-item" href="{% url 'orders:order_receipt' order.pk %}" target="_blank">
+            <i class="bi bi-shield-check me-2 text-success"></i>Chargeback Receipt
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{% url 'orders:order_invoice' order.pk %}" target="_blank">
+            <i class="bi bi-receipt me-2 text-primary"></i>Invoice
+          </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li><h6 class="dropdown-header">Logistics</h6></li>
+        <li>
+          <a class="dropdown-item" href="{% url 'orders:order_shipping_label' order.pk %}" target="_blank">
+            <i class="bi bi-box-seam me-2 text-warning"></i>Shipping Label (PDF)
+          </a>
+        </li>
+      </ul>
+    </div>
     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
   </div>
 </div>
@@ -261,23 +293,29 @@
           {% include "orders/partials/_payment_history.html" with order=order payments=payments quick_pay_form=quick_pay_form %}
         </div>
 
-        {# ── Client photos ── #}
+        {# ── Client photos — grouped by person ── #}
         {% if order.client_photos.exists %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Client photos</div>
-          <div class="d-flex gap-2">
-            {% for photo in order.client_photos.all %}
-            <div class="text-center">
+          {% regroup order.client_photos.all|dictsort:"person_number" by person_number as person_groups %}
+          {% for group in person_groups %}
+          <div class="mb-2">
+            <div class="small fw-semibold text-muted mb-1">Person {{ group.grouper }}</div>
+            <div class="d-flex gap-2 flex-wrap">
+              {% for photo in group.list %}
               {% if photo.image %}
-              <a href="{{ photo.image.url }}" target="_blank">
-                <img src="{{ photo.image.url }}" alt="{{ photo.photo_type }}"
-                     style="width:80px;height:100px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6">
-              </a>
+              <div class="text-center">
+                <a href="{{ photo.image.url }}" target="_blank">
+                  <img src="{{ photo.image.url }}"
+                       style="width:72px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #dee2e6">
+                </a>
+                <div class="small text-muted mt-1" style="font-size:0.7rem">{{ photo.photo_type|capfirst }}</div>
+              </div>
               {% endif %}
-              <div class="small text-muted mt-1">{{ photo.photo_type|capfirst }}</div>
+              {% endfor %}
             </div>
-            {% endfor %}
           </div>
+          {% endfor %}
         </div>
         {% endif %}
 
@@ -322,6 +360,9 @@
   <div>
     <span class="text-muted small me-2">Total:</span>
     <strong>{{ order.total_amount|floatformat:0 }} {{ order.total_currency }}</strong>
+    {% with user_role=request.user.staff_profile.role|default:"staff" %}
+    {% include "orders/partials/_lock_badge.html" with order=order user_role=user_role %}
+    {% endwith %}
   </div>
   <div class="d-flex gap-2">
     <a href="{% url 'orders:order_edit' order.pk %}"

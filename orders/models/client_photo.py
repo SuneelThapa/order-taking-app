@@ -20,17 +20,21 @@ class ClientPhoto(models.Model):
         related_name='client_photos',
         db_index=True
     )
+    person_number = models.PositiveIntegerField(
+        default=1,
+        help_text="Person 1, 2, 3... for package orders with multiple people."
+    )
     photo_type = models.CharField(max_length=20, choices=PHOTO_TYPES)
     image = models.ImageField(upload_to='client_photos/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('order', 'photo_type')
+        unique_together = ('order', 'person_number', 'photo_type')
         verbose_name = 'Client Photo'
         verbose_name_plural = 'Client Photos'
 
     def __str__(self):
-        return f"{self.order.order_number} — {self.photo_type}"
+        return f"{self.order.order_number} — Person {self.person_number} — {self.photo_type}"
 
     def save(self, *args, **kwargs):
         if self.image:

@@ -32,8 +32,7 @@
   <form method="post" enctype="multipart/form-data" id="orderForm" novalidate>
     {% csrf_token %}
     {{ item_formset.management_form }}
-    {{ client_photo_formset.management_form }}
-    {{ payment_formset.management_form }}
+        {{ payment_formset.management_form }}
     <input type="hidden" name="client" :value="clientId">
 
     
@@ -253,7 +252,7 @@
         <div class="card-body">
           <div id="items-container">
             {% for row in item_rows %}
-              {% include "orders/partials/_order_item_row.html" with item_form=row.form measurement_form=row.measurement_form existing_photos=row.existing_photos is_new=False %}
+              {% include "orders/partials/_order_item_row.html" with item_form=row.form measurement_form=row.measurement_form existing_photos=row.existing_photos body_form=row.body_form temp_photos=row.temp_photos is_new=False %}
             {% endfor %}
           </div>
           <button type="button" class="btn btn-outline-primary btn-sm mt-2"
@@ -270,29 +269,131 @@
 
     
     <section x-show="step===4" x-cloak>
-      <div class="card mb-3">
-        <div class="card-header bg-white fw-semibold">Client photos</div>
+      {# ── Multi-person client photos ── #}
+      <div class="card mb-3"
+           x-data="{ persons: {{ initial_persons }} }">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Client photos</span>
+          <button type="button" class="btn btn-sm btn-outline-primary"
+                  @click="persons++">
+            <i class="bi bi-person-plus me-1"></i>Add person
+          </button>
+        </div>
         <div class="card-body">
-          <div class="row g-3">
-            {% for form in client_photo_formset %}
-            <div class="col-md-4">
-              <div class="border rounded p-3 text-center photo-slot">
-                {{ form.id }}
-                {% if forloop.counter == 1 %}<div class="fw-semibold mb-2">Front</div><input type="hidden" name="{{ form.photo_type.html_name }}" value="front">
-                {% elif forloop.counter == 2 %}<div class="fw-semibold mb-2">Side</div><input type="hidden" name="{{ form.photo_type.html_name }}" value="side">
-                {% else %}<div class="fw-semibold mb-2">Back</div><input type="hidden" name="{{ form.photo_type.html_name }}" value="back">{% endif %}
-                <div class="mb-2">
-                  {% if form.instance.image %}<img src="{{ form.instance.image.url }}" class="img-fluid rounded preview-img" style="max-height:160px">
-                  {% else %}<img src="" class="img-fluid rounded preview-img d-none" style="max-height:160px">{% endif %}
+
+          <input type="hidden" name="person_count" :value="persons">
+
+          {# Server-rendered existing persons #}
+          {% for person in persons_photos %}
+          <div class="mb-4 border-bottom pb-3">
+            <div class="small fw-semibold mb-2">Person {{ person.num }}</div>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <div class="border rounded p-2 text-center photo-upload-slot">
+                  <div class="small fw-semibold mb-2">Front</div>
+                  {% if person.front %}
+                  <img src="{{ person.front.image.url }}" class="img-fluid rounded mb-2" style="max-height:130px;width:100%;object-fit:contain;background:#f8f9fa">
+                  {% if person.front.is_temp %}
+                  <input type="hidden" name="temp_person_{{ person.num }}_front" value="{{ person.front.temp_uuid }}">
+                  <div class="small text-success text-center mb-1"><i class="bi bi-check-circle me-1"></i>Uploaded</div>
+                  {% else %}
+                  <div class="d-flex justify-content-center mb-1">
+                    <div class="form-check form-check-sm">
+                      <input type="checkbox" class="form-check-input" name="delete_person_{{ person.num }}_front" value="1" id="del-{{ person.num }}-front">
+                      <label class="form-check-label small text-danger" for="del-{{ person.num }}-front">Delete</label>
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% endif %}
+                  <input type="file" class="form-control form-control-sm" name="person_{{ person.num }}_front" accept="image/*" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_front')">
                 </div>
-                {{ form.image }}
+              </div>
+              <div class="col-md-4">
+                <div class="border rounded p-2 text-center photo-upload-slot">
+                  <div class="small fw-semibold mb-2">Side</div>
+                  {% if person.side %}
+                  <img src="{{ person.side.image.url }}" class="img-fluid rounded mb-2" style="max-height:130px;width:100%;object-fit:contain;background:#f8f9fa">
+                  {% if person.side.is_temp %}
+                  <input type="hidden" name="temp_person_{{ person.num }}_side" value="{{ person.side.temp_uuid }}">
+                  <div class="small text-success text-center mb-1"><i class="bi bi-check-circle me-1"></i>Uploaded</div>
+                  {% else %}
+                  <div class="d-flex justify-content-center mb-1">
+                    <div class="form-check form-check-sm">
+                      <input type="checkbox" class="form-check-input" name="delete_person_{{ person.num }}_side" value="1" id="del-{{ person.num }}-side">
+                      <label class="form-check-label small text-danger" for="del-{{ person.num }}-side">Delete</label>
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% endif %}
+                  <input type="file" class="form-control form-control-sm" name="person_{{ person.num }}_side" accept="image/*" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_side')">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="border rounded p-2 text-center photo-upload-slot">
+                  <div class="small fw-semibold mb-2">Back</div>
+                  {% if person.back %}
+                  <img src="{{ person.back.image.url }}" class="img-fluid rounded mb-2" style="max-height:130px;width:100%;object-fit:contain;background:#f8f9fa">
+                  {% if person.back.is_temp %}
+                  <input type="hidden" name="temp_person_{{ person.num }}_back" value="{{ person.back.temp_uuid }}">
+                  <div class="small text-success text-center mb-1"><i class="bi bi-check-circle me-1"></i>Uploaded</div>
+                  {% else %}
+                  <div class="d-flex justify-content-center mb-1">
+                    <div class="form-check form-check-sm">
+                      <input type="checkbox" class="form-check-input" name="delete_person_{{ person.num }}_back" value="1" id="del-{{ person.num }}-back">
+                      <label class="form-check-label small text-danger" for="del-{{ person.num }}-back">Delete</label>
+                    </div>
+                  </div>
+                  {% endif %}
+                  {% endif %}
+                  <input type="file" class="form-control form-control-sm" name="person_{{ person.num }}_back" accept="image/*" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_back')">
+                </div>
               </div>
             </div>
-            {% endfor %}
           </div>
+          {% endfor %}
+
+          {# Alpine-added extra persons (beyond server-rendered count) #}
+          <template x-for="i in Math.max(0, persons - {{ initial_persons }})" :key="i">
+            <div class="mb-4 border-bottom pb-3">
+              <div class="small fw-semibold mb-2">
+                Person <span x-text="{{ initial_persons }} + i"></span>
+              </div>
+              <div class="row g-2">
+                <template x-for="ptype in ['front','side','back']" :key="ptype">
+                  <div class="col-md-4">
+                    <div class="border rounded p-2 text-center photo-upload-slot">
+                      <div class="small fw-semibold mb-2 text-capitalize" x-text="ptype"></div>
+                      <input type="file" class="form-control form-control-sm photo-upload-input"
+                             :name="'person_' + ({{ initial_persons }} + i) + '_' + ptype"
+                             accept="image/*"
+                             @change="
+                               const file = $event.target.files[0];
+                               if (file) {
+                                 const reader = new FileReader();
+                                 const img = $event.target.previousElementSibling;
+                                 reader.onload = e => {
+                                   if (img && img.tagName === 'IMG') {
+                                     img.src = e.target.result;
+                                   } else {
+                                     const newImg = document.createElement('img');
+                                     newImg.src = e.target.result;
+                                     newImg.style = 'max-height:130px;width:100%;object-fit:cover;border-radius:4px;margin-bottom:8px';
+                                     $event.target.parentNode.insertBefore(newImg, $event.target);
+                                   }
+                                 };
+                                 reader.readAsDataURL(file);
+                               }
+                             ">
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
         </div>
       </div>
-      <div class="card">
+            <div class="card">
         <div class="card-header bg-white fw-semibold">Scratch note</div>
         <div class="card-body">
           {% if is_edit and edit_order.scratch_notes.exists %}
@@ -436,6 +537,9 @@
             <div class="col-md-4">
               <label class="form-label">Total amount</label>
               {{ order_form.total_amount }}
+              {% if order_form.total_amount.help_text %}
+              <div class="form-text text-warning">{{ order_form.total_amount.help_text }}</div>
+              {% endif %}
             </div>
             <div class="col-md-3">
               <label class="form-label">Currency</label>
@@ -448,6 +552,40 @@
               </div>
             </div>
           </div>
+          {% if is_edit and edit_order %}
+          <div class="mt-3 pt-2 border-top">
+            <div id="total-lock-badge" class="d-flex align-items-center gap-2">
+              {% if edit_order.total_locked %}
+              <span class="badge text-bg-warning">
+                <i class="bi bi-lock-fill me-1"></i>Amount locked
+              </span>
+              <span class="text-muted small">
+                {{ edit_order.total_locked_at|date:"d M Y H:i" }}
+                {% if edit_order.total_locked_by %}· {{ edit_order.total_locked_by.get_full_name|default:edit_order.total_locked_by.username }}{% endif %}
+              </span>
+              {% if can_lock %}
+              <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                      style="font-size:0.72rem"
+                      hx-post="{% url 'orders:order_toggle_lock' edit_order.pk %}"
+                      hx-vals='{"from_step": "6"}'
+                      hx-confirm="Unlock total amount for editing?">
+                Unlock
+              </button>
+              {% endif %}
+              {% else %}
+              <span class="text-muted small"><i class="bi bi-unlock me-1"></i>Amount not locked</span>
+              {% if can_lock %}
+              <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2"
+                      style="font-size:0.72rem"
+                      hx-post="{% url 'orders:order_toggle_lock' edit_order.pk %}"
+                      hx-vals='{"from_step": "6"}'>
+                <i class="bi bi-lock me-1"></i>Lock amount
+              </button>
+              {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
 
@@ -568,14 +706,22 @@
 let _orderWizardRef = null;
 
 function orderWizard() {
+  // Read step from URL param (set after lock/unlock redirect) or error step or default 1
+  const urlStep = parseInt(new URLSearchParams(window.location.search).get('step'));
   return {
-    step: {% if first_error_step %}{{ first_error_step }}{% else %}1{% endif %},
+    step: urlStep || {% if first_error_step %}{{ first_error_step }}{% else %}1{% endif %},
     clientId: '{{ selected_client.pk|default:"" }}',
     searchQ:  '',
     showCreate: false,
 
     init() {
       _orderWizardRef = this; // expose to saveClientInline()
+      // Clean up ?step= param from URL without reload
+      if (urlStep) {
+        const url = new URL(window.location);
+        url.searchParams.delete('step');
+        history.replaceState(null, '', url);
+      }
     },
 
     // Called by _client_results.html @click and by saveClientInline() below
@@ -825,6 +971,20 @@ document.addEventListener('change', function(e) {
 // Scratch canvas
 (function(){
   const canvas=document.getElementById('scratchCanvas');
+  {% if scratch_canvas_data %}(function(){
+    const img=new Image();
+    img.onload=function(){const c=document.getElementById('scratchCanvas');if(c){c.getContext('2d').drawImage(img,0,0);hasDrawing=true;}};
+    img.src='{{ scratch_canvas_data }}';
+  })();{% endif %}
+  {% if signature_canvas_data %}(function(){
+    const img=new Image();
+    img.onload=function(){
+      const c=document.getElementById('signatureCanvas');
+      if(c){c.getContext('2d').drawImage(img,0,0);hasSig=true;
+      document.getElementById('signatureCanvasImage').value='{{ signature_canvas_data }}';}
+    };
+    img.src='{{ signature_canvas_data }}';
+  })();{% endif %}
   if(!canvas)return;
   const ctx=canvas.getContext('2d');
   let drawing=false,history=[],erasing=false,lastTap=0,hasDrawing=false,scale=1,startDist=0,pinching=false;
@@ -875,5 +1035,42 @@ document.addEventListener('change', function(e) {
   const clearBtn=document.getElementById('clearSigCanvas');if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;};
   const form=document.getElementById('orderForm');if(form)form.addEventListener('submit',()=>{document.getElementById('signatureCanvasImage').value=hasSig?canvas.toDataURL('image/png'):'';});
 })();
+</script>
+
+<script>
+// ── Temp photo auto-upload ────────────────────────────────────────────────
+// Immediately uploads selected file so photo survives form validation errors.
+async function autoUploadPhoto(input, tempFieldName) {
+  const file = input.files[0];
+  if (!file) return;
+  // Local preview
+  const reader = new FileReader();
+  reader.onload = e => {
+    const slot = input.closest('.photo-upload-slot') || input.parentNode;
+    let img = slot.querySelector('img.temp-preview');
+    if (!img) {
+      img = document.createElement('img');
+      img.className = 'temp-preview img-fluid rounded mb-2';
+      img.style.cssText = 'max-height:130px;width:100%;object-fit:contain;background:#f8f9fa';
+      slot.insertBefore(img, input);
+    }
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  // Upload
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('csrfmiddlewaretoken',
+      document.querySelector('[name=csrfmiddlewaretoken]').value);
+    const r = await fetch("{% url 'orders:upload_temp_photo' %}", {method:'POST', body:fd});
+    if (!r.ok) return;
+    const d = await r.json();
+    const slot = input.closest('.photo-upload-slot') || input.parentNode;
+    let h = slot.querySelector('input[name="' + tempFieldName + '"]');
+    if (!h) { h = document.createElement('input'); h.type='hidden'; h.name=tempFieldName; slot.appendChild(h); }
+    h.value = d.uuid;
+  } catch(e) { console.warn('Temp upload failed:', e); }
+}
 </script>
 {% endblock %}

@@ -349,3 +349,41 @@ class ClientEditForm(StyledModelForm):
         if self.instance and self.instance.pk:
             self.fields["referred_by"].queryset = \
                 Client.objects.exclude(pk=self.instance.pk)
+
+
+# ─────────────────────────────────────────────────────────
+# Body Measurement Form
+# ─────────────────────────────────────────────────────────
+from .models import BodyMeasurement
+
+BODY_FIELDS_MEN = [
+    'neck', 'shoulder', 'sleeve', 'biceps',
+    'chest', 'stomach', 'waist', 'hips',
+    'height', 'weight',
+]
+
+BODY_FIELDS_LADIES_EXTRA = [
+    'high_chest', 'upper_hips',
+    'deep_front', 'deep_back',
+    'shoulder_to_middle_breast',
+    'shoulder_to_under_breast',
+    'middle_breast_to_middle_breast',
+]
+
+
+class BodyMeasurementForm(forms.ModelForm):
+    class Meta:
+        model  = BodyMeasurement
+        fields = ['gender'] + BODY_FIELDS_MEN + BODY_FIELDS_LADIES_EXTRA
+        widgets = {
+            'gender': forms.RadioSelect(
+                attrs={'class': 'form-check-input'}
+            ),
+            **{
+                f: forms.NumberInput(attrs={
+                    'class': 'form-control form-control-sm',
+                    'step': '0.1',
+                })
+                for f in BODY_FIELDS_MEN + BODY_FIELDS_LADIES_EXTRA
+            }
+        }

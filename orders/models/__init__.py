@@ -56,6 +56,12 @@ from .belt import *
 # Item photos — depends on order_item
 from .order_item_photo import *
 
+# Body measurement (per item, gender-aware)
+from .body_measurement import *
+
+# Temporary photo upload (survives form validation errors)
+from .temp_photo import *
+
 # ── Production bill models ──────────────────────────────
 # No external dependencies
 from .target_item import *
