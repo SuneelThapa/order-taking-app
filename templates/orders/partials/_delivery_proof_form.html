@@ -36,7 +36,7 @@
         {% if delivery.proof_image %}Replace proof image{% else %}Upload proof image{% endif %}
       </label>
       <input type="file" name="proof_image" id="proof-image-input"
-             accept="image/*" capture="environment"
+             accept="image/*"
              class="form-control"
              {% if not delivery.proof_image %}required{% endif %}
              onchange="previewProofImage(this)">
