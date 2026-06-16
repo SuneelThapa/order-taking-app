@@ -317,7 +317,16 @@
                   </div>
                   {% endif %}
                   {% endif %}
-                  <input type="file" class="form-control form-control-sm" name="person_{{ person.num }}_front" accept="image/*" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_front')">
+                  <div class="d-flex gap-1 mt-1">
+                    <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                      <i class="bi bi-camera"></i> Camera
+                      <input type="file" name="person_{{ person.num }}_front" accept="image/*" capture="environment" class="d-none" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_front')">
+                    </label>
+                    <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                      <i class="bi bi-image"></i> Gallery
+                      <input type="file" name="person_{{ person.num }}_front" accept="image/*" class="d-none" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_front')">
+                    </label>
+                  </div>
                 </div>
               </div>
               <div class="col-md-4">
@@ -337,7 +346,16 @@
                   </div>
                   {% endif %}
                   {% endif %}
-                  <input type="file" class="form-control form-control-sm" name="person_{{ person.num }}_side" accept="image/*" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_side')">
+                  <div class="d-flex gap-1 mt-1">
+                    <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                      <i class="bi bi-camera"></i> Camera
+                      <input type="file" name="person_{{ person.num }}_side" accept="image/*" capture="environment" class="d-none" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_side')">
+                    </label>
+                    <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                      <i class="bi bi-image"></i> Gallery
+                      <input type="file" name="person_{{ person.num }}_side" accept="image/*" class="d-none" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_side')">
+                    </label>
+                  </div>
                 </div>
               </div>
               <div class="col-md-4">
@@ -357,7 +375,16 @@
                   </div>
                   {% endif %}
                   {% endif %}
-                  <input type="file" class="form-control form-control-sm" name="person_{{ person.num }}_back" accept="image/*" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_back')">
+                  <div class="d-flex gap-1 mt-1">
+                    <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                      <i class="bi bi-camera"></i> Camera
+                      <input type="file" name="person_{{ person.num }}_back" accept="image/*" capture="environment" class="d-none" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_back')">
+                    </label>
+                    <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                      <i class="bi bi-image"></i> Gallery
+                      <input type="file" name="person_{{ person.num }}_back" accept="image/*" class="d-none" onchange="autoUploadPhoto(this, 'temp_person_{{ person.num }}_back')">
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

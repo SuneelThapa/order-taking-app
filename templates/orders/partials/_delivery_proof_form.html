@@ -35,11 +35,20 @@
       <label class="form-label fw-semibold">
         {% if delivery.proof_image %}Replace proof image{% else %}Upload proof image{% endif %}
       </label>
-      <input type="file" name="proof_image" id="proof-image-input"
-             accept="image/*"
-             class="form-control"
-             {% if not delivery.proof_image %}required{% endif %}
-             onchange="previewProofImage(this)">
+      <div class="d-flex gap-2 mt-1">
+      <label class="btn btn-outline-secondary btn-sm flex-fill">
+        <i class="bi bi-camera"></i> Camera
+        <input type="file" name="proof_image" accept="image/*" capture="environment"
+               class="d-none" {% if not delivery.proof_image %}required{% endif %}
+               onchange="previewProofImage(this)">
+      </label>
+      <label class="btn btn-outline-secondary btn-sm flex-fill">
+        <i class="bi bi-image"></i> Gallery
+        <input type="file" name="proof_image" accept="image/*"
+               class="d-none" {% if not delivery.proof_image %}required{% endif %}
+               onchange="previewProofImage(this)">
+      </label>
+    </div>
       <div class="form-text">
         Photo of handover, hotel delivery receipt, or shipping label.
         Protects against chargebacks.
