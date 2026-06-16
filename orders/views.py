@@ -1978,11 +1978,19 @@ def order_invoice_view(request, pk):
 
 @user_passes_test(staff_check)
 def order_shipping_label_view(request, pk):
-    tenant = getattr(request, "tenant", None)
+    tenant = getattr(request, 'tenant', None)
     if not tenant:
-        return HttpResponse("Tenant not found", status=404)
+        return HttpResponse('Tenant not found', status=404)
     ctx = _order_doc_context(pk, tenant)
-    return render(request, "orders/docs/shipping_label.html", ctx)
+
+    # Server-side PDF via WeasyPrint
+    html_string = render_to_string('orders/docs/shipping_label.html', ctx, request=request)
+    from weasyprint import HTML, CSS
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
+    order = ctx['order']
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="shipping-label-{order.order_number}.pdf"'
+    return response
 
 
 # ─────────────────────────────────────────────────────────
