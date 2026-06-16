@@ -10,20 +10,199 @@
   <link rel="stylesheet" href="{% static 'plugins/bootstrap5/css/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+
+  <style>
+  /* ── Collapsible icon-rail sidebar ───────────────────── */
+  :root {
+    --sidebar-rail-w: 52px;
+    --sidebar-full-w: 220px;
+    --sidebar-bg:     #141824;
+    --sidebar-border: rgba(255,255,255,.1);
+    --rail-icon-size: 17px;
+  }
+
+  .app { display: flex; min-height: 100vh; }
+
+  /* ── DESKTOP: icon rail always visible ── */
+  @media (min-width: 769px) {
+    .app-sidebar {
+      position: fixed !important;
+      left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-rail-w);
+      background: var(--sidebar-bg);
+      z-index: 1045;
+      overflow: hidden;
+      transition: width .22s cubic-bezier(.4,0,.2,1), box-shadow .22s ease;
+      display: flex !important;
+      flex-direction: column;
+      transform: none !important;
+      visibility: visible !important;
+    }
+    .app-sidebar.sidebar-expanded {
+      width: var(--sidebar-full-w);
+      box-shadow: 6px 0 24px rgba(0,0,0,.4);
+    }
+    .app-main {
+      margin-left: var(--sidebar-rail-w) !important;
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+    }
+    .topbar-hamburger { display: none !important; }
+  }
+
+  /* ── MOBILE: no rail, hamburger in topbar ── */
+  @media (max-width: 768px) {
+    .app-sidebar {
+      position: fixed !important;
+      left: 0; top: 0; bottom: 0;
+      width: var(--sidebar-full-w) !important;
+      background: var(--sidebar-bg);
+      z-index: 1045;
+      overflow: hidden;
+      transform: translateX(-100%);
+      transition: transform .22s cubic-bezier(.4,0,.2,1), box-shadow .22s ease;
+      display: flex !important;
+      flex-direction: column;
+    }
+    .app-sidebar.sidebar-expanded {
+      transform: translateX(0) !important;
+      box-shadow: 6px 0 24px rgba(0,0,0,.5);
+    }
+    .app-main {
+      margin-left: 0 !important;
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+    }
+    .sidebar-toggle-top { display: none; }
+    .topbar-hamburger { display: flex !important; }
+    .rail-label { opacity: 1 !important; pointer-events: auto !important; }
+    .rail-user-info { opacity: 1 !important; }
+  }
+
+  /* Rail container */
+  .sidebar-rail {
+    display: flex; flex-direction: column;
+    height: 100%; width: 100%; overflow: hidden;
+  }
+
+  /* Toggle at top (desktop only) */
+  .sidebar-toggle-top {
+    width: 100%; height: 48px;
+    background: none; border: none;
+    border-bottom: 1px solid var(--sidebar-border);
+    color: rgba(255,255,255,.5);
+    font-size: 18px;
+    display: flex; align-items: center;
+    justify-content: flex-start;
+    padding: 0 16px;
+    cursor: pointer; flex-shrink: 0;
+    transition: color .15s;
+  }
+  .sidebar-toggle-top:hover { color: #fff; }
+
+  .rail-divider {
+    height: 1px; background: var(--sidebar-border);
+    margin: 6px 0; flex-shrink: 0;
+  }
+
+  /* Nav items */
+  .rail-nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 16px; height: 42px;
+    color: rgba(255,255,255,.5);
+    text-decoration: none; font-size: 13px;
+    white-space: nowrap; flex-shrink: 0;
+    transition: color .15s, background .15s;
+    border: none; background: none;
+    width: 100%; text-align: left; cursor: pointer;
+  }
+  .rail-nav-item i {
+    font-size: var(--rail-icon-size);
+    flex-shrink: 0; width: 20px; text-align: center;
+  }
+  .rail-nav-item:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .rail-active { color: #fff !important; background: rgba(255,255,255,.1) !important; }
+
+  /* Label — hidden on desktop collapsed, always shown on mobile */
+  .rail-label {
+    opacity: 0;
+    transition: opacity .15s ease .05s;
+    pointer-events: none; font-size: 13px;
+    color: rgba(255,255,255,.7);
+  }
+  .sidebar-expanded .rail-label { opacity: 1; pointer-events: auto; }
+
+  /* User panel */
+  .rail-user {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; flex-shrink: 0;
+  }
+  .rail-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #2a3048;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500;
+    color: rgba(255,255,255,.7); flex-shrink: 0;
+  }
+  .rail-user-info { opacity: 0; transition: opacity .15s ease .05s; white-space: nowrap; }
+  .sidebar-expanded .rail-user-info { opacity: 1; }
+  .rail-user-name { font-size: 12px; color: rgba(255,255,255,.85); font-weight: 500; }
+  .rail-user-role { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 1px; }
+
+  .rail-logout-form { flex-shrink: 0; }
+  .rail-logout { color: rgba(220,80,80,.75) !important; }
+  .rail-logout:hover { color: #e74c3c !important; background: rgba(231,76,60,.1) !important; }
+
+  /* Topbar */
+  .app-topbar {
+    height: 48px; background: #fff;
+    border-bottom: 1px solid #e9ecef;
+    display: flex; align-items: center;
+    padding: 0 16px; flex-shrink: 0;
+    position: sticky; top: 0; z-index: 100;
+    gap: 12px;
+  }
+  .topbar-hamburger {
+    display: none;
+    width: 32px; height: 32px;
+    align-items: center; justify-content: center;
+    background: none; border: 1px solid #dee2e6;
+    border-radius: 6px; cursor: pointer;
+    color: #6c757d; font-size: 16px; flex-shrink: 0;
+  }
+  .topbar-hamburger:hover { background: #f8f9fa; }
+  .topbar-page-title { font-size: 13px; font-weight: 500; color: #6c757d; }
+
+  /* Backdrop */
+  .app-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 1044;
+  }
+  </style>
   {% block extra_css %}{% endblock %}
 </head>
 
 <!-- hx-headers puts the CSRF token on every htmx request (GET/POST/DELETE) automatically -->
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
       x-data="{ sidebarOpen: false }"
-      :class="{ 'sidebar-open': sidebarOpen }">
+      @keydown.escape="sidebarOpen = false">
 
   <div class="app">
 
     {% include "includes/app_sidebar.html" %}
 
-    <!-- Mobile backdrop for the sidebar -->
-    <div class="app-backdrop" @click="sidebarOpen = false" x-show="sidebarOpen" x-transition.opacity></div>
+    {# Backdrop — click outside to close sidebar #}
+    <div class="app-backdrop"
+         @click="sidebarOpen = false"
+         x-show="sidebarOpen"
+         x-transition:enter="transition-opacity ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         x-cloak></div>
 
     <div class="app-main">
       {% include "includes/app_navbar.html" %}

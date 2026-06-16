@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="60">
+<title>{{ tenant.name }} — Status Board</title>
+<style>
+  :root {
+    --bg:       #0f1117;
+    --card:     #1a1d27;
+    --border:   #2a2d3a;
+    --text:     #e8eaf0;
+    --muted:    #8b8fa8;
+    --blue:     #4f8ef7;
+    --green:    #2ecc71;
+    --yellow:   #f0c040;
+    --red:      #e74c3c;
+    --purple:   #9b59b6;
+    --orange:   #e67e22;  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px;
+    background: var(--card);
+    border-bottom: 2px solid var(--blue);
+  }
+  .shop-name  { font-size: 1.4rem; font-weight: 700; color: var(--blue); }
+  .clock      { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .date-str   { font-size: 0.9rem; color: var(--muted); text-align: right; }
+
+  /* ── Main grid ── */
+  .board {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+    overflow: hidden;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Full-width panels */
+  .panel.full-width { grid-column: 1 / -1; }
+
+  .panel-header {
+    padding: 10px 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .panel-header .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Order cards ── */
+  .order-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    transition: background .2s;
+  }
+  .order-row:last-child { border-bottom: none; }
+  .order-row.urgent { background: rgba(231,76,60,.08); border-left: 3px solid var(--red); }
+
+  .order-time {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--blue);
+    min-width: 52px;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .order-num {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .client-name {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .items-list {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* Staff badges */
+  .staff-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 5px;
+  }
+  .staff-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .staff-badge.salesman { background: rgba(79,142,247,.18); color: var(--blue); }
+  .staff-badge.helper   { background: rgba(46,204,113,.15); color: var(--green); }
+  .staff-badge .avatar {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Date badge */
+  .date-badge {
+    font-size: 0.72rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .date-badge.today    { background: rgba(79,142,247,.2);  color: var(--blue); }
+  .date-badge.tomorrow { background: rgba(240,192,64,.15); color: var(--yellow); }
+
+  /* Status badges */
+  .status-badge {
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .status-processing  { background:rgba(155,89,182,.2); color:var(--purple); }
+  .status-alterations { background:rgba(230,126,34,.2);  color:var(--orange); }
+  .status-pending     { background:rgba(240,192,64,.15); color:var(--yellow); }
+  .status-ready       { background:rgba(46,204,113,.15); color:var(--green); }
+
+  /* Empty state */
+  .empty {
+    padding: 20px 16px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    padding: 8px 28px;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .urgent-ticker {
+    color: var(--red);
+    font-weight: 700;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+</style>
+</head>
+<body>
+
+{# ── Header ── #}
+<div class="header">
+  <div>
+    <div class="shop-name">{{ tenant.name }}</div>
+    <div class="date-str">{{ today|date:"l, d F Y" }}</div>
+  </div>
+  <div class="clock" id="clock">--:--</div>
+</div>
+
+{# ── Board ── #}
+<div class="board">
+
+  {# Column 1 — Today's fittings #}
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot" style="background:var(--blue)"></span>
+      ✂ Today's Fittings
+      <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ fittings_today|length }}</span>
+    </div>
+    <div class="panel-body">
+      {% if fittings_today %}
+        {% for order in fittings_today %}
+        <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
+          <div class="order-time">
+            {% if order.fitting_time %}
+              {{ order.fitting_time|time:"H:i" }}
+            {% else %}
+              <span style="font-size:1rem;color:var(--muted);" title="Time not set">🕐 TBD</span>
+            {% endif %}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="order-num">#{{ order.order_number }}</div>
+            <div class="client-name">{{ order.client.name }}</div>
+            <div class="items-list">
+              {% for item in order.items.all %}{{ item.product_type.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% include "orders/partials/_status_board_staff.html" with assignments=order.staff_assignments.all %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty">No fittings today</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Column 2 — Ready for pickup #}
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot" style="background:var(--green)"></span>
+      ✅ Ready for Pickup
+      <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ ready_orders|length }}</span>
+    </div>
+    <div class="panel-body">
+      {% if ready_orders %}
+        {% for order in ready_orders %}
+        <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
+          <div class="order-time" style="color:var(--green);">
+            {% if order.ready_time %}{{ order.ready_time|time:"H:i" }}{% else %}
+            <span style="font-size:0.8rem">{{ order.ready_date|date:"d M" }}</span>
+            {% endif %}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="order-num">#{{ order.order_number }}</div>
+            <div class="client-name">{{ order.client.name }}</div>
+            {% if order.hotel_name %}
+            <div class="items-list">🏨 {{ order.hotel_name }}{% if order.room_number %} · Rm {{ order.room_number }}{% endif %}</div>
+            {% endif %}
+            <div class="items-list">
+              {% for item in order.items.all %}{{ item.product_type.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% include "orders/partials/_status_board_staff.html" with assignments=order.staff_assignments.all %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty">No orders ready</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Column 3 — Departing today / tomorrow #}
+  <div class="panel">
+    <div class="panel-header">
+      <span class="dot" style="background:var(--yellow)"></span>
+      🛫 Departing Soon
+      <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ departing|length }}</span>
+    </div>
+    <div class="panel-body">
+      {% if departing %}
+        {% for order in departing %}
+        <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
+          <div>
+            <span class="date-badge {% if order.departure_date == today %}today{% else %}tomorrow{% endif %}">
+              {% if order.departure_date == today %}TODAY{% else %}TMW{% endif %}
+            </span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="order-num">#{{ order.order_number }}</div>
+            <div class="client-name">{{ order.client.name }}</div>
+            {% if order.hotel_name %}
+            <div class="items-list">🏨 {{ order.hotel_name }}{% if order.room_number %} · Rm {{ order.room_number }}{% endif %}</div>
+            {% endif %}
+            <div class="items-list">
+              {% for item in order.items.all %}{{ item.product_type.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% include "orders/partials/_status_board_staff.html" with assignments=order.staff_assignments.all %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty">No departures today or tomorrow</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Row 2 — In progress + Shipping (full width split) #}
+  <div class="panel full-width" style="grid-template-columns:1fr 1fr;display:grid;gap:0">
+
+    {# In progress #}
+    <div style="display:flex;flex-direction:column;border-right:1px solid var(--border);">
+      <div class="panel-header">
+        <span class="dot" style="background:var(--purple)"></span>
+        🔧 In Progress
+        <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ in_progress|length }}</span>
+      </div>
+      <div class="panel-body" style="display:flex;flex-wrap:wrap;gap:0;padding:0;">
+        {% if in_progress %}
+          {% for order in in_progress %}
+          <div class="order-row {% if order.is_urgent %}urgent{% endif %}"
+               style="width:50%;border-right:1px solid var(--border);">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                <span class="order-num">#{{ order.order_number }}</span>
+                <span class="status-badge status-{{ order.status }}">{{ order.get_status_display }}</span>
+                {% if order.ready_date %}
+                <span style="font-size:0.7rem;color:var(--muted);margin-left:auto;">
+                  Ready {{ order.ready_date|date:"d M" }}
+                  {% if order.ready_time %}<span style="color:var(--blue)">{{ order.ready_time|time:"H:i" }}</span>{% endif %}
+                </span>
+                {% endif %}
+              </div>
+              <div class="client-name">{{ order.client.name }}</div>
+              <div class="items-list">
+                {% for item in order.items.all %}{{ item.product_type.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </div>
+              {% include "orders/partials/_status_board_staff.html" with assignments=order.staff_assignments.all %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty" style="width:100%">All clear — nothing in progress</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Shipping #}
+    <div style="display:flex;flex-direction:column;">
+      <div class="panel-header">
+        <span class="dot" style="background:var(--orange)"></span>
+        📦 Shipping
+        <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ shipping_orders|length }}</span>
+      </div>
+      <div class="panel-body">
+        {% if shipping_orders %}
+          {% for order in shipping_orders %}
+          <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
+            <div>
+              {% if order.delivery_date %}
+              <div class="order-time" style="font-size:0.85rem;color:var(--orange);">
+                {{ order.delivery_date|date:"d M" }}
+              </div>
+              {% if order.delivery_time %}
+              <div style="font-size:0.7rem;color:var(--muted);">{{ order.delivery_time|time:"H:i" }}</div>
+              {% endif %}
+              {% else %}
+              <div class="order-time" style="color:var(--muted);font-size:0.8rem">No date</div>
+              {% endif %}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div class="order-num">#{{ order.order_number }}</div>
+              <div class="client-name">{{ order.client.name }}</div>
+              {% if order.delivery.street %}
+              <div class="items-list">📍 {{ order.delivery.street }}{% if order.delivery.city %}, {{ order.delivery.city }}{% endif %}</div>
+              {% endif %}
+              {% if order.client.phone %}
+              <div class="items-list">📞 {{ order.client.phone }}</div>
+              {% endif %}
+              <div class="items-list">
+                {% for item in order.items.all %}{{ item.product_type.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </div>
+              {% include "orders/partials/_status_board_staff.html" with assignments=order.staff_assignments.all %}
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+        <div class="empty">No shipments pending</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+{# ── Footer ── #}
+<div class="footer">
+  <span>Auto-refreshes every 60 seconds</span>
+  {% if urgent %}
+  <span class="urgent-ticker">⚠ {{ urgent|length }} URGENT order{{ urgent|length|pluralize }}</span>
+  {% endif %}
+  <span>{{ tenant.name }} · Status Board</span>
+</div>
+
+<script>
+// Live clock
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').textContent = h + ':' + m;
+}
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

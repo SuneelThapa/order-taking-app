@@ -212,32 +212,32 @@
              Array.from(inp.files).forEach(function(f, i){
                const idx = (inp.dataset.count|0) + i;
                const tempName = 'temp_item_photo_{{ item_form.prefix }}_' + idx;
-               // Preview
-               const reader = new FileReader();
-               reader.onload = function(e){
-                 const wrap = document.createElement('div');
-                 wrap.style.cssText='display:inline-block;margin:2px;text-align:center';
-                 const img = document.createElement('img');
-                 img.src = e.target.result;
-                 img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6';
-                 const lbl = document.createElement('div');
-                 lbl.className='small text-muted'; lbl.style.fontSize='0.7rem'; lbl.textContent='Uploading...';
-                 wrap.appendChild(img); wrap.appendChild(lbl); slot.appendChild(wrap);
-                 // Upload
-                 const fd = new FormData();
-                 fd.append('file', f);
-                 fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-                 fetch('{% url "orders:upload_temp_photo" %}', {method:'POST',body:fd})
-                   .then(r=>r.json())
-                   .then(d=>{
-                     lbl.textContent='✓ Ready';
-                     lbl.className='small text-success';
-                     const h=document.createElement('input');
-                     h.type='hidden'; h.name=tempName; h.value=d.uuid;
-                     slot.appendChild(h);
-                   }).catch(()=>{ lbl.textContent='Upload failed'; lbl.className='small text-danger'; });
-               };
-               reader.readAsDataURL(f);
+               resizeImageBeforeUpload(f).then(function(resized){
+                 const reader = new FileReader();
+                 reader.onload = function(e){
+                   const wrap = document.createElement('div');
+                   wrap.style.cssText='display:inline-block;margin:2px;text-align:center';
+                   const img = document.createElement('img');
+                   img.src = e.target.result;
+                   img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:4px;border:1px solid #dee2e6';
+                   const lbl = document.createElement('div');
+                   lbl.className='small text-muted'; lbl.style.fontSize='0.7rem'; lbl.textContent='Uploading...';
+                   wrap.appendChild(img); wrap.appendChild(lbl); slot.appendChild(wrap);
+                   const fd = new FormData();
+                   fd.append('file', resized);
+                   fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                   fetch('{% url "orders:upload_temp_photo" %}', {method:'POST',body:fd})
+                     .then(r=>r.json())
+                     .then(d=>{
+                       lbl.textContent='✓ Ready';
+                       lbl.className='small text-success';
+                       const h=document.createElement('input');
+                       h.type='hidden'; h.name=tempName; h.value=d.uuid;
+                       slot.appendChild(h);
+                     }).catch(()=>{ lbl.textContent='Upload failed'; lbl.className='small text-danger'; });
+                 };
+                 reader.readAsDataURL(resized);
+               });
              });
              inp.dataset.count = (inp.dataset.count|0) + inp.files.length;
            })(this)">

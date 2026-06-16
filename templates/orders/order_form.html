@@ -1068,9 +1068,49 @@ document.addEventListener('change', function(e) {
 <script>
 // ── Temp photo auto-upload ────────────────────────────────────────────────
 // Immediately uploads selected file so photo survives form validation errors.
+// ── Client-side image resize before upload ───────────────
+// Tablets take 10-12MB photos — resize to max 1920px / 85% quality
+// before uploading. Reduces file size from ~10MB to ~300KB.
+function resizeImageBeforeUpload(file, maxWidth=1920, quality=0.85) {
+  return new Promise(resolve => {
+    // Skip resize for small files (< 500KB) or non-images
+    if (file.size < 500 * 1024 || !file.type.startsWith('image/')) {
+      resolve(file);
+      return;
+    }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      // Only downscale, never upscale
+      if (w > maxWidth) {
+        h = Math.round(h * maxWidth / w);
+        w = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        const resized = new File([blob], file.name, {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+        console.log(`[resize] ${(file.size/1024).toFixed(0)}KB → ${(resized.size/1024).toFixed(0)}KB`);
+        resolve(resized);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 async function autoUploadPhoto(input, tempFieldName) {
-  const file = input.files[0];
-  if (!file) return;
+  const rawFile = input.files[0];
+  if (!rawFile) return;
+  // Resize before upload
+  const file = await resizeImageBeforeUpload(rawFile);
   // Local preview
   const reader = new FileReader();
   reader.onload = e => {

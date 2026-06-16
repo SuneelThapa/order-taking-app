@@ -1,0 +1,19 @@
+{% comment %}Staff badges for status board — shows salesman + helpers with initials avatar (profile photo ready){% endcomment %}
+{% if assignments %}
+<div class="staff-list">
+  {% for sa in assignments %}
+  <span class="staff-badge {{ sa.role }}">
+    <span class="avatar">
+      {% if sa.user.profile_image %}
+      <img src="{{ sa.user.profile_image.url }}"
+           style="width:18px;height:18px;border-radius:50%;object-fit:cover">
+      {% else %}
+      {{ sa.user.get_full_name|default:sa.user.username|slice:":1"|upper }}
+      {% endif %}
+    </span>
+    {{ sa.user.get_full_name|default:sa.user.username }}
+    {% if sa.role == 'salesman' %}· Sales{% else %}· Helper{% endif %}
+  </span>
+  {% endfor %}
+</div>
+{% endif %}

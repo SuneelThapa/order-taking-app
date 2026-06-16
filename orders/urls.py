@@ -19,6 +19,7 @@ from .views import (
     order_invoice_view,
     order_shipping_label_view,
     referred_by_search,
+    status_board,
 )
 
 app_name = "orders"
@@ -47,6 +48,7 @@ urlpatterns = [
     path("<int:pk>/invoice/",             order_invoice_view,     name="order_invoice"),
     path("<int:pk>/shipping-label/",      order_shipping_label_view, name="order_shipping_label"),
     path("clients/search-referred/",      referred_by_search,        name="referred_by_search"),
+    path("display/",                      status_board,              name="status_board"),
     path("pending-approvals/",            pending_approvals,      name="pending_approvals"),
     path("client/search/",                client_search,          name="client_search"),
     path("client/create-inline/",         client_create_inline,   name="client_create_inline"),

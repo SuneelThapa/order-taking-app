@@ -162,15 +162,32 @@ LOGOUT_REDIRECT_URL = "/accounts/login/"
 
 
 
-
-
-
+# ── Add this block to base.py, right after the existing cloudinary.config() ──
+# Replace the existing cloudinary.config() block with this:
 
 cloudinary.config(
     cloud_name=env("CLOUDINARY_CLOUD_NAME"),
     api_key=env("CLOUDINARY_API_KEY"),
     api_secret=env("CLOUDINARY_API_SECRET"),
+    secure=True,  # always use https
 )
+
+# Cloudinary auto-optimisation on every upload:
+#   quality: auto:good  → smart compression, ~40-70% smaller
+#   fetch_format: auto  → serve WebP to modern browsers automatically
+#   width: 2048 / limit → safety cap (client-side resize already handles this)
+CLOUDINARY_STORAGE = {
+    'TRANSFORMATION': {
+        'quality':      'auto:good',
+        'fetch_format': 'auto',
+        'width':        2048,
+        'crop':         'limit',   # never upscale, only downscale if > 2048px
+    },
+}
+
+
+
+
 
 
 
@@ -211,3 +228,6 @@ CSRF_TRUSTED_ORIGINS = [
 
 # if missed, in url and add "/"
 APPEND_SLASH = True  # default is True
+
+#http://yourdomain.com/display/?key=emporiumarmani2026
+DISPLAY_KEY = env("DISPLAY_KEY", default="/?key=emporiumarmani2026")

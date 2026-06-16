@@ -102,6 +102,7 @@ def _orders_table_context(request, tenant):
             | Q(client__name__icontains=q)
             | Q(client__phone__icontains=q)
             | Q(client__email__icontains=q)
+            | Q(hotel_name__icontains=q)
         )
     if from_date:
         orders = orders.filter(created_at__date__gte=from_date)
@@ -2008,3 +2009,129 @@ def referred_by_search(request):
         return HttpResponse(
             f'<div class="text-danger small p-2">Search error: {type(e).__name__}: {e}</div>'
         )
+
+
+# ─────────────────────────────────────────────────────────
+# Status Board — public display for second monitor
+# ─────────────────────────────────────────────────────────
+def status_board(request):
+    """
+    No login required. Protected by DISPLAY_KEY from .env.
+    Auto-refreshes every 60s.
+    """
+    from django.conf import settings as dj_settings
+    from datetime import date as _date2, timedelta as _td2
+    from django.db import models
+
+    display_key = getattr(dj_settings, 'DISPLAY_KEY', '')
+    if display_key and request.GET.get('key') != display_key:
+        return HttpResponse(
+            '''<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+  body{font-family:sans-serif;background:#0f1117;color:#aaa;
+       display:flex;align-items:center;justify-content:center;
+       height:100vh;margin:0;flex-direction:column;gap:12px}
+  .lock{font-size:48px}
+  h2{color:#fff;margin:0;font-size:1.2rem}
+  code{background:#1a1d27;padding:4px 12px;border-radius:6px;
+       color:#4f8ef7;font-size:0.9rem}
+</style></head>
+<body>
+  <div class="lock">🔒</div>
+  <h2>Status Board</h2>
+  <p style="margin:0">Add the access key to the URL:</p>
+  <code>yourdomain.com/display/?key=YOUR_KEY</code>
+</body></html>''',
+            status=403, content_type='text/html',
+        )
+
+    # Get tenant from subdomain or first tenant as fallback
+    tenant = getattr(request, 'tenant', None)
+    if not tenant:
+        from .models import Tenant
+        tenant = Tenant.objects.first()
+    if not tenant:
+        return HttpResponse("No tenant configured", status=404)
+
+    today    = _date2.today()
+    tomorrow = today + _td2(days=1)
+
+    # Base queryset
+    orders = (
+        Order.objects
+        .filter(tenant=tenant)
+        .exclude(status__in=['canceled', 'delivered'])
+        .select_related('client')
+        .prefetch_related(
+            'items__product_type',
+            'staff_assignments__user',
+        )
+        .order_by('fitting_time', 'fitting_date')
+    )
+
+    # Today's fittings — earlier time first, null times last
+    fittings_today = orders.filter(
+        fitting_date=today
+    ).order_by(
+        models.F('fitting_time').asc(nulls_last=True)
+    )
+
+    # Ready for pickup — earlier ready time first
+    ready_orders = orders.filter(status='ready').order_by(
+        'ready_date',
+        models.F('ready_time').asc(nulls_last=True)
+    )
+
+    # Departing today or tomorrow — by date then time
+    departing = (
+        Order.objects
+        .filter(tenant=tenant)
+        .exclude(status__in=['canceled', 'delivered'])
+        .filter(departure_date__in=[today, tomorrow])
+        .select_related('client')
+        .prefetch_related('items__product_type', 'staff_assignments__user')
+        .order_by('departure_date', models.F('fitting_time').asc(nulls_last=True))
+    )
+
+    # In progress — by ready date then time
+    in_progress = orders.filter(
+        status__in=['processing', 'alterations', 'pending']
+    ).order_by(
+        models.F('ready_date').asc(nulls_last=True),
+        models.F('ready_time').asc(nulls_last=True)
+    )
+
+    # Urgent orders — by departure date, then fitting date/time
+    urgent = orders.filter(is_urgent=True).order_by(
+        models.F('departure_date').asc(nulls_last=True),
+        models.F('fitting_date').asc(nulls_last=True),
+        models.F('fitting_time').asc(nulls_last=True)
+    )
+
+    # Shipping — orders with ship delivery type, ordered by delivery_date
+    from .models import Delivery
+    shipping_orders = (
+        Order.objects
+        .filter(tenant=tenant)
+        .exclude(status__in=['canceled', 'delivered'])
+        .filter(delivery__type='ship')
+        .select_related('client', 'delivery')
+        .prefetch_related('items__product_type', 'staff_assignments__user')
+        .order_by(
+            models.F('delivery_date').asc(nulls_last=True),
+            models.F('delivery_time').asc(nulls_last=True)
+        )
+    )
+
+    return render(request, 'orders/status_board.html', {
+        'tenant':          tenant,
+        'today':           today,
+        'tomorrow':        tomorrow,
+        'fittings_today':  fittings_today,
+        'ready_orders':    ready_orders,
+        'departing':       departing,
+        'in_progress':     in_progress,
+        'urgent':          urgent,
+        'shipping_orders': shipping_orders,
+    })

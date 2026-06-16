@@ -23,7 +23,9 @@
 
       {# Search #}
       <div class="col-md-3">
-        <input type="text" name="q" value="{{ current_q }}"
+        <input type="text" name="q" id="orders-search-q"
+               hx-preserve
+               value="{{ current_q }}"
                class="form-control form-control-sm"
                placeholder="Search client, phone, order #"
                hx-get="{% url 'orders:orders_table' %}"

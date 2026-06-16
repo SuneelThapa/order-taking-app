@@ -28,30 +28,102 @@
   </div>
   {% endif %}
 
-  <form hx-post="{% url 'orders:order_delivery_proof' order.pk %}"
-        hx-target="#cancel-modal-body"
-        hx-swap="innerHTML"
-        hx-encoding="multipart/form-data"
+  <form id="proof-upload-form"
         novalidate>
     {% csrf_token %}
     <div class="mb-3">
       <label class="form-label fw-semibold">
         {% if delivery.proof_image %}Replace proof image{% else %}Upload proof image{% endif %}
       </label>
-      <input type="file" name="proof_image" accept="image/*"
-             class="form-control" {% if not delivery.proof_image %}required{% endif %}>
+      <input type="file" name="proof_image" id="proof-image-input"
+             accept="image/*"
+             class="form-control"
+             {% if not delivery.proof_image %}required{% endif %}
+             onchange="previewProofImage(this)">
       <div class="form-text">
         Photo of handover, hotel delivery receipt, or shipping label.
         Protects against chargebacks.
       </div>
+      {# Preview #}
+      <img id="proof-preview" src="" alt=""
+           class="img-thumbnail mt-2 d-none" style="max-height:150px">
+      <div id="proof-upload-status" class="small mt-1"></div>
     </div>
     <div class="d-flex gap-2 justify-content-end">
       <button type="button" class="btn btn-secondary btn-sm"
               data-bs-dismiss="modal">Close</button>
-      <button type="submit" class="btn btn-primary btn-sm">
+      <button type="button" class="btn btn-primary btn-sm"
+              onclick="submitProofForm('{% url 'orders:order_delivery_proof' order.pk %}')">
         <i class="bi bi-cloud-upload me-1"></i>Save proof
       </button>
     </div>
   </form>
 
 </div>
+
+<script>
+function previewProofImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('proof-preview');
+    img.src = e.target.result;
+    img.classList.remove('d-none');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function resizeForProof(file) {
+  return new Promise(resolve => {
+    if (!file || file.size < 500 * 1024) { resolve(file); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => {
+        resolve(new File([blob], file.name, {type: 'image/jpeg', lastModified: Date.now()}));
+      }, 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+async function submitProofForm(url) {
+  const form    = document.getElementById('proof-upload-form');
+  const input   = document.getElementById('proof-image-input');
+  const status  = document.getElementById('proof-upload-status');
+  const rawFile = input.files[0];
+
+  if (!rawFile && input.required) {
+    input.classList.add('is-invalid');
+    return;
+  }
+
+  status.textContent = 'Resizing & uploading...';
+  status.className = 'small mt-1 text-muted';
+
+  const file = rawFile ? await resizeForProof(rawFile) : null;
+  const fd   = new FormData(form);
+  if (file) fd.set('proof_image', file, rawFile.name);
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      body: fd,
+      headers: {'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value},
+    });
+    const html = await resp.text();
+    document.getElementById('cancel-modal-body').innerHTML = html;
+  } catch(e) {
+    status.textContent = 'Upload failed — please try again.';
+    status.className = 'small mt-1 text-danger';
+  }
+}
+</script>
