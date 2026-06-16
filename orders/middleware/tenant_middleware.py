@@ -1,29 +1,30 @@
-# orders/middleware/tenant_middleware.py
 from django.http import Http404
-from django.conf import settings  # <-- needed for settings.DEBUG
+from django.conf import settings
 from orders.models.tenant import Tenant
 
 class TenantMiddleware:
-    """
-    Determine tenant from subdomain and attach it to request.
-    Fallbacks to first tenant for local dev if DEBUG=True.
-    """
-
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        host = request.get_host().split(':')[0]  # remove port
-        subdomain = host.split('.')[0]           # first part of host
+        host = request.get_host().split(':')[0]
+        parts = host.split('.')
+        subdomain = parts[0]
 
         try:
             tenant = Tenant.objects.get(subdomain=subdomain)
         except Tenant.DoesNotExist:
-            # Local development fallback
-            if host in ["127.0.0.1", "localhost"] and settings.DEBUG:
+            # Fallback: localhost, IP address, or DEBUG mode
+            if (host in ["127.0.0.1", "localhost"]
+                    or host == "143.198.207.146"
+                    or settings.DEBUG
+                    or len(parts) < 3):
                 tenant = Tenant.objects.first()
             else:
                 raise Http404("Tenant not found")
+
+        if not tenant:
+            raise Http404("No tenant configured")
 
         request.tenant = tenant
         response = self.get_response(request)
