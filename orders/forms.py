@@ -86,15 +86,18 @@ class OrderForm(StyledModelForm):
             "parent_order", "status",  # 'client' handled via hidden input in template
             "hotel_name", "room_number", "departure_date",
             "street_address", "city", "state", "postcode", "country",
-            "fitting_date", "ready_date", "delivery_date",
+            "fitting_date", "fitting_time", "ready_date", "ready_time", "delivery_date", "delivery_time",
             "total_amount", "total_currency",
             "note", "internal_notes", "is_urgent",
         ]
         widgets = {
             "departure_date": forms.DateInput(attrs={"type": "date"}),
             "fitting_date":   forms.DateInput(attrs={"type": "date"}),
+            "fitting_time":   forms.TimeInput(attrs={"type": "time"}),
             "ready_date":     forms.DateInput(attrs={"type": "date"}),
+            "ready_time":     forms.TimeInput(attrs={"type": "time"}),
             "delivery_date":  forms.DateInput(attrs={"type": "date"}),
+            "delivery_time":  forms.TimeInput(attrs={"type": "time"}),
             "note":           forms.Textarea(attrs={"rows": 3}),
             "internal_notes": forms.Textarea(attrs={"rows": 3}),
         }

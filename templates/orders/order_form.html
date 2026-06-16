@@ -144,13 +144,25 @@
           
           <div class="row g-3 mb-3">
             <div class="col-md-4">
-              <label class="form-label">Fitting date</label>{{ order_form.fitting_date }}
+              <label class="form-label">Fitting date &amp; time</label>
+              <div class="d-flex gap-2">
+                {{ order_form.fitting_date }}
+                {{ order_form.fitting_time }}
+              </div>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Ready date</label>{{ order_form.ready_date }}
+              <label class="form-label">Ready date &amp; time</label>
+              <div class="d-flex gap-2">
+                {{ order_form.ready_date }}
+                {{ order_form.ready_time }}
+              </div>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Delivery date</label>{{ order_form.delivery_date }}
+              <label class="form-label">Delivery date &amp; time</label>
+              <div class="d-flex gap-2">
+                {{ order_form.delivery_date }}
+                {{ order_form.delivery_time }}
+              </div>
             </div>
           </div>
 
@@ -291,7 +303,7 @@
               <div class="col-md-4">
                 <div class="border rounded p-2 text-center photo-upload-slot">
                   <div class="small fw-semibold mb-2">Front</div>
-                  {% if person.front %}
+                  {% if person.front and person.front.image %}
                   <img src="{{ person.front.image.url }}" class="img-fluid rounded mb-2" style="max-height:130px;width:100%;object-fit:contain;background:#f8f9fa">
                   {% if person.front.is_temp %}
                   <input type="hidden" name="temp_person_{{ person.num }}_front" value="{{ person.front.temp_uuid }}">
@@ -311,7 +323,7 @@
               <div class="col-md-4">
                 <div class="border rounded p-2 text-center photo-upload-slot">
                   <div class="small fw-semibold mb-2">Side</div>
-                  {% if person.side %}
+                  {% if person.side and person.side.image %}
                   <img src="{{ person.side.image.url }}" class="img-fluid rounded mb-2" style="max-height:130px;width:100%;object-fit:contain;background:#f8f9fa">
                   {% if person.side.is_temp %}
                   <input type="hidden" name="temp_person_{{ person.num }}_side" value="{{ person.side.temp_uuid }}">
@@ -331,7 +343,7 @@
               <div class="col-md-4">
                 <div class="border rounded p-2 text-center photo-upload-slot">
                   <div class="small fw-semibold mb-2">Back</div>
-                  {% if person.back %}
+                  {% if person.back and person.back.image %}
                   <img src="{{ person.back.image.url }}" class="img-fluid rounded mb-2" style="max-height:130px;width:100%;object-fit:contain;background:#f8f9fa">
                   {% if person.back.is_temp %}
                   <input type="hidden" name="temp_person_{{ person.num }}_back" value="{{ person.back.temp_uuid }}">
@@ -741,9 +753,16 @@ function orderWizard() {
         </div>`;
     },
 
-    nextStep() {
+    async nextStep() {
       if (this.step === 1 && !this.clientId) {
-        alert('Please select or create a client first.\n\nSearch for an existing client OR click "Create new client", fill the form, then click "Save client".');
+        if (this.showCreate) {
+          // Create form is open — auto-save client then advance
+          const btn = { disabled: false, textContent: 'Saving...' };
+          const ok = await saveClientInlineReturning(btn);
+          if (ok) this.step++;
+        } else {
+          alert('Please select a client by searching, or click "Create new client" to add one.');
+        }
         return;
       }
       this.step++;
@@ -762,6 +781,11 @@ function orderWizard() {
 // HX-Trigger custom events fire on the triggering button, which is removed from
 // the DOM by outerHTML swap before the event dispatches, so it never bubbles.
 // A direct fetch reads response headers immediately with no event needed.
+// Returns true on success, false on failure (used by nextStep auto-save)
+async function saveClientInlineReturning(btn) {
+  return await saveClientInline(btn);
+}
+
 async function saveClientInline(btn) {
   console.log('[saveClientInline] START');
   btn.disabled = true; btn.textContent = 'Saving…';
@@ -797,6 +821,8 @@ async function saveClientInline(btn) {
       if (_orderWizardRef) {
         _orderWizardRef.clientId = '';
         _orderWizardRef.selectClient(clientId, clientName, clientPhone);
+        btn.disabled = false; btn.textContent = 'Save client';
+        return true;
         setTimeout(() => {
           console.log('[saveClientInline] clientId now:', _orderWizardRef.clientId);
           console.log('[saveClientInline] hidden input:', document.querySelector('[name=client]')?.value);
@@ -806,6 +832,8 @@ async function saveClientInline(btn) {
       }
     } else {
       console.warn('[saveClientInline] no client ID header — form errors');
+      btn.disabled=false; btn.textContent='Save client';
+      return false;
       const html = await res.text();
       const tmp = document.createElement('div'); tmp.innerHTML = html;
       const newForm = tmp.querySelector('#client-create-form') || tmp.firstElementChild;
@@ -1071,6 +1099,19 @@ async function autoUploadPhoto(input, tempFieldName) {
     if (!h) { h = document.createElement('input'); h.type='hidden'; h.name=tempFieldName; slot.appendChild(h); }
     h.value = d.uuid;
   } catch(e) { console.warn('Temp upload failed:', e); }
+}
+// ── Referred-by client search ────────────────────────────
+function selectReferredBy(id, label) {
+  document.getElementById('referred_by_id').value = id;
+  const inp = document.querySelector('[name="referred_q"]');
+  if (inp) inp.value = label;
+  document.getElementById('referred-by-results').innerHTML = '';
+}
+function clearReferredBy() {
+  document.getElementById('referred_by_id').value = '';
+  const inp = document.querySelector('[name="referred_q"]');
+  if (inp) inp.value = '';
+  document.getElementById('referred-by-results').innerHTML = '';
 }
 </script>
 {% endblock %}

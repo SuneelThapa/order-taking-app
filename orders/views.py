@@ -1982,3 +1982,29 @@ def order_shipping_label_view(request, pk):
         return HttpResponse("Tenant not found", status=404)
     ctx = _order_doc_context(pk, tenant)
     return render(request, "orders/docs/shipping_label.html", ctx)
+
+
+# ─────────────────────────────────────────────────────────
+# Referred-by client search (HTMX)
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def referred_by_search(request):
+    """Returns a small list of matching clients for the referred_by field."""
+    try:
+        tenant = getattr(request, "tenant", None)
+        if not tenant:
+            return HttpResponse("")
+        q = (request.GET.get("referred_q") or request.GET.get("referred_q_modal") or "").strip()
+        if not q or len(q) < 2:
+            return HttpResponse("")
+        clients = (
+            Client.objects.filter(is_active=True)
+            .filter(Q(name__icontains=q) | Q(phone__icontains=q))
+            .order_by("name")[:10]
+        )
+        return render(request, "orders/partials/_referred_by_results.html",
+                      {"clients": clients})
+    except Exception as e:
+        return HttpResponse(
+            f'<div class="text-danger small p-2">Search error: {type(e).__name__}: {e}</div>'
+        )

@@ -1,0 +1,16 @@
+{% if clients %}
+<div class="border rounded bg-white shadow-sm" style="max-height:200px;overflow-y:auto;z-index:1050;position:absolute;width:100%;">
+  {% for client in clients %}
+  <div class="px-3 py-2 referred-result"
+       style="cursor:pointer;border-bottom:1px solid #f0f0f0;"
+       onmouseenter="this.style.background='#f8f9fa'"
+       onmouseleave="this.style.background=''"
+       onclick="selectReferredBy({{ client.pk }}, '{{ client.name|escapejs }}{% if client.phone %} · {{ client.phone|escapejs }}{% endif %}')">
+    <div class="small fw-semibold">{{ client.name }}</div>
+    {% if client.phone %}
+    <div class="small text-muted">{{ client.phone }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -113,18 +113,21 @@
     <div class="small">
       <span class="text-muted">Fitting</span>
       <strong class="ms-1">{{ order.fitting_date|date:"d M" }}</strong>
+      {% if order.fitting_time %}<span class="text-muted ms-1">{{ order.fitting_time|time:"H:i" }}</span>{% endif %}
     </div>
     {% endif %}
     {% if order.ready_date %}
     <div class="small">
       <span class="text-muted">Ready</span>
       <strong class="ms-1">{{ order.ready_date|date:"d M" }}</strong>
+      {% if order.ready_time %}<span class="text-muted ms-1">{{ order.ready_time|time:"H:i" }}</span>{% endif %}
     </div>
     {% endif %}
     {% if order.delivery_date %}
     <div class="small">
       <span class="text-muted">Delivery</span>
       <strong class="ms-1">{{ order.delivery_date|date:"d M" }}</strong>
+      {% if order.delivery_time %}<span class="text-muted ms-1">{{ order.delivery_time|time:"H:i" }}</span>{% endif %}
     </div>
     {% endif %}
   </div>

@@ -7,7 +7,12 @@
     </div>
     <div class="text-muted" style="font-size:0.72rem">
       {% if order.departure_date %}🛫 {{ order.departure_date|date:"d M" }}{% endif %}
-      {% if order.fitting_date %} ✂ {{ order.fitting_date|date:"d M" }}{% endif %}
+      {% if order.fitting_date %}
+      ✂ {{ order.fitting_date|date:"d M" }}{% if order.fitting_time %} {{ order.fitting_time|time:"H:i" }}{% endif %}
+      {% endif %}
+      {% if order.ready_date %}
+      ✅ {{ order.ready_date|date:"d M" }}{% if order.ready_time %} {{ order.ready_time|time:"H:i" }}{% endif %}
+      {% endif %}
     </div>
   </div>
   <div class="small text-truncate mb-1">{{ order.client.name }}</div>

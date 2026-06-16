@@ -125,7 +125,20 @@
         </div>
         <div class="col-md-6">
           <label class="form-label form-label-sm">{{ form.referred_by.label }}</label>
-          {{ form.referred_by }}
+          <div class="position-relative">
+            <input type="hidden" name="referred_by" id="referred_by_id_modal"
+                   value="{{ form.referred_by.value|default:'' }}">
+            <input type="text" class="form-control form-control-sm"
+                   name="referred_q_modal" autocomplete="off"
+                   placeholder="Search by name or phone..."
+                   value="{% if form.instance.referred_by %}{{ form.instance.referred_by.name }}{% endif %}"
+                   hx-get="{% url 'orders:referred_by_search' %}"
+                   hx-trigger="input changed delay:300ms"
+                   hx-target="#referred-by-results-modal"
+                   hx-include="[name='referred_q_modal']"
+                   @change.stop>
+            <div id="referred-by-results-modal" class="position-relative" style="z-index:1060;"></div>
+          </div>
         </div>
 
         <div class="col-12">

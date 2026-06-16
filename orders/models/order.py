@@ -65,8 +65,11 @@ class Order(models.Model):
     # Key dates
     departure_date = models.DateField(blank=True, null=True)
     fitting_date   = models.DateField(blank=True, null=True)
+    fitting_time   = models.TimeField(blank=True, null=True)
     ready_date     = models.DateField(blank=True, null=True)
+    ready_time     = models.TimeField(blank=True, null=True)
     delivery_date  = models.DateField(blank=True, null=True)
+    delivery_time  = models.TimeField(blank=True, null=True)
 
     # Quoted total — stored in whatever currency was agreed with the client
     total_amount = models.DecimalField(

@@ -34,7 +34,34 @@
     </div>
     <div class="col-md-12">
       <label class="form-label small mb-1">Referred by <span class="text-muted">(existing client, optional)</span></label>
-      {{ client_form.referred_by }}
+      <div class="position-relative" x-data="{ refQ: '' }">
+        {# Hidden field — stores actual client ID for form submission #}
+        <input type="hidden" name="referred_by" id="referred_by_id"
+               value="{{ client_form.referred_by.value|default:'' }}">
+        {# Search input — visible, not submitted #}
+        <input type="text"
+               class="form-control form-control-sm"
+               placeholder="Search by name or phone..."
+               name="referred_q"
+               autocomplete="off"
+               x-model="refQ"
+               value="{% if client_form.instance.referred_by %}{{ client_form.instance.referred_by.name }}{% endif %}"
+               hx-get="{% url 'orders:referred_by_search' %}"
+               hx-trigger="input changed delay:300ms"
+               hx-target="#referred-by-results"
+               hx-include="this"
+               @change.stop>
+        {# Clear button — shown when something is selected #}
+        <button type="button"
+                class="btn btn-sm btn-link text-muted p-0 mt-1"
+                style="font-size:0.75rem"
+                onclick="clearReferredBy()"
+                title="Clear">
+          <i class="bi bi-x-circle me-1"></i>Clear referred by
+        </button>
+        {# Results dropdown #}
+        <div id="referred-by-results" class="position-relative" style="z-index:1050;"></div>
+      </div>
     </div>
   </div>
 
@@ -80,15 +107,18 @@
     </div>
   </div>
 
-  <div class="d-flex gap-2 mt-3">
+  <div class="d-flex gap-2 mt-3 align-items-center">
     {# Native fetch — avoids HTMX event-bubbling issues with outerHTML swap #}
-    <button type="button" class="btn btn-primary btn-sm"
+    <button type="button" class="btn btn-outline-secondary btn-sm"
             onclick="saveClientInline(this)">
-      Save client
+      Save client only
     </button>
     <button type="button" class="btn btn-outline-secondary btn-sm"
             @click="showCreate = false">
       Cancel
     </button>
+    <span class="text-muted small ms-2">
+      <i class="bi bi-info-circle me-1"></i>Or just click <strong>Next →</strong> to save and continue
+    </span>
   </div>
 </div>
