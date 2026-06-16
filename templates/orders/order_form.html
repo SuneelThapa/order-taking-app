@@ -402,27 +402,62 @@
                   <div class="col-md-4">
                     <div class="border rounded p-2 text-center photo-upload-slot">
                       <div class="small fw-semibold mb-2 text-capitalize" x-text="ptype"></div>
-                      <input type="file" class="form-control form-control-sm photo-upload-input"
-                             :name="'person_' + ({{ initial_persons }} + i) + '_' + ptype"
-                             accept="image/*"
-                             @change="
-                               const file = $event.target.files[0];
-                               if (file) {
-                                 const reader = new FileReader();
-                                 const img = $event.target.previousElementSibling;
-                                 reader.onload = e => {
-                                   if (img && img.tagName === 'IMG') {
-                                     img.src = e.target.result;
-                                   } else {
-                                     const newImg = document.createElement('img');
-                                     newImg.src = e.target.result;
-                                     newImg.style = 'max-height:130px;width:100%;object-fit:cover;border-radius:4px;margin-bottom:8px';
-                                     $event.target.parentNode.insertBefore(newImg, $event.target);
+                      <div class="d-flex gap-1 mt-1">
+                        <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                          <i class="bi bi-camera"></i> Camera
+                          <input type="file" class="d-none photo-upload-input"
+                                 :name="'person_' + ({{ initial_persons }} + i) + '_' + ptype"
+                                 accept="image/*" capture="environment"
+                                 @change="
+                                   const file = $event.target.files[0];
+                                   if (file) {
+                                     resizeImageBeforeUpload(file).then(resized => {
+                                       const reader = new FileReader();
+                                       reader.onload = e => {
+                                         const slot = $event.target.closest('.photo-upload-slot');
+                                         let img = slot.querySelector('img.temp-preview');
+                                         if (!img) {
+                                           img = document.createElement('img');
+                                           img.className = 'temp-preview img-fluid rounded mb-2';
+                                           img.style.cssText = 'max-height:130px;width:100%;object-fit:contain';
+                                           slot.insertBefore(img, slot.firstChild);
+                                         }
+                                         img.src = e.target.result;
+                                         autoUploadPhoto($event.target, 'person_' + ({{ initial_persons }} + i) + '_' + ptype);
+                                       };
+                                       reader.readAsDataURL(resized);
+                                     });
                                    }
-                                 };
-                                 reader.readAsDataURL(file);
-                               }
-                             ">
+                                 ">
+                        </label>
+                        <label class="btn btn-outline-secondary btn-sm flex-fill" style="font-size:0.75rem">
+                          <i class="bi bi-image"></i> Gallery
+                          <input type="file" class="d-none photo-upload-input"
+                                 :name="'person_' + ({{ initial_persons }} + i) + '_' + ptype"
+                                 accept="image/*"
+                                 @change="
+                                   const file = $event.target.files[0];
+                                   if (file) {
+                                     resizeImageBeforeUpload(file).then(resized => {
+                                       const reader = new FileReader();
+                                       reader.onload = e => {
+                                         const slot = $event.target.closest('.photo-upload-slot');
+                                         let img = slot.querySelector('img.temp-preview');
+                                         if (!img) {
+                                           img = document.createElement('img');
+                                           img.className = 'temp-preview img-fluid rounded mb-2';
+                                           img.style.cssText = 'max-height:130px;width:100%;object-fit:contain';
+                                           slot.insertBefore(img, slot.firstChild);
+                                         }
+                                         img.src = e.target.result;
+                                         autoUploadPhoto($event.target, 'person_' + ({{ initial_persons }} + i) + '_' + ptype);
+                                       };
+                                       reader.readAsDataURL(resized);
+                                     });
+                                   }
+                                 ">
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </template>
