@@ -29,6 +29,60 @@
       {{ item_form.product_name }}
       {% if item_form.product_name.errors %}<div class="text-danger small">{{ item_form.product_name.errors|striptags }}</div>{% endif %}
     </div>
+
+    {# Group label — select with fixed options + custom #}
+    <div class="col-md-4">
+      <label class="form-label small mb-1">
+        Set / Group <span class="text-muted">(optional)</span>
+      </label>
+
+      {% with existing=item_form.instance.group_label|default:'' %}
+      {% with presets='2-piece suit,3-piece suit,Safari suit,Tuxedo' %}
+      <div x-data="{
+        presets: ['2-piece suit', '3-piece suit', 'Safari suit', 'Tuxedo'],
+        selected: '{{ existing }}',
+        customText: '',
+        get isCustom() {
+          return this.selected === '__custom__';
+        },
+        get finalValue() {
+          return this.isCustom ? this.customText : this.selected;
+        },
+        init() {
+          const known = ['', ...this.presets];
+          if ('{{ existing }}' && !known.includes('{{ existing }}')) {
+            this.selected = '__custom__';
+            this.customText = '{{ existing }}';
+          }
+        }
+      }">
+        {# Hidden input carries actual submitted value #}
+        <input type="hidden"
+               name="{{ item_form.group_label.html_name }}"
+               :value="finalValue">
+
+        {# Select dropdown #}
+        <select class="form-select form-select-sm"
+                x-model="selected">
+          <option value="">— No group —</option>
+          <option value="2-piece suit">2-piece suit</option>
+          <option value="3-piece suit">3-piece suit</option>
+          <option value="Safari suit">Safari suit</option>
+          <option value="Tuxedo">Tuxedo</option>
+          <option value="__custom__">Custom…</option>
+        </select>
+
+        {# Custom text input — shown only when Custom selected #}
+        <input type="text"
+               x-show="isCustom"
+               x-cloak
+               x-model="customText"
+               class="form-control form-control-sm mt-1"
+               placeholder="Enter group name…">
+      </div>
+      {% endwith %}
+      {% endwith %}
+    </div>
     <div class="col-md-2">
       <label class="form-label small mb-1">Qty</label>
       {{ item_form.quantity }}
@@ -65,6 +119,15 @@
                {% if body_form.instance.gender == 'ladies' %}checked{% endif %}>
         <label class="form-check-label fw-semibold" for="{{ body_form.prefix }}-g-ladies">Ladies</label>
       </div>
+      {# Copy button — shown for all items, copies from first item's body measurements #}
+      {% if item_form.prefix != 'items-0' %}
+      <button type="button"
+              class="btn btn-outline-secondary btn-sm ms-auto"
+              onclick="copyBodyMeasurements('body-items-0', 'body-{{ item_form.prefix }}')"
+              title="Copy all body measurements from first item">
+        <i class="bi bi-clipboard me-1"></i>Copy from Item 1
+      </button>
+      {% endif %}
     </div>
 
     {# ── Universal fields — rendered ONCE, always submitted ── #}

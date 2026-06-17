@@ -758,6 +758,10 @@ def order_form_view(request, pk=None):
         "first_error_step":     first_error_step,
         "existing_payments":    list(edit_order.payments.select_related("recorded_by").all()) if edit_order else [],
         "existing_signature":   getattr(edit_order, "signature", None) if edit_order else None,
+        "product_type_model_map": {
+            str(pt.pk): pt.measurement_model
+            for pt in ProductType.objects.all()
+        },
     }
     return render(request, "orders/order_form.html", context)
 
@@ -930,21 +934,71 @@ _MEAS_FIELD_ORDER = {
 }
 
 
+# Unified display order for all garments
+UNIFIED_ORDER = [
+    ('neck',                          'Neck'),
+    ('shoulder',                      'Shoulder'),
+    ('sleeve',                        'Sleeve'),
+    ('biceps',                        'Biceps'),
+    ('chest',                         'Chest'),
+    ('stomach',                       'Stomach'),
+    ('hips',                          'Hip'),
+    ('length',                        'Length'),
+    ('jacket_length',                 'Jacket Length'),
+    ('front',                         'Front'),
+    ('back',                          'Back'),
+    ('pants_waist',                   'Pants Waist'),
+    ('pants_hip',                     'Pants Hip'),
+    ('belly',                         'Belly'),
+    ('crotch',                        'Crotch'),
+    ('thigh',                         'Thigh'),
+    ('knee',                          'Knee'),
+    ('cuff',                          'Cuff'),
+    ('pants_length',                  'Pants Length'),
+    ('shoulder_posture',              'Shoulder Posture'),
+    ('chest_description',             'Chest Type'),
+    ('stomach_description',           'Stomach Type'),
+    ('height',                        'Height'),
+    ('weight',                        'Weight'),
+    ('high_chest',                    'High Chest'),
+    ('upper_hips',                    'Upper Hips'),
+    ('deep_front',                    'Deep Front'),
+    ('deep_back',                     'Deep Back'),
+    ('shoulder_to_middle_breast',     'Sh. to Middle Breast'),
+    ('shoulder_to_under_breast',      'Sh. to Under Breast'),
+    ('middle_breast_to_middle_breast','Middle Breast'),
+    ('foot_length',                   'Foot Length'),
+    ('foot_width',                    'Foot Width'),
+    ('foot_instep',                   'Foot Instep'),
+    ('belt_waist',                    'Belt Waist'),
+]
+
+# All body field names (for fallback when no garment mapping found)
+ALL_BODY_FIELD_NAMES = set(fname for fname, _ in UNIFIED_ORDER)
+
+
 def _get_measurement_fields(item):
     """
     Returns a single unified measurement list in tailor-logical order.
-    Merges body + garment-specific measurements.
-    Garment-specific value takes priority when same field exists in both.
+    Body fields are filtered to garment-relevant fields only.
+    Garment-specific value takes priority over body value for same field name.
     Only shows fields with actual values.
     """
-    # ── Collect body measurement values ──────────────────
     body_vals = {}
+    garment_model_name = None
+
+    # ── Collect garment-relevant body measurement values ──
     try:
         bm = item.body_measurement
+        garment_model_name = item.product_type.measurement_model
+        # Only collect body fields relevant to this garment
+        allowed = set(GARMENT_BODY_FIELDS.get(garment_model_name, ALL_BODY_FIELD_NAMES))
         for f in bm._meta.get_fields():
             if not hasattr(f, 'column'):
                 continue
             if f.name in ('id', 'order_item', 'gender'):
+                continue
+            if f.name not in allowed:
                 continue
             val = getattr(bm, f.name, None)
             if val not in (None, '', 0, 0.0):
@@ -956,10 +1010,11 @@ def _get_measurement_fields(item):
     # ── Collect garment-specific values ──────────────────
     garment_vals = {}
     try:
-        base              = item.measurement
-        garment_model_name = item.product_type.measurement_model
-        model             = apps.get_model("orders", garment_model_name)
-        m                 = model.objects.filter(base=base).first()
+        if not garment_model_name:
+            garment_model_name = item.product_type.measurement_model
+        base  = item.measurement
+        model = apps.get_model("orders", garment_model_name)
+        m     = model.objects.filter(base=base).first()
         if m:
             for f in m._meta.get_fields():
                 if not hasattr(f, 'column'):
@@ -972,58 +1027,12 @@ def _get_measurement_fields(item):
     except Exception:
         pass
 
-    # ── Unified display order ─────────────────────────────
-    # Garment-specific value overrides body value for same field name
-    UNIFIED_ORDER = [
-        ('neck',                 'Neck'),
-        ('shoulder',             'Shoulder'),
-        ('sleeve',               'Sleeve'),
-        ('biceps',               'Biceps'),
-        ('chest',                'Chest'),
-        ('stomach',              'Stomach'),
-        ('hips',                 'Hip'),
-        ('length',               'Length'),
-        ('jacket_length',        'Jacket Length'),
-        ('front',                'Front'),
-        ('back',                 'Back'),
-        # Lower body
-        ('pants_waist',          'Pants Waist'),
-        ('pants_hip',            'Pants Hip'),
-        ('belly',                'Belly'),
-        ('crotch',               'Crotch'),
-        ('thigh',                'Thigh'),
-        ('knee',                 'Knee'),
-        ('cuff',                 'Cuff'),
-        ('pants_length',         'Pants Length'),
-        # Descriptions
-        ('shoulder_posture',     'Shoulder Posture'),
-        ('chest_description',    'Chest Type'),
-        ('stomach_description',  'Stomach Type'),
-        # General
-        ('height',               'Height'),
-        ('weight',               'Weight'),
-        # Ladies specific
-        ('high_chest',                   'High Chest'),
-        ('upper_hips',                   'Upper Hips'),
-        ('deep_front',                   'Deep Front'),
-        ('deep_back',                    'Deep Back'),
-        ('shoulder_to_middle_breast',    'Sh. to Middle Breast'),
-        ('shoulder_to_under_breast',     'Sh. to Under Breast'),
-        ('middle_breast_to_middle_breast','Middle Breast'),
-        # Shoes / Belt
-        ('foot_length',  'Foot Length'),
-        ('foot_width',   'Foot Width'),
-        ('foot_instep',  'Foot Instep'),
-        ('belt_waist',   'Belt Waist'),
-    ]
-
+    # ── Build display list ────────────────────────────────
     result = []
     for fname, label in UNIFIED_ORDER:
-        # Garment-specific takes priority over body measurement
         val = garment_vals.get(fname, body_vals.get(fname))
         if val not in (None, '', 0, 0.0, False):
             result.append((label, val))
-
     return result
 
 

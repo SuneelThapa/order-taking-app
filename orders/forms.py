@@ -187,6 +187,7 @@ class OrderItemForm(StyledModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["price"].required = False
+        self.fields["group_label"].required = False
         if self.prefix:
             self.fields["product_type"].widget.attrs.update({
                 "hx-get":     reverse_lazy("orders:load_measurement_form"),

@@ -1142,6 +1142,68 @@ document.addEventListener('change', function(e) {
 </script>
 
 <script>
+// ── Copy body measurements between item rows (smart - garment-aware) ───────
+const GARMENT_BODY_FIELDS = {
+  'JacketMeasurement': ['neck','shoulder','sleeve','biceps','chest','stomach','hips','height','weight','shoulder_posture','chest_description'],
+  'ShirtMeasurement':  ['neck','shoulder','sleeve','biceps','chest','stomach','hips','height','weight','shoulder_posture','chest_description'],
+  'VestMeasurement':   ['shoulder','chest','stomach','hips','height','weight','chest_description'],
+  'CoatMeasurement':   ['neck','shoulder','sleeve','biceps','chest','stomach','hips','height','weight','shoulder_posture'],
+  'PantsMeasurement':  ['pants_waist','pants_hip','belly','crotch','thigh','knee','cuff','pants_length','height','weight','stomach_description'],
+  'ShortsMeasurement': ['pants_waist','pants_hip','belly','crotch','thigh','knee','cuff','height','weight','stomach_description'],
+  'SkirtMeasurement':  ['pants_waist','hips','height','weight'],
+  'DressMeasurement':  ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','deep_front','deep_back','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','height','weight'],
+  'BlouseMeasurement': ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','height','weight'],
+};
+
+// Server-side mapping of product type PK → measurement model name
+const PRODUCT_TYPE_MAP = {{ product_type_model_map|safe }};
+
+const ALL_BODY_FIELDS = [
+  'neck','shoulder','sleeve','biceps','chest','stomach','hips',
+  'length','front','back',
+  'pants_waist','pants_hip','belly','crotch','thigh','knee','cuff','pants_length',
+  'height','weight',
+  'shoulder_posture','stomach_description','chest_description',
+  'high_chest','upper_hips','deep_front','deep_back',
+  'shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast',
+];
+
+function copyBodyMeasurements(fromPrefix, toPrefix) {
+  // Get current item's product type PK from its select
+  const itemPrefix = toPrefix.replace('body-', '');
+  const productTypeSelect = document.querySelector(`[name="${itemPrefix}-product_type"]`);
+  const productTypePk = productTypeSelect ? productTypeSelect.value : null;
+  const measurementModel = productTypePk ? PRODUCT_TYPE_MAP[productTypePk] : null;
+
+  // Use garment-specific fields or fall back to all fields
+  const fields = (measurementModel && GARMENT_BODY_FIELDS[measurementModel])
+    ? GARMENT_BODY_FIELDS[measurementModel]
+    : ALL_BODY_FIELDS;
+
+  let copied = 0;
+  fields.forEach(field => {
+    const from = document.querySelector(`[name="${fromPrefix}-${field}"]`);
+    const to   = document.querySelector(`[name="${toPrefix}-${field}"]`);
+    if (from && to) { to.value = from.value; if (from.value) copied++; }
+  });
+
+  // Copy gender radio
+  const fromGender = document.querySelector(`[name="${fromPrefix}-gender"]:checked`);
+  if (fromGender) {
+    const toGender = document.querySelector(`[name="${toPrefix}-gender"][value="${fromGender.value}"]`);
+    if (toGender) toGender.click();
+  }
+
+  const garmentName = productTypeSelect
+    ? productTypeSelect.options[productTypeSelect.selectedIndex].text
+    : 'this item';
+  if (copied > 0) {
+    alert(`✅ Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
+  } else {
+    alert('⚠ No measurements found on Item 1 yet.\nPlease fill Item 1 measurements first, then copy.');
+  }
+}
+
 // ── Temp photo auto-upload ────────────────────────────────────────────────
 // Immediately uploads selected file so photo survives form validation errors.
 // ── Client-side image resize before upload ───────────────

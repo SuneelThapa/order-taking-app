@@ -6,10 +6,19 @@ from .product_type import ProductType
 
 class OrderItem(models.Model):
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', db_index=True)
+    order        = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', db_index=True)
     product_type = models.ForeignKey(ProductType, on_delete=models.PROTECT, related_name='items', db_index=True)
     product_name = models.CharField(max_length=200)
-    quantity = models.PositiveIntegerField(default=1)
+    quantity     = models.PositiveIntegerField(default=1)
+
+    # Group label — links related pieces (e.g. "2-piece suit", "3-piece suit")
+    # Items with the same group_label in an order are shown together
+    group_label  = models.CharField(
+        max_length=100,
+        null=True, blank=True,
+        verbose_name='Set / Group',
+        help_text='e.g. "2-piece suit", "3-piece suit". Items with the same label are grouped together.'
+    )
 
     # Nullable — price may not be known at order creation time.
     # total_amount on Order is the authoritative price set on the Finish step.
