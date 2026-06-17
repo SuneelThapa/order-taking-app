@@ -1,21 +1,12 @@
 from django.db import models
 from .base_measurement import BaseMeasurement
-from .upper_body import UpperBodyMeasurement
 
 
-
-class JacketMeasurement(UpperBodyMeasurement):
-    base = models.OneToOneField(
-        BaseMeasurement,
-        on_delete=models.CASCADE,
-        related_name='jacket'
-    )
-    
-    
-    
-    stomach = models.FloatField(null=True, blank=True)
-    length = models.FloatField(null=True, blank=True)
+class JacketMeasurement(models.Model):
+    base   = models.OneToOneField(BaseMeasurement, on_delete=models.CASCADE, related_name='jacket')
+    sleeve = models.FloatField(null=True, blank=True, verbose_name='Sleeve')
+    length = models.FloatField(null=True, blank=True, verbose_name='Length')
 
     class Meta:
-        verbose_name = "Jacket"
-        verbose_name_plural = "Jackets"
+        verbose_name = 'Jacket'
+        verbose_name_plural = 'Jackets'

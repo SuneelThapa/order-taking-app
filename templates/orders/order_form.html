@@ -735,7 +735,7 @@
                  alt="Client signature">
             <div class="text-muted small">
               Signed {{ existing_signature.signed_at|date:"d M Y H:i" }}<br>
-              Draw below to update
+              <span class="text-success"><i class="bi bi-check-circle me-1"></i>Signature on file — draw below only to replace</span>
             </div>
           </div>
           {% elif is_edit %}
@@ -1070,8 +1070,13 @@ document.addEventListener('change', function(e) {
     const img=new Image();
     img.onload=function(){
       const c=document.getElementById('signatureCanvas');
-      if(c){c.getContext('2d').drawImage(img,0,0);hasSig=true;
-      document.getElementById('signatureCanvasImage').value='{{ signature_canvas_data }}';}
+      const h=document.getElementById('signatureCanvasImage');
+      if(c){
+        c.getContext('2d').drawImage(img,0,0);
+        if(h) h.value='{{ signature_canvas_data }}';
+        // Tell the sig IIFE that canvas has content
+        if(window._setSigHasSig) window._setSigHasSig(true);
+      }
     };
     img.src='{{ signature_canvas_data }}';
   })();{% endif %}
@@ -1112,6 +1117,7 @@ document.addEventListener('change', function(e) {
   const canvas=document.getElementById('signatureCanvas');
   if(!canvas)return;
   const ctx=canvas.getContext('2d');
+  const hiddenInput=document.getElementById('signatureCanvasImage');
   let drawing=false,hasSig=false;
   canvas.style.touchAction='none';
   function pos(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};return{x:e.offsetX,y:e.offsetY};}
@@ -1122,8 +1128,16 @@ document.addEventListener('change', function(e) {
   canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
   canvas.addEventListener('touchend',()=>{drawing=false;ctx.beginPath();});
   canvas.addEventListener('touchmove',e=>{if(!drawing)return;e.preventDefault();const p=pos(e);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
-  const clearBtn=document.getElementById('clearSigCanvas');if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;};
-  const form=document.getElementById('orderForm');if(form)form.addEventListener('submit',()=>{document.getElementById('signatureCanvasImage').value=hasSig?canvas.toDataURL('image/png'):'';});
+  const clearBtn=document.getElementById('clearSigCanvas');
+  if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;if(hiddenInput)hiddenInput.value='';};
+  // On submit: capture canvas if drawn, otherwise keep pre-populated value
+  const form=document.getElementById('orderForm');
+  if(form)form.addEventListener('submit',()=>{
+    if(hasSig && hiddenInput) hiddenInput.value=canvas.toDataURL('image/png');
+    // If !hasSig, hiddenInput keeps its pre-populated value (from restore or edit)
+  });
+  // Expose setter so restore code can set hasSig
+  window._setSigHasSig = function(val){ hasSig=val; };
 })();
 </script>
 

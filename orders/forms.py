@@ -359,11 +359,19 @@ class ClientEditForm(StyledModelForm):
 # ─────────────────────────────────────────────────────────
 from .models import BodyMeasurement
 
-BODY_FIELDS_MEN = [
+BODY_FIELDS_MEN_UPPER = [
     'neck', 'shoulder', 'sleeve', 'biceps',
-    'chest', 'stomach', 'waist', 'hips',
-    'height', 'weight',
+    'chest', 'stomach', 'hips', 'length', 'front', 'back',
 ]
+
+BODY_FIELDS_MEN_LOWER = [
+    'pants_waist', 'pants_hip', 'belly', 'crotch',
+    'thigh', 'knee', 'cuff', 'pants_length',
+]
+
+BODY_FIELDS_MEN_GENERAL = ['height', 'weight']
+
+BODY_FIELDS_MEN = BODY_FIELDS_MEN_UPPER + BODY_FIELDS_MEN_LOWER + BODY_FIELDS_MEN_GENERAL
 
 BODY_FIELDS_LADIES_EXTRA = [
     'high_chest', 'upper_hips',
@@ -373,14 +381,33 @@ BODY_FIELDS_LADIES_EXTRA = [
     'middle_breast_to_middle_breast',
 ]
 
+_decimal_widget = lambda: forms.NumberInput(attrs={
+    'class': 'form-control form-control-sm',
+    'step': '0.1',
+})
+
 
 class BodyMeasurementForm(forms.ModelForm):
     class Meta:
         model  = BodyMeasurement
-        fields = ['gender'] + BODY_FIELDS_MEN + BODY_FIELDS_LADIES_EXTRA
+        fields = (
+            ['gender'] +
+            BODY_FIELDS_MEN +
+            ['shoulder_posture', 'stomach_description', 'chest_description'] +
+            BODY_FIELDS_LADIES_EXTRA
+        )
         widgets = {
             'gender': forms.RadioSelect(
                 attrs={'class': 'form-check-input'}
+            ),
+            'shoulder_posture': forms.Select(
+                attrs={'class': 'form-select form-select-sm'}
+            ),
+            'stomach_description': forms.Select(
+                attrs={'class': 'form-select form-select-sm'}
+            ),
+            'chest_description': forms.Select(
+                attrs={'class': 'form-select form-select-sm'}
             ),
             **{
                 f: forms.NumberInput(attrs={

@@ -1,18 +1,11 @@
 from django.db import models
 from .base_measurement import BaseMeasurement
-from .lower_body import LowerBodyMeasurement, PantsExtra
 
 
-
-class PantsMeasurement(LowerBodyMeasurement, PantsExtra):
-    base = models.OneToOneField(
-        BaseMeasurement,
-        on_delete=models.CASCADE,
-        related_name='pants'
-    )
-
-    
+class PantsMeasurement(models.Model):
+    base   = models.OneToOneField(BaseMeasurement, on_delete=models.CASCADE, related_name='pants')
+    length = models.FloatField(null=True, blank=True, verbose_name='Length')
 
     class Meta:
-        verbose_name = "Pants"
-        verbose_name_plural = "Pants"
+        verbose_name = 'Pants'
+        verbose_name_plural = 'Pants'

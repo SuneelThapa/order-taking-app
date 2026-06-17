@@ -105,22 +105,28 @@ async function resizeForProof(file) {
 }
 
 async function submitProofForm(url) {
-  const form    = document.getElementById('proof-upload-form');
-  const input   = document.getElementById('proof-image-input');
-  const status  = document.getElementById('proof-upload-status');
-  const rawFile = input.files[0];
+  const form   = document.getElementById('proof-upload-form');
+  const status = document.getElementById('proof-upload-status');
 
-  if (!rawFile && input.required) {
-    input.classList.add('is-invalid');
+  // Find whichever file input (camera or gallery) has a file selected
+  const inputs = form.querySelectorAll('input[type="file"]');
+  let rawFile = null;
+  for (const inp of inputs) {
+    if (inp.files && inp.files[0]) { rawFile = inp.files[0]; break; }
+  }
+
+  if (!rawFile) {
+    status.textContent = 'Please select or take a photo first.';
+    status.className = 'small mt-1 text-danger';
     return;
   }
 
   status.textContent = 'Resizing & uploading...';
   status.className = 'small mt-1 text-muted';
 
-  const file = rawFile ? await resizeForProof(rawFile) : null;
+  const file = await resizeForProof(rawFile);
   const fd   = new FormData(form);
-  if (file) fd.set('proof_image', file, rawFile.name);
+  fd.set('proof_image', file, rawFile.name);
 
   try {
     const resp = await fetch(url, {
@@ -129,7 +135,20 @@ async function submitProofForm(url) {
       headers: {'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value},
     });
     const html = await resp.text();
+    // Update the proof form in the modal
     document.getElementById('cancel-modal-body').innerHTML = html;
+    // Also refresh the order detail modal so proof image appears instantly
+    const detailBody = document.getElementById('order-detail-modal-body');
+    if (detailBody) {
+      // Extract order pk from the proof URL e.g. /orders/42/delivery-proof/
+      const match = url.match(/\/(\d+)\/delivery-proof\//);
+      if (match) {
+        htmx.ajax('GET',
+          url.replace('/delivery-proof/', '/detail/'),
+          '#order-detail-modal-body'
+        );
+      }
+    }
   } catch(e) {
     status.textContent = 'Upload failed — please try again.';
     status.className = 'small mt-1 text-danger';
