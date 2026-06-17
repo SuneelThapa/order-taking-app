@@ -8,8 +8,9 @@ from .order import Order
 class OrderStaff(models.Model):
 
     ROLE_CHOICES = [
+        ('owner',    'Owner'),
         ('salesman', 'Salesman'),
-        ('helper', 'Helper'),
+        ('helper',   'Helper'),
     ]
 
     order = models.ForeignKey(
