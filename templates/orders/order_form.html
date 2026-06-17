@@ -1249,16 +1249,23 @@ async function autoUploadPhoto(input, tempFieldName) {
   if (!rawFile) return;
   // Resize before upload
   const file = await resizeImageBeforeUpload(rawFile);
-  // Local preview
+  // Local preview — find the slot container
+  const slot = input.closest('.photo-upload-slot') || input.parentNode;
   const reader = new FileReader();
   reader.onload = e => {
-    const slot = input.closest('.photo-upload-slot') || input.parentNode;
+    // Find or create preview img
     let img = slot.querySelector('img.temp-preview');
     if (!img) {
       img = document.createElement('img');
       img.className = 'temp-preview img-fluid rounded mb-2';
       img.style.cssText = 'max-height:130px;width:100%;object-fit:contain;background:#f8f9fa';
-      slot.insertBefore(img, input);
+      // Insert at the top of the slot (after the label, before buttons)
+      const btnRow = slot.querySelector('.d-flex.gap-1');
+      if (btnRow) {
+        slot.insertBefore(img, btnRow);
+      } else {
+        slot.prepend(img);
+      }
     }
     img.src = e.target.result;
   };
