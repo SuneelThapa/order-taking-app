@@ -189,7 +189,8 @@
               {% endfor %}
             </div>
             {% endif %}
-            {# ── Production bill button ── #}
+            {# ── Production bill button — hidden for no-measurement items ── #}
+            {% if row.item.product_type.measurement_model != 'NoMeasurement' %}
             <div class="px-3 pb-2">
               {% if row.item.production_bill %}
                 {% if row.item.production_bill.is_locked %}
@@ -211,6 +212,7 @@
               </a>
               {% endif %}
             </div>
+            {% endif %}
           </div>
           {% empty %}
           <div class="text-muted small">No items recorded.</div>
