@@ -18,8 +18,8 @@
     .section-title { font-size: 10px; font-weight: 600; text-transform: uppercase;
                      letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
     .diagram-box { border: 1px solid #ccc; border-radius: 4px;
-                   padding: 4px; text-align: center; width: 90px; }
-    .diagram-box img { max-height: 60px; max-width: 80px; object-fit: contain; }
+                   padding: 4px; text-align: center; width: 120px; }
+    .diagram-box img { max-height: 90px; max-width: 110px; object-fit: contain; }
     .diagram-label { font-size: 9px; color: #555; margin-top: 2px; }
     .measure-row { display: flex; justify-content: space-between; gap: 4px;
                    border-bottom: 1px dotted #ddd; padding: 1px 0; font-size: 11px; }
@@ -112,7 +112,7 @@
           {% if sel.chosen_option.image %}
           <img src="{{ sel.chosen_option.image.url }}" alt="{{ sel.chosen_option.name }}">
           {% else %}
-          <div style="height:60px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:9px;">No image</div>
+          <div style="height:90px;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:9px;">No image</div>
           {% endif %}
           <div class="diagram-label">
             <div>{{ sel.variation_type.name }}</div>
@@ -230,7 +230,7 @@
           {% for photo in group.list %}
           <div x-show="cp[{{ forloop.parentloop.counter0|add:forloop.counter0 }}]" class="text-center">
             <img src="{{ photo.image.url }}"
-                 style="height:140px;width:105px;object-fit:contain;background:#f8f9fa;border:1px solid #ccc;border-radius:3px">
+                 style="height:200px;width:150px;object-fit:contain;background:#f8f9fa;border:1px solid #ccc;border-radius:3px">
             <div style="font-size:9px;color:#666;margin-top:2px;">{{ photo.photo_type|capfirst }}</div>
           </div>
           {% endfor %}
@@ -241,7 +241,7 @@
       {% for photo in item_photos %}
       <div x-show="ip[{{ forloop.counter0 }}]" class="text-center">
         <img src="{{ photo.image.url }}"
-             style="height:140px;width:140px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
+             style="height:200px;width:200px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
         <div style="font-size:9px;color:#666;margin-top:2px;">Design {{ forloop.counter }}</div>
       </div>
       {% endfor %}
@@ -249,7 +249,7 @@
       {% for note in scratch_notes %}
       <div x-show="sn[{{ forloop.counter0 }}]" class="text-center">
         <img src="{{ note.image.url }}"
-             style="height:140px;width:140px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
+             style="height:200px;width:200px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
         <div style="font-size:9px;color:#666;margin-top:2px;">Sketch {{ forloop.counter }}</div>
       </div>
       {% endfor %}
@@ -258,11 +258,13 @@
   {% endif %}
 
   {# ── Fabric sets — side by side ── #}
-  <div class="section-title">Fabric details</div>
+  <div class="section-title" style="break-before:avoid;page-break-before:avoid;">Fabric details</div>
   <div class="row g-2 mb-2"
-       style="display:grid;grid-template-columns:repeat({{ fabric_sets|length }},1fr);gap:8px;">
+       style="display:grid;grid-template-columns:repeat({{ fabric_sets|length }},1fr);gap:8px;
+              break-inside:avoid;page-break-inside:avoid;">
     {% for fset in fabric_sets %}
-    <div style="border:1px solid #ccc;border-radius:4px;padding:8px;">
+    <div style="border:1px solid #ccc;border-radius:4px;padding:8px;
+                break-inside:avoid;page-break-inside:avoid;">
 
       <div style="font-weight:600;font-size:11px;margin-bottom:4px;">
         Piece {{ fset.piece_number }}
