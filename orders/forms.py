@@ -418,3 +418,11 @@ class BodyMeasurementForm(forms.ModelForm):
                 for f in BODY_FIELDS_MEN + BODY_FIELDS_LADIES_EXTRA
             }
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make all fields optional — body measurements are never required
+        for field in self.fields.values():
+            field.required = False
+        # Default gender to 'men' if not provided
+        self.fields['gender'].initial = 'men'

@@ -473,6 +473,9 @@ def order_form_view(request, pk=None):
                 if body_form.is_valid():
                     bm = body_form.save(commit=False)
                     bm.order_item = item
+                    # Fallback gender to 'men' if not submitted
+                    if not bm.gender:
+                        bm.gender = 'men'
                     bm.save()
 
                 for uploaded in request.FILES.getlist(f"item_photos_{form.prefix}"):
@@ -1031,6 +1034,19 @@ def _get_measurement_fields(item):
                         garment_vals[fname] = val
                 except Exception:
                     continue
+
+            # ── Garment-specific field remapping ──────────────
+            # PantsMeasurement.length → pants_length
+            # (avoids showing both "Length" and "Pants Length")
+            if garment_model_name == 'PantsMeasurement':
+                if 'length' in garment_vals:
+                    garment_vals['pants_length'] = garment_vals.pop('length')
+
+            # SuitMeasurement.jacket_length → length
+            if garment_model_name == 'SuitMeasurement':
+                if 'jacket_length' in garment_vals:
+                    garment_vals['length'] = garment_vals.pop('jacket_length')
+
     except Exception:
         pass
 

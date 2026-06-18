@@ -76,7 +76,17 @@
   </div>
 </div>
 
-<div class="page px-4 py-3">
+<script>
+  function photoSelector() {
+    return {
+      cp: Array({{ client_photos|length }}).fill(true),
+      ip: Array({{ item_photos|length }}).fill(true),
+      sn: Array({{ scratch_notes|length }}).fill(true),
+    };
+  }
+</script>
+
+<div class="page px-4 py-3" x-data="photoSelector()">
 
   {# ── Bill header ── #}
   <div class="bill-header d-flex justify-content-between align-items-start">
@@ -162,25 +172,26 @@
       {% else %}
       <div style="font-size:10px;color:#aaa;">No measurements recorded.</div>
       {% endif %}
+      {# ── Design photos — shown in right column under measurements ── #}
+      {% if item_photos %}
+      <div class="section-title mt-2">Design reference</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for photo in item_photos %}
+        <div x-show="ip[{{ forloop.counter0 }}]" class="text-center">
+          <img src="{{ photo.image.url }}"
+               style="height:240px;width:240px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
+          <div style="font-size:9px;color:#666;margin-top:2px;">Design {{ forloop.counter }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
 
   </div>
 
   {# ── Reference photos — selectable before print ── #}
   {% if client_photos or item_photos or scratch_notes %}
-
-  {# Alpine state initialised via script — avoids template-tag-in-x-data issues #}
-  <script>
-    function photoSelector() {
-      return {
-        cp: Array({{ client_photos|length }}).fill(true),
-        ip: Array({{ item_photos|length }}).fill(true),
-        sn: Array({{ scratch_notes|length }}).fill(true),
-      };
-    }
-  </script>
-
-  <div x-data="photoSelector()" class="mb-2">
+  <div class="mb-2">
 
     {# Controls — hidden when printing #}
     <div class="no-print mb-1 p-2 border rounded bg-light d-flex flex-wrap gap-3 align-items-center" style="font-size:11px;">
@@ -238,18 +249,10 @@
       </div>
       {% endfor %}
 
-      {% for photo in item_photos %}
-      <div x-show="ip[{{ forloop.counter0 }}]" class="text-center">
-        <img src="{{ photo.image.url }}"
-             style="height:200px;width:200px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
-        <div style="font-size:9px;color:#666;margin-top:2px;">Design {{ forloop.counter }}</div>
-      </div>
-      {% endfor %}
-
       {% for note in scratch_notes %}
       <div x-show="sn[{{ forloop.counter0 }}]" class="text-center">
         <img src="{{ note.image.url }}"
-             style="height:200px;width:200px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
+             style="height:400px;width:400px;object-fit:contain;border:1px solid #ccc;border-radius:3px;background:#f8f9fa">
         <div style="font-size:9px;color:#666;margin-top:2px;">Sketch {{ forloop.counter }}</div>
       </div>
       {% endfor %}
