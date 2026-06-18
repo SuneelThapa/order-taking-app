@@ -864,32 +864,37 @@ BODY_FIELD_ORDER_LADIES = [
 # Order: top to bottom as a tailor would measure
 GARMENT_BODY_FIELDS = {
     'JacketMeasurement': [
-        'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
-        'hips', 'height', 'weight',
+        'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
+        'hips', 'length', 'front', 'back',
+        'height', 'weight',
         'shoulder_posture', 'stomach_description', 'chest_description',
     ],
     'ShirtMeasurement': [
         'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
-        'hips', 'height', 'weight',
+        'hips', 'length', 'front', 'back',
+        'height', 'weight',
         'shoulder_posture', 'stomach_description', 'chest_description',
     ],
     'VestMeasurement': [
-        'shoulder', 'chest', 'stomach', 'hips',
-        'height', 'weight', 'stomach_description', 'chest_description',
+        'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
+        'hips', 'length', 'front', 'back',
+        'height', 'weight',
+        'shoulder_posture', 'stomach_description', 'chest_description',
     ],
     'CoatMeasurement': [
-        'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
-        'hips', 'height', 'weight',
-        'shoulder_posture', 'stomach_description',
+        'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
+        'hips', 'length', 'front', 'back',
+        'height', 'weight',
+        'shoulder_posture', 'stomach_description', 'chest_description',
     ],
     'PantsMeasurement': [
-        'pants_waist', 'pants_hip', 'belly', 'crotch',
-        'thigh', 'knee', 'cuff',
+        'pants_waist', 'pants_hip', 'crotch',
+        'thigh', 'knee', 'cuff', 'pants_length', 'belly',
         'height', 'weight', 'stomach_description',
     ],
     'ShortsMeasurement': [
-        'pants_waist', 'pants_hip', 'belly', 'crotch',
-        'thigh', 'knee', 'cuff',
+        'pants_waist', 'pants_hip', 'crotch',
+        'thigh', 'knee', 'cuff', 'pants_length', 'belly',
         'height', 'weight', 'stomach_description',
     ],
     'SkirtMeasurement': [
@@ -920,11 +925,11 @@ GARMENT_BODY_FIELDS = {
     ],
 }
 _MEAS_FIELD_ORDER = {
-    "JacketMeasurement":  ["sleeve", "length", "front", "back"],
-    "ShirtMeasurement":   ["neck", "sleeve", "length", "front", "back"],
-    "PantsMeasurement":   ["pants_length", "length"],
-    "VestMeasurement":    ["length", "front", "back"],
-    "CoatMeasurement":    ["sleeve", "length", "front", "back"],
+    "JacketMeasurement":  ["sleeve", "length"],
+    "ShirtMeasurement":   ["neck", "sleeve", "length"],
+    "PantsMeasurement":   ["length"],
+    "VestMeasurement":    ["length"],
+    "CoatMeasurement":    ["sleeve", "length"],
     "SuitMeasurement":    ["sleeve", "jacket_length", "pants_length"],
     "DressMeasurement":   ["neck", "length", "front", "back"],
     "BlouseMeasurement":  ["neck", "length", "front", "back"],
@@ -1017,14 +1022,15 @@ def _get_measurement_fields(item):
         model = apps.get_model("orders", garment_model_name)
         m     = model.objects.filter(base=base).first()
         if m:
-            for f in m._meta.get_fields():
-                if not hasattr(f, 'column'):
+            # Use explicit field list from _MEAS_FIELD_ORDER for reliability
+            field_names = _MEAS_FIELD_ORDER.get(model.__name__, [])
+            for fname in field_names:
+                try:
+                    val = getattr(m, fname, None)
+                    if val not in (None, '', 0, 0.0):
+                        garment_vals[fname] = val
+                except Exception:
                     continue
-                if f.name in ('id', 'base'):
-                    continue
-                val = getattr(m, f.name, None)
-                if val not in (None, '', 0, 0.0):
-                    garment_vals[f.name] = val
     except Exception:
         pass
 

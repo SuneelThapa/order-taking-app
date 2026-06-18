@@ -112,8 +112,10 @@
                          class="text-muted small">No image</div>
                     {% endif %}
                   </div>
+                  {# Use x-model for reliable radio form submission #}
                   <input type="radio" name="style_{{ vtype.pk }}" value="{{ opt.pk }}"
-                         class="d-none" :checked="sel === '{{ opt.pk }}'">
+                         x-model="sel"
+                         class="d-none">
                   <div style="font-size:0.72rem" class="text-center">{{ opt.name }}</div>
                 </label>
                 {% endfor %}
