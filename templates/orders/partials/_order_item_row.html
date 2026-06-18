@@ -131,62 +131,65 @@
     </div>
 
     {# ── Universal fields — rendered ONCE, always submitted ── #}
+
+    {# ── SECTION 1: Body Measurements ── #}
     <div class="small fw-semibold text-muted mb-2">Body Measurements</div>
-    <div class="row g-2 mb-3">
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.neck.label }}</label>{{ body_form.neck }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.shoulder.label }}</label>{{ body_form.shoulder }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.sleeve.label }}</label>{{ body_form.sleeve }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.biceps.label }}</label>{{ body_form.biceps }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.chest.label }}</label>{{ body_form.chest }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.stomach.label }}</label>{{ body_form.stomach }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.hips.label }}</label>{{ body_form.hips }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.height.label }}</label>{{ body_form.height }}</div>
-      <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.weight.label }}</label>{{ body_form.weight }}</div>
+    <div class="row g-2 mb-2">
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.neck.label }}</label>{{ body_form.neck }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.shoulder.label }}</label>{{ body_form.shoulder }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.sleeve.label }}</label>{{ body_form.sleeve }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.biceps.label }}</label>{{ body_form.biceps }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.chest.label }}</label>{{ body_form.chest }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.stomach.label }}</label>{{ body_form.stomach }}</div>
+      {# Hip — shown for both Men and Ladies #}
+      <div class="col-6 col-md-2">
+        <label class="form-label small mb-1">{{ body_form.hips.label }}</label>{{ body_form.hips }}
+      </div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.length.label }}</label>{{ body_form.length }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.front.label }}</label>{{ body_form.front }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.back.label }}</label>{{ body_form.back }}</div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small mb-1">{{ body_form.shoulder_posture.label }}</label>
+        {{ body_form.shoulder_posture }}
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small mb-1">{{ body_form.stomach_description.label }}</label>
+        {{ body_form.stomach_description }}
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label small mb-1">{{ body_form.chest_description.label }}</label>
+        {{ body_form.chest_description }}
+      </div>
     </div>
 
-    {# ── MEN-ONLY: Upper extras + Lower body + Posture ── #}
+    {# ── SECTION 2: General = Height + Weight ── #}
+    <div class="small fw-semibold text-muted mb-2">General</div>
+    <div class="row g-2 mb-3">
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.height.label }}</label>{{ body_form.height }}</div>
+      <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.weight.label }}</label>{{ body_form.weight }}</div>
+    </div>
+
+    {# ── MEN-ONLY: Lower body ── #}
     <div x-show="gender === 'men'">
-
-      <div class="small fw-semibold text-muted mb-2">Upper Body (extra)</div>
-      <div class="row g-2 mb-3">
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.length.label }}</label>{{ body_form.length }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.front.label }}</label>{{ body_form.front }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.back.label }}</label>{{ body_form.back }}</div>
-      </div>
-
       <div class="small fw-semibold text-muted mb-2">Lower Body (Pants)</div>
       <div class="row g-2 mb-3">
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.pants_waist.label }}</label>{{ body_form.pants_waist }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.pants_hip.label }}</label>{{ body_form.pants_hip }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.crotch.label }}</label>{{ body_form.crotch }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.thigh.label }}</label>{{ body_form.thigh }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.knee.label }}</label>{{ body_form.knee }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.cuff.label }}</label>{{ body_form.cuff }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.pants_length.label }}</label>{{ body_form.pants_length }}</div>
-        <div class="col-6 col-md-3 col-lg-2"><label class="form-label small mb-1">{{ body_form.belly.label }}</label>{{ body_form.belly }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.pants_waist.label }}</label>{{ body_form.pants_waist }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.pants_hip.label }}</label>{{ body_form.pants_hip }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.crotch.label }}</label>{{ body_form.crotch }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.thigh.label }}</label>{{ body_form.thigh }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.knee.label }}</label>{{ body_form.knee }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.cuff.label }}</label>{{ body_form.cuff }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.pants_length.label }}</label>{{ body_form.pants_length }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.belly.label }}</label>{{ body_form.belly }}</div>
       </div>
-
-      <div class="row g-2">
-        <div class="col-6 col-md-3">
-          <label class="form-label small mb-1">{{ body_form.shoulder_posture.label }}</label>
-          {{ body_form.shoulder_posture }}
-        </div>
-        <div class="col-6 col-md-3">
-          <label class="form-label small mb-1">{{ body_form.stomach_description.label }}</label>
-          {{ body_form.stomach_description }}
-        </div>
-        <div class="col-6 col-md-3">
-          <label class="form-label small mb-1">{{ body_form.chest_description.label }}</label>
-          {{ body_form.chest_description }}
-        </div>
-      </div>
-
     </div>
 
     {# ── LADIES-ONLY: extra fields ── #}
     <div x-show="gender === 'ladies'" x-cloak>
+
+      {# Ladies Specific #}
       <div class="small fw-semibold text-muted mb-2">Ladies Specific</div>
-      <div class="row g-2">
+      <div class="row g-2 mb-3">
         <div class="col-6 col-md-3"><label class="form-label small mb-1">{{ body_form.high_chest.label }}</label>{{ body_form.high_chest }}</div>
         <div class="col-6 col-md-3"><label class="form-label small mb-1">{{ body_form.upper_hips.label }}</label>{{ body_form.upper_hips }}</div>
         <div class="col-6 col-md-3"><label class="form-label small mb-1">{{ body_form.deep_front.label }}</label>{{ body_form.deep_front }}</div>
@@ -195,6 +198,20 @@
         <div class="col-6 col-md-4"><label class="form-label small mb-1">{{ body_form.shoulder_to_under_breast.label }}</label>{{ body_form.shoulder_to_under_breast }}</div>
         <div class="col-6 col-md-4"><label class="form-label small mb-1">{{ body_form.middle_breast_to_middle_breast.label }}</label>{{ body_form.middle_breast_to_middle_breast }}</div>
       </div>
+
+      {# Lower Body (Pants) #}
+      <div class="small fw-semibold text-muted mb-2">Lower Body (Pants)</div>
+      <div class="row g-2 mb-3">
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.pants_waist.label }}</label>{{ body_form.pants_waist }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.pants_hip.label }}</label>{{ body_form.pants_hip }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.crotch.label }}</label>{{ body_form.crotch }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.thigh.label }}</label>{{ body_form.thigh }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.knee.label }}</label>{{ body_form.knee }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.cuff.label }}</label>{{ body_form.cuff }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.pants_length.label }}</label>{{ body_form.pants_length }}</div>
+        <div class="col-6 col-md-2"><label class="form-label small mb-1">{{ body_form.belly.label }}</label>{{ body_form.belly }}</div>
+      </div>
+
     </div>
 
   </div>
