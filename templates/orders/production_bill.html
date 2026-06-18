@@ -67,6 +67,22 @@
 
         {# Style diagrams #}
         {% if variation_types %}
+        {# Image enlarge modal #}
+        <div class="modal fade" id="diagramModal" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header py-2">
+                <h6 class="modal-title" id="diagramModalLabel">—</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body text-center p-3">
+                <img id="diagramModalImg" src="" alt=""
+                     style="max-width:100%;max-height:70vh;object-fit:contain">
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card mb-3">
           <div class="card-header bg-white fw-semibold small">Style selections</div>
           <div class="card-body">
@@ -81,6 +97,16 @@
                        @click="sel = '{{ opt.pk }}'">
                     {% if opt.image %}
                     <img src="{{ opt.image.url }}" class="w-100" style="height:64px;object-fit:contain">
+                    {# Enlarge button #}
+                    <div class="text-center mt-1">
+                      <span style="font-size:0.65rem;color:#0d6efd;cursor:pointer"
+                            onclick="event.preventDefault();event.stopPropagation();
+                                     document.getElementById('diagramModalImg').src='{{ opt.image.url }}';
+                                     document.getElementById('diagramModalLabel').textContent='{{ opt.name }}';
+                                     new bootstrap.Modal(document.getElementById('diagramModal')).show();">
+                        <i class="bi bi-zoom-in"></i> Enlarge
+                      </span>
+                    </div>
                     {% else %}
                     <div style="height:64px;display:flex;align-items:center;justify-content:center"
                          class="text-muted small">No image</div>

@@ -864,22 +864,23 @@ BODY_FIELD_ORDER_LADIES = [
 # Order: top to bottom as a tailor would measure
 GARMENT_BODY_FIELDS = {
     'JacketMeasurement': [
-        'neck', 'shoulder', 'biceps', 'chest', 'stomach',
+        'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
         'hips', 'height', 'weight',
-        'shoulder_posture', 'chest_description',
+        'shoulder_posture', 'stomach_description', 'chest_description',
     ],
     'ShirtMeasurement': [
-        'neck', 'shoulder', 'biceps', 'chest', 'stomach',
+        'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
         'hips', 'height', 'weight',
-        'shoulder_posture', 'chest_description',
+        'shoulder_posture', 'stomach_description', 'chest_description',
     ],
     'VestMeasurement': [
         'shoulder', 'chest', 'stomach', 'hips',
-        'height', 'weight', 'chest_description',
+        'height', 'weight', 'stomach_description', 'chest_description',
     ],
     'CoatMeasurement': [
-        'neck', 'shoulder', 'biceps', 'chest', 'stomach',
-        'hips', 'height', 'weight', 'shoulder_posture',
+        'neck', 'shoulder', 'sleeve', 'biceps', 'chest', 'stomach',
+        'hips', 'height', 'weight',
+        'shoulder_posture', 'stomach_description',
     ],
     'PantsMeasurement': [
         'pants_waist', 'pants_hip', 'belly', 'crotch',
