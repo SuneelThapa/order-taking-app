@@ -2258,3 +2258,112 @@ def status_board(request):
         'urgent':          urgent,
         'shipping_orders': shipping_orders,
     })
+
+
+# ─────────────────────────────────────────────────────────────────
+# Sales Report
+# ─────────────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def sales_report(request):
+    from django.db.models import Sum, Count, Q
+    from django.utils import timezone
+    import datetime
+
+    tenant = getattr(request, "tenant", None)
+
+    # ── Date filter ───────────────────────────────────────────────
+    period     = request.GET.get('period', 'this_month')
+    date_from  = request.GET.get('date_from', '')
+    date_to    = request.GET.get('date_to', '')
+    today      = timezone.now().date()
+
+    if period == 'today':
+        start = today
+        end   = today
+    elif period == 'this_week':
+        start = today - datetime.timedelta(days=today.weekday())
+        end   = today
+    elif period == 'this_month':
+        start = today.replace(day=1)
+        end   = today
+    elif period == 'last_month':
+        first = today.replace(day=1)
+        end   = first - datetime.timedelta(days=1)
+        start = end.replace(day=1)
+    elif period == 'this_year':
+        start = today.replace(month=1, day=1)
+        end   = today
+    elif period == 'custom' and date_from and date_to:
+        try:
+            start = datetime.date.fromisoformat(date_from)
+            end   = datetime.date.fromisoformat(date_to)
+        except ValueError:
+            start = today.replace(day=1)
+            end   = today
+    else:
+        start = today.replace(day=1)
+        end   = today
+
+    # ── Payments in period ────────────────────────────────────────
+    from .models import Payment, OrderStaff
+    payments_qs = Payment.objects.filter(
+        order__tenant=tenant,
+        created_at__date__gte=start,
+        created_at__date__lte=end,
+        original_amount__gt=0,   # exclude refunds
+    ).select_related('order', 'order__client')
+
+    # ── Shop totals ───────────────────────────────────────────────
+    shop_total    = payments_qs.aggregate(t=Sum('thb_equivalent'))['t'] or 0
+    order_ids     = payments_qs.values_list('order_id', flat=True).distinct()
+    order_count   = order_ids.count()
+
+    # ── Per-staff breakdown ───────────────────────────────────────
+    staff_rows = []
+    assignments = (
+        OrderStaff.objects
+        .filter(order__tenant=tenant, order_id__in=order_ids)
+        .select_related('user', 'user__staff_profile', 'order')
+        .order_by('user__username')
+    )
+
+    # Group by staff member
+    staff_map = {}
+    for a in assignments:
+        uid = a.user_id
+        if uid not in staff_map:
+            staff_map[uid] = {
+                'name':    a.user.get_full_name() or a.user.username,
+                'role':    a.get_role_display(),
+                'orders':  set(),
+                'sales':   0,
+                'default_commission': float(
+                    getattr(getattr(a.user, 'staff_profile', None),
+                            'default_commission_percentage', 0) or 0
+                ),
+            }
+        staff_map[uid]['orders'].add(a.order_id)
+        # Sum payments for this staff member's orders within the period
+        staff_payments = payments_qs.filter(order=a.order).aggregate(
+            t=Sum('thb_equivalent')
+        )['t'] or 0
+        staff_map[uid]['sales'] += float(staff_payments)
+
+    for uid, data in staff_map.items():
+        data['order_count'] = len(data['orders'])
+        data.pop('orders')
+        staff_rows.append(data)
+
+    staff_rows.sort(key=lambda x: x['sales'], reverse=True)
+
+    return render(request, 'orders/sales_report.html', {
+        'period':       period,
+        'date_from':    date_from or start.isoformat(),
+        'date_to':      date_to   or end.isoformat(),
+        'start':        start,
+        'end':          end,
+        'shop_total':   shop_total,
+        'order_count':  order_count,
+        'staff_rows':   staff_rows,
+        'today':        today,
+    })

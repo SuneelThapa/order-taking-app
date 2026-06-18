@@ -8,7 +8,7 @@ from .views import (
     order_form_view, order_item_row,
     payment_row, load_measurement_form,
     client_profile, client_edit,
-    order_delivery_proof, export_csv,
+    order_delivery_proof, export_csv, sales_report,
     notifications_count, notifications_list,
     production_bill_view, production_bill_print,
     bill_toggle_sent,
@@ -58,6 +58,7 @@ urlpatterns = [
     path("payment-row/",                  payment_row,            name="payment_row"),
     path("load-measurement-form/",        load_measurement_form,  name="load_measurement_form"),
     path("export-csv/",                   export_csv,             name="export_csv"),
+    path("sales/",                        sales_report,           name="sales_report"),
     path("notifications/",                notifications_list,     name="notifications_list"),
     path("notifications/count/",          notifications_count,    name="notifications_count"),
 ]
