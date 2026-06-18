@@ -2367,3 +2367,22 @@ def sales_report(request):
         'staff_rows':   staff_rows,
         'today':        today,
     })
+
+
+# ─────────────────────────────────────────────────────────────────
+# PWA Service Worker — served at /sw.js (root scope required)
+# ─────────────────────────────────────────────────────────────────
+from django.http import HttpResponse
+from django.views.decorators.cache import cache_control
+
+@cache_control(no_cache=True)
+def service_worker(request):
+    import os
+    from django.contrib.staticfiles import finders
+    path = finders.find('sw.js')
+    if path and os.path.exists(path):
+        with open(path, 'r') as f:
+            content = f.read()
+    else:
+        content = "self.addEventListener('fetch', e => {});"
+    return HttpResponse(content, content_type='application/javascript')

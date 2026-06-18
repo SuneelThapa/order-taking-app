@@ -8,7 +8,7 @@
 
   <!-- Vendored Bootstrap 5 (kept in its own folder so it never collides with the AdminLTE/BS4 plugins) -->
   <link rel="stylesheet" href="{% static 'plugins/bootstrap5/css/bootstrap.min.css' %}">
-  <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/bootstrap-icons.css' %}">
+  <link rel="stylesheet" href="{% static 'plugins/bootstrap-icons/font/bootstrap-icons.css' %}">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
 
   <style>
@@ -181,6 +181,19 @@
   }
   </style>
   {% block extra_css %}{% endblock %}
+  {# ── PWA ── #}
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <meta name="theme-color" content="#336699">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EA Studio">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
+  {# ── Favicon ── #}
+  <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'icons/favicon-180.png' %}">
 </head>
 
 <!-- hx-headers puts the CSRF token on every htmx request (GET/POST/DELETE) automatically -->
@@ -326,6 +339,16 @@
     </div>
   </div>
 </div>
+
+<script>
+  // Register PWA service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .catch(err => console.log('SW registration failed:', err));
+    });
+  }
+</script>
 
 </body>
 </html>

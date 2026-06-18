@@ -1,0 +1,42 @@
+{
+  "name": "Emporium Armani Studio",
+  "short_name": "EA Studio",
+  "description": "Order management for Emporium Armani tailoring",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#336699",
+  "theme_color": "#336699",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Order",
+      "url": "/new/",
+      "description": "Create a new order"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "View all orders"
+    },
+    {
+      "name": "Sales Report",
+      "url": "/sales/",
+      "description": "View sales report"
+    }
+  ]
+}
