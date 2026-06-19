@@ -29,7 +29,37 @@
   <div class="alert alert-danger">Some fields need attention. Check the steps and fix before saving.</div>
   {% endif %}
 
-  <form method="post" enctype="multipart/form-data" id="orderForm" novalidate>
+  {# ── Inquiry pre-fill banner ── #}
+  {% if inquiry_prefill %}
+  <div class="alert alert-warning d-flex align-items-start gap-3 mb-3">
+    <i class="bi bi-shop fs-4 text-warning"></i>
+    <div>
+      <div class="fw-semibold mb-1">
+        Converting Catalogue Inquiry #{{ inquiry_prefill.id }}
+      </div>
+      <div class="small">
+        <strong>{{ inquiry_prefill.name }}</strong> · {{ inquiry_prefill.phone }}
+      </div>
+      {% if inquiry_prefill.message %}
+      <div class="small text-muted mt-1" style="white-space:pre-line">{{ inquiry_prefill.message|truncatechars:200 }}</div>
+      {% endif %}
+      {% if selected_client %}
+      <div class="small text-success mt-1">
+        <i class="bi bi-person-check me-1"></i>Existing client found: <strong>{{ selected_client.name }}</strong>
+      </div>
+      {% else %}
+      <div class="small text-muted mt-1">
+        <i class="bi bi-person-plus me-1"></i>No existing client found — search or create new in Step 1.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Hidden inputs to carry inquiry data through form submission #}
+  <input type="hidden" name="inquiry_id"    value="{{ inquiry_prefill.id }}">
+  <input type="hidden" name="inquiry_name"  value="{{ inquiry_prefill.name }}">
+  <input type="hidden" name="inquiry_phone" value="{{ inquiry_prefill.phone }}">
+  {% endif %}
     {% csrf_token %}
     {{ item_formset.management_form }}
         {{ payment_formset.management_form }}
@@ -785,7 +815,7 @@ function orderWizard() {
   return {
     step: urlStep || {% if first_error_step %}{{ first_error_step }}{% else %}1{% endif %},
     clientId: '{{ selected_client.pk|default:"" }}',
-    searchQ:  '',
+    searchQ:  '{% if inquiry_prefill and not selected_client %}{{ inquiry_prefill.phone }}{% endif %}',
     showCreate: false,
 
     init() {
