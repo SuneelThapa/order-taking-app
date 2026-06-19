@@ -20,6 +20,7 @@ from .views import (
     order_shipping_label_view,
     referred_by_search,
     status_board,
+    inquiry_update,
 )
 
 app_name = "orders"
@@ -62,4 +63,5 @@ urlpatterns = [
     path("sw.js",                         service_worker,         name="service_worker"),
     path("notifications/",                notifications_list,     name="notifications_list"),
     path("notifications/count/",          notifications_count,    name="notifications_count"),
+    path("inquiry/<int:inquiry_id>/update/", inquiry_update,      name="inquiry_update"),
 ]

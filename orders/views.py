@@ -1674,9 +1674,51 @@ def notifications_list(request):
     })
 
 
-# ─────────────────────────────────────────────────────────
-# Production Bill
-# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def inquiry_update(request, inquiry_id):
+    """Update inquiry status via HTMX PATCH — called from notification bell."""
+    if request.method not in ('POST', 'PATCH'):
+        return HttpResponse(status=405)
+
+    status = request.POST.get('status') or request.GET.get('status')
+    valid  = ['new', 'contacted', 'confirmed', 'no_reply', 'converted', 'closed']
+    if status not in valid:
+        return HttpResponse('Invalid status', status=400)
+
+    try:
+        import httpx
+        r = httpx.patch(
+            f"https://emporiumarmani.com/api/v1/inquiries/{inquiry_id}/",
+            json={'status': status},
+            timeout=5,
+        )
+        if r.status_code in (200, 204):
+            # Return updated card or empty div if closed
+            if status == 'closed':
+                return HttpResponse(
+                    f'<div id="inq-{inquiry_id}" class="px-3 py-2 border-bottom text-muted small">'
+                    f'<i class="bi bi-check-circle text-success me-1"></i>Inquiry closed.</div>'
+                )
+            inq = r.json()
+            # Re-render the inquiry card with updated status badge
+            status_colors = {
+                'contacted': 'warning',
+                'confirmed': 'success',
+                'no_reply':  'secondary',
+            }
+            color = status_colors.get(status, 'secondary')
+            return HttpResponse(
+                f'<div id="inq-{inquiry_id}" class="px-3 py-2 border-bottom">'
+                f'<div class="small fw-semibold">{inq["name"]} '
+                f'<span class="badge text-bg-{color}">{status.replace("_"," ").title()}</span></div>'
+                f'<div class="small text-muted">{inq["phone"]}</div>'
+                f'<div class="small text-muted mt-1" style="font-size:0.7rem">{inq["message"][:100]}</div>'
+                f'</div>'
+            )
+    except Exception as e:
+        return HttpResponse(f'Error: {e}', status=500)
+
+    return HttpResponse(status=200)
 @user_passes_test(staff_check)
 def production_bill_view(request, order_pk, item_pk):
     from django.utils import timezone
