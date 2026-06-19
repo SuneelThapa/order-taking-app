@@ -60,6 +60,25 @@
   <input type="hidden" name="inquiry_name"  value="{{ inquiry_prefill.name }}">
   <input type="hidden" name="inquiry_phone" value="{{ inquiry_prefill.phone }}">
   {% endif %}
+
+  {# ── Draft restore banner ── #}
+  {% if not is_edit %}
+  <div id="draft-banner" class="alert alert-info d-flex align-items-center justify-content-between gap-3 mb-3 d-none">
+    <div>
+      <i class="bi bi-clock-history me-2"></i>
+      <strong>Unsaved draft found</strong> — last saved at <span id="draft-saved-at"></span>
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+      <button type="button" class="btn btn-sm btn-primary" onclick="restoreDraft()">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearDraft()">
+        Discard
+      </button>
+    </div>
+  </div>
+  {% endif %}
+
     {% csrf_token %}
     {{ item_formset.management_form }}
         {{ payment_formset.management_form }}
@@ -938,6 +957,84 @@ async function saveClientInline(btn) {
   }
 }
 
+// ── Draft persistence ────────────────────────────────────────────────
+// Saves all form data to localStorage on every change.
+// Restores on page load. Clears on successful submit.
+
+const DRAFT_KEY  = '{% if is_edit %}ea_draft_{{ edit_order.pk }}{% else %}ea_draft_new{% endif %}';
+const SKIP_NAMES = new Set([
+  'csrfmiddlewaretoken', 'signature_canvas_image',
+  'scratch_canvas_image', 'inquiry_id', 'inquiry_name', 'inquiry_phone'
+]);
+
+function saveDraft() {
+  const form = document.getElementById('orderForm');
+  if (!form) return;
+  const data = {};
+  for (const el of form.elements) {
+    if (!el.name || SKIP_NAMES.has(el.name)) continue;
+    if (el.type === 'file') continue;
+    if (el.type === 'checkbox') { data[el.name] = el.checked; }
+    else if (el.type === 'radio') { if (el.checked) data[el.name] = el.value; }
+    else { data[el.name] = el.value; }
+  }
+  if (_orderWizardRef) data['_clientId'] = _orderWizardRef.clientId;
+  data['_savedAt'] = new Date().toLocaleString();
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function restoreDraft() {
+  {% if is_edit %}return;{% endif %}  // don't restore on edit — server has the data
+  const raw = localStorage.getItem(DRAFT_KEY);
+  if (!raw) return;
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { return; }
+  const form = document.getElementById('orderForm');
+  if (!form) return;
+
+  for (const [name, value] of Object.entries(data)) {
+    if (name.startsWith('_')) continue;
+    const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
+    for (const el of els) {
+      if (el.type === 'file') continue;
+      if (el.type === 'checkbox') { el.checked = value; }
+      else if (el.type === 'radio') { el.checked = (el.value === String(value)); }
+      else { el.value = value; el.dispatchEvent(new Event('change', {bubbles:true})); }
+    }
+  }
+
+  // Restore Alpine clientId
+  if (data['_clientId'] && _orderWizardRef) {
+    _orderWizardRef.clientId = String(data['_clientId']);
+  }
+
+  // Show restore banner
+  if (data['_savedAt']) {
+    const banner = document.getElementById('draft-banner');
+    const time   = document.getElementById('draft-saved-at');
+    if (banner) { banner.classList.remove('d-none'); }
+    if (time)   { time.textContent = data['_savedAt']; }
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  const banner = document.getElementById('draft-banner');
+  if (banner) banner.classList.add('d-none');
+}
+
+// Auto-save on any input change (debounced 1s)
+let _draftTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('orderForm');
+  if (!form) return;
+  form.addEventListener('input',  () => { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveDraft, 1000); });
+  form.addEventListener('change', () => { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveDraft, 1000); });
+
+  // Restore after a short delay (Alpine needs to init first)
+  setTimeout(restoreDraft, 300);
+});
+
 // Block form submission if no client, jump back to step 1
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('orderForm')?.addEventListener('submit', (e) => {
@@ -948,6 +1045,8 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('[submit] BLOCKED — no client');
       if (_orderWizardRef) _orderWizardRef.step = 1;
       alert('No client selected.\n\nStep 1: Search for a client OR click "Create new client", fill the form, then click "Save client".');
+    } else {
+      clearDraft(); // Clear draft on successful submit
     }
   });
 });
