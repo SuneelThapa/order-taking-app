@@ -1676,11 +1676,21 @@ def notifications_list(request):
 
 @user_passes_test(staff_check)
 def inquiry_update(request, inquiry_id):
-    """Update inquiry status via HTMX PATCH — called from notification bell."""
+    """Update inquiry status via HTMX — called from notification bell."""
     if request.method not in ('POST', 'PATCH'):
         return HttpResponse(status=405)
 
-    status = request.POST.get('status') or request.GET.get('status')
+    # Django doesn't parse PATCH body into request.POST — read manually
+    status = request.POST.get('status')
+    if not status:
+        try:
+            import json
+            data   = json.loads(request.body)
+            status = data.get('status')
+        except Exception:
+            from urllib.parse import parse_qs
+            data   = parse_qs(request.body.decode())
+            status = data.get('status', [None])[0]
     valid  = ['new', 'contacted', 'confirmed', 'no_reply', 'converted', 'closed']
     if status not in valid:
         return HttpResponse('Invalid status', status=400)
