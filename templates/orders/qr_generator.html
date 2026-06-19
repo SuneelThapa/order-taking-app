@@ -11,11 +11,14 @@
   baseUrl:  'https://catalogue.emporiumarmani.com',
 
   get qrUrl() {
-    let url = this.baseUrl;
     let params = [];
-    if (this.category) params.push('category=' + this.category);
-    if (this.staff)    params.push('ref=' + this.staff);
-    if (params.length) url += '/?' + params.join('&');
+    let url = this.baseUrl;
+    if (this.category) {
+      url = this.baseUrl + '/catalogue/';
+      params.push('category=' + this.category);
+    }
+    if (this.staff) params.push('ref=' + this.staff);
+    if (params.length) url += '?' + params.join('&');
     return url;
   },
 
