@@ -21,6 +21,7 @@ from .views import (
     referred_by_search,
     status_board,
     inquiry_update,
+    qr_generator,
 )
 
 app_name = "orders"
@@ -64,4 +65,5 @@ urlpatterns = [
     path("notifications/",                notifications_list,     name="notifications_list"),
     path("notifications/count/",          notifications_count,    name="notifications_count"),
     path("inquiry/<int:inquiry_id>/update/", inquiry_update,      name="inquiry_update"),
+    path("qr/",                              qr_generator,          name="qr_generator"),
 ]
