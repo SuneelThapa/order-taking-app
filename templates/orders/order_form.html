@@ -79,6 +79,7 @@
   </div>
   {% endif %}
 
+  <form method="post" enctype="multipart/form-data" id="orderForm" novalidate>
     {% csrf_token %}
     {{ item_formset.management_form }}
         {{ payment_formset.management_form }}
