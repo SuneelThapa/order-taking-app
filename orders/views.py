@@ -1595,13 +1595,48 @@ def notifications_count(request):
     today = _date.today()
     days  = int(request.session.get("reminder_days", 3))
     data  = _get_reminders(tenant, today, days)
-    count = data["total_count"]
-    if count:
-        return HttpResponse(str(count))
+    reminder_count = data["total_count"]
+
+    # Add catalogue inquiry count
+    inquiry_count = _get_inquiry_count()
+    total = reminder_count + inquiry_count
+
+    if total:
+        return HttpResponse(str(total))
     return HttpResponse("")
 
 
 REMINDER_DAYS_OPTIONS = [1, 3, 7, 14]
+
+
+def _get_inquiry_count():
+    """Fetch new inquiry count from fashion_01 API."""
+    try:
+        import httpx
+        r = httpx.get(
+            "https://emporiumarmani.com/api/v1/inquiries/count/",
+            timeout=3,
+        )
+        if r.status_code == 200:
+            return r.json().get("new_count", 0)
+    except Exception:
+        pass
+    return 0
+
+
+def _get_inquiries():
+    """Fetch new inquiries from fashion_01 API."""
+    try:
+        import httpx
+        r = httpx.get(
+            "https://emporiumarmani.com/api/v1/inquiries/?status=new",
+            timeout=3,
+        )
+        if r.status_code == 200:
+            return r.json().get("results", [])
+    except Exception:
+        pass
+    return []
 
 
 @user_passes_test(staff_check)
@@ -1625,11 +1660,16 @@ def notifications_list(request):
             f'<span style="font-size:0.7rem">{type(e).__name__}: {e}</span>'
             f'</div>'
         )
+
+    # Fetch inquiries from catalogue API
+    inquiries = _get_inquiries()
+
     return render(request, "orders/partials/_notifications_dropdown.html", {
         **data,
         "days":         days,
         "days_options": REMINDER_DAYS_OPTIONS,
         "today":        today,
+        "inquiries":    inquiries,
     })
 
 
