@@ -45,7 +45,7 @@
         {{ inq.message|truncatechars:120 }}
       </div>
       <div class="text-muted mt-1" style="font-size:0.65rem">
-        {{ inq.created_at|slice:":19"|date:"d M Y H:i" }}
+        {{ inq.created_at|slice:":16"|cut:"T" }}
       </div>
     </div>
     <div class="d-flex flex-column gap-1 ms-2">
