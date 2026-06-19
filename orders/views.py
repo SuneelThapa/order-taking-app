@@ -669,6 +669,26 @@ def order_form_view(request, pk=None):
         if cid:
             selected_client = Client.objects.filter(pk=cid).first()
 
+    # ── Pre-fill from catalogue inquiry (Convert button) ──────────
+    inquiry_prefill = None
+    if not is_edit and request.method == "GET":
+        inq_name    = request.GET.get("name", "").strip()
+        inq_phone   = request.GET.get("phone", "").strip()
+        inq_message = request.GET.get("message", "").strip()
+        inq_id      = request.GET.get("inquiry", "").strip()
+        if inq_name or inq_phone:
+            inquiry_prefill = {
+                "id":      inq_id,
+                "name":    inq_name,
+                "phone":   inq_phone,
+                "message": inq_message,
+            }
+            # Try to find existing client by phone
+            if inq_phone and not selected_client:
+                selected_client = Client.objects.filter(
+                    phone__icontains=inq_phone.replace("+", "").strip()
+                ).first()
+
     first_error_step = None
     if request.method == "POST":
         if client_error:
@@ -761,6 +781,7 @@ def order_form_view(request, pk=None):
         "first_error_step":     first_error_step,
         "existing_payments":    list(edit_order.payments.select_related("recorded_by").all()) if edit_order else [],
         "existing_signature":   getattr(edit_order, "signature", None) if edit_order else None,
+        "inquiry_prefill":      inquiry_prefill,
         "product_type_model_map": {
             str(pt.pk): pt.measurement_model
             for pt in ProductType.objects.all()
