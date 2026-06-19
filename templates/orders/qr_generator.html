@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}QR Code Generator — Emporium Armani{% endblock %}
+
+{% block content %}
+<div x-data="{
+  staff:    '',
+  category: '',
+  label:    '',
+  baseUrl:  'https://catalogue.emporiumarmani.com',
+
+  get qrUrl() {
+    let url = this.baseUrl;
+    let params = [];
+    if (this.category) params.push('category=' + this.category);
+    if (this.staff)    params.push('ref=' + this.staff);
+    if (params.length) url += '/?' + params.join('&');
+    return url;
+  },
+
+  get displayLabel() {
+    if (this.label) return this.label;
+    let parts = [];
+    if (this.category) parts.push(this.category.charAt(0).toUpperCase() + this.category.slice(1));
+    if (this.staff)    parts.push(this.staff.charAt(0).toUpperCase() + this.staff.slice(1));
+    return parts.length ? parts.join(' · ') : 'All Products';
+  },
+
+  generateQR() {
+    const el = document.getElementById('qr-canvas');
+    el.innerHTML = '';
+    new QRCode(el, {
+      text:          this.qrUrl,
+      width:         256,
+      height:        256,
+      colorDark:     '#1A1A1A',
+      colorLight:    '#ffffff',
+      correctLevel:  QRCode.CorrectLevel.H,
+    });
+  },
+
+  printQR() {
+    window.print();
+  }
+}"
+x-init="generateQR()"
+@change.window="generateQR()">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h4 mb-0"><i class="bi bi-qr-code me-2"></i>QR Code Generator</h1>
+  </div>
+
+  <div class="row g-4">
+
+    {# ── Options panel ── #}
+    <div class="col-md-5">
+      <div class="card">
+        <div class="card-header bg-white fw-semibold">Configure QR Code</div>
+        <div class="card-body">
+
+          {# Staff #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Staff Member <span class="text-muted fw-normal">(optional)</span></label>
+            <select class="form-select" x-model="staff" @change="generateQR()">
+              <option value="">— All staff / no tracking —</option>
+              {% for member in staff_list %}
+              <option value="{{ member.username }}">{{ member.get_full_name|default:member.username }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Tracks which staff member referred the client.</div>
+          </div>
+
+          {# Category #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Category <span class="text-muted fw-normal">(optional)</span></label>
+            <select class="form-select" x-model="category" @change="generateQR()">
+              <option value="">— All products —</option>
+              {% for cat in categories %}
+              <option value="{{ cat.slug }}">{{ cat.name }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Client lands directly on this category.</div>
+          </div>
+
+          {# Custom label #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Print Label <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="text" class="form-control" x-model="label"
+                   placeholder="e.g. Scan to view our Suits collection"
+                   @input="generateQR()">
+          </div>
+
+          {# URL preview #}
+          <div class="mb-3">
+            <label class="form-label fw-semibold small text-muted">Generated URL</label>
+            <div class="bg-light rounded p-2 small text-break font-monospace" x-text="qrUrl"></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── QR preview + print ── #}
+    <div class="col-md-7">
+      <div class="card">
+        <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+          <span>Preview</span>
+          <button class="btn btn-primary btn-sm" @click="printQR()">
+            <i class="bi bi-printer me-1"></i>Print
+          </button>
+        </div>
+        <div class="card-body text-center py-5" id="print-area">
+
+          {# Logo #}
+          <div class="fw-bold fs-5 mb-1" style="letter-spacing:0.1em">EMPORIUM ARMANI</div>
+          <div class="text-muted small mb-4" style="letter-spacing:0.2em">BESPOKE TAILORING · BANGKOK</div>
+
+          {# QR code #}
+          <div id="qr-canvas" class="d-inline-block border p-3 rounded mb-4"></div>
+
+          {# Label #}
+          <div class="fw-semibold mb-1" x-text="displayLabel"></div>
+          <div class="text-muted small mb-3">Scan to browse our collection</div>
+
+          {# URL #}
+          <div class="text-muted" style="font-size:0.7rem" x-text="qrUrl"></div>
+
+        </div>
+      </div>
+
+      {# Quick QR cards for each category #}
+      <div class="card mt-4">
+        <div class="card-header bg-white fw-semibold">Quick Category QR Codes</div>
+        <div class="card-body">
+          <div class="row g-2">
+            {% for cat in categories %}
+            <div class="col-6 col-md-4">
+              <button class="btn btn-outline-secondary btn-sm w-100"
+                      @click="category='{{ cat.slug }}'; staff=''; generateQR()">
+                <i class="bi bi-qr-code me-1"></i>{{ cat.name }}
+              </button>
+            </div>
+            {% endfor %}
+            <div class="col-6 col-md-4">
+              <button class="btn btn-outline-primary btn-sm w-100"
+                      @click="category=''; staff=''; generateQR()">
+                <i class="bi bi-grid me-1"></i>All Products
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# QR code library #}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+{# Print styles #}
+<style>
+@media print {
+  .app-sidebar, .app-topbar, .card-header button,
+  .col-md-5, .mt-4 { display: none !important; }
+  .col-md-7 { width: 100% !important; }
+  .card { border: none !important; box-shadow: none !important; }
+  body { background: white !important; }
+}
+</style>
+{% endblock %}

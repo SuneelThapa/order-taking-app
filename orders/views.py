@@ -2500,3 +2500,35 @@ def service_worker(request):
     else:
         content = "self.addEventListener('fetch', e => {});"
     return HttpResponse(content, content_type='application/javascript')
+
+
+# ─────────────────────────────────────────────────────────
+# QR Code Generator
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def qr_generator(request):
+    """QR code generator — creates catalogue URLs with staff ref + category tracking."""
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    staff_list = User.objects.filter(is_staff=True, is_active=True).order_by('first_name')
+
+    # Fetch categories from fashion_01 API
+    categories = []
+    try:
+        import httpx
+        r = httpx.get(
+            "https://emporiumarmani.com/api/v1/categories/",
+            timeout=5,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            if data:
+                categories = data[0].get('categories', [])
+    except Exception:
+        pass
+
+    return render(request, "orders/qr_generator.html", {
+        "staff_list": staff_list,
+        "categories": categories,
+    })

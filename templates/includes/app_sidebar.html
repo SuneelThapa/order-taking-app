@@ -36,6 +36,10 @@
       <i class="bi bi-bar-chart-line"></i>
       <span class="rail-label">Sales</span>
     </a>
+    <a href="{% url 'orders:qr_generator' %}" class="rail-nav-item {% if request.resolver_match.url_name == 'qr_generator' %}rail-active{% endif %}" title="QR Code">
+      <i class="bi bi-qr-code"></i>
+      <span class="rail-label">QR Code</span>
+    </a>
 
     {# Spacer #}
     <div style="flex:1"></div>
