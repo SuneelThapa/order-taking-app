@@ -39,7 +39,18 @@
 <div class="px-3 py-2 border-bottom" id="inq-{{ inq.id }}">
   <div class="d-flex justify-content-between align-items-start">
     <div>
-      <div class="small fw-semibold text-dark">{{ inq.name }}</div>
+      <div class="small fw-semibold text-dark">
+        {{ inq.name }}
+        {% if inq.status != 'new' %}
+        <span class="badge ms-1
+          {% if inq.status == 'contacted' %}text-bg-warning
+          {% elif inq.status == 'confirmed' %}text-bg-success
+          {% elif inq.status == 'no_reply' %}text-bg-secondary
+          {% endif %}">
+          {{ inq.status|title }}
+        </span>
+        {% endif %}
+      </div>
       <div class="small text-muted">{{ inq.phone }}</div>
       <div class="small text-muted mt-1" style="max-width:260px;white-space:pre-line;font-size:0.7rem">
         {{ inq.message|truncatechars:120 }}

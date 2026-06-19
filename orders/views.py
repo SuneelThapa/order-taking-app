@@ -1625,11 +1625,11 @@ def _get_inquiry_count():
 
 
 def _get_inquiries():
-    """Fetch new inquiries from fashion_01 API."""
+    """Fetch active inquiries from fashion_01 API (new, contacted, confirmed, no_reply)."""
     try:
         import httpx
         r = httpx.get(
-            "https://emporiumarmani.com/api/v1/inquiries/?status=new",
+            "https://emporiumarmani.com/api/v1/inquiries/?status=new,contacted,confirmed,no_reply",
             timeout=3,
         )
         if r.status_code == 200:
