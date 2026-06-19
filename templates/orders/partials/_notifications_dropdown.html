@@ -5,8 +5,8 @@
 <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
   <span class="fw-semibold small">
     <i class="bi bi-bell me-1 text-primary"></i>Notifications
-    {% if total_count or inquiries %}
-    <span class="badge text-bg-danger ms-1">{{ total_count|add:inquiries|length }}</span>
+    {% if total_count or inquiry_count %}
+    <span class="badge text-bg-danger ms-1">{{ total_count|add:inquiry_count }}</span>
     {% endif %}
   </span>
   <div class="d-flex align-items-center gap-2">
@@ -65,7 +65,7 @@
 {% endif %}
 
 {# ── Order Reminders ── #}
-{% if not total_count and not inquiries %}
+{% if not total_count and not inquiry_count %}
   <div class="text-center py-4 text-muted small">
     <i class="bi bi-check-circle text-success d-block mb-2" style="font-size:1.8rem"></i>
     All clear for the next {{ days }} day{{ days|pluralize }}

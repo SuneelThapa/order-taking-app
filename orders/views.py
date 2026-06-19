@@ -1666,10 +1666,11 @@ def notifications_list(request):
 
     return render(request, "orders/partials/_notifications_dropdown.html", {
         **data,
-        "days":         days,
-        "days_options": REMINDER_DAYS_OPTIONS,
-        "today":        today,
-        "inquiries":    inquiries,
+        "days":          days,
+        "days_options":  REMINDER_DAYS_OPTIONS,
+        "today":         today,
+        "inquiries":     inquiries,
+        "inquiry_count": len(inquiries),
     })
 
 
