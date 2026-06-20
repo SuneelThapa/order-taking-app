@@ -6,7 +6,6 @@ from datetime import date as _date, timedelta as _timedelta
 from urllib.parse import quote as _quote
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -1960,6 +1959,75 @@ def production_bill_print(request, pk):
         "scratch_notes":      scratch_notes,
         "show_signature":     show_signature,
     })
+
+
+@user_passes_test(staff_check)
+def production_bill_pdf(request, pk):
+    """Generate PDF of production bill for sharing via WhatsApp/LINE."""
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    bill = get_object_or_404(
+        ProductionBill.objects
+        .select_related(
+            "order_item__order__client",
+            "order_item__order__signature",
+            "order_item__product_type",
+            "order_item__measurement",
+            "confirmed_by",
+            "created_by",
+        )
+        .prefetch_related(
+            "style_selections__variation_type",
+            "style_selections__chosen_option",
+            "fabric_sets__zone_entries__zone",
+            "fabric_sets__monogram__style",
+        ),
+        pk=pk,
+        order_item__order__tenant=tenant,
+    )
+
+    measurement_fields = _get_measurement_fields(bill.order_item)
+    client_photos  = list(bill.order_item.order.client_photos.exclude(image='').order_by('person_number', 'photo_type'))
+    item_photos    = list(bill.order_item.photos.exclude(image='').order_by('pk'))
+    scratch_notes  = list(bill.order_item.order.scratch_notes.exclude(image='').order_by('created_at'))
+    show_signature = request.GET.get("sig", "0") == "1"
+
+    ctx = {
+        "bill":               bill,
+        "order":              bill.order_item.order,
+        "item":               bill.order_item,
+        "measurement_fields": measurement_fields,
+        "fabric_sets":        bill.fabric_sets.all().order_by("piece_number"),
+        "style_selections":   bill.style_selections.all().order_by("variation_type__order"),
+        "client_photos":      client_photos,
+        "item_photos":        item_photos,
+        "scratch_notes":      scratch_notes,
+        "show_signature":     show_signature,
+        "pdf_mode":           True,
+    }
+
+    html_string = render_to_string("orders/production_bill_print.html", ctx, request=request)
+
+    try:
+        from weasyprint import HTML, CSS
+        pdf_bytes = HTML(
+            string=html_string,
+            base_url=request.build_absolute_uri('/')
+        ).write_pdf()
+
+        order_num = bill.order_item.order.order_number
+        item_name = bill.order_item.product_type.name if bill.order_item.product_type else 'item'
+        copy_type = 'shop' if show_signature else 'factory'
+        filename  = f"bill_{order_num}_{item_name}_{copy_type}.pdf".replace(' ', '_')
+
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"PDF generation failed: {e}", status=500)
 
 
 @user_passes_test(staff_check)
