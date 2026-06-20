@@ -874,11 +874,8 @@ function contactScratchPad() {
   }
 }
 
-// Measurements scratch pad (Step 3 — inline, prefix passed via data attr)
-function measScratchPad(el) {
-  const prefix      = el.dataset.prefix;
-  const genderField = el.dataset.genderField;
-  const qrElId      = 'meas-qr-' + prefix;
+// Measurements scratch pad base (Step 3 — prefix/genderField passed via x-data spread)
+function measScratchPadBase() {
   return {
     createUrl: window._spCreateUrl,
     pollBase:  window._spPollBase,
@@ -887,7 +884,7 @@ function measScratchPad(el) {
       this.done = false; this.error = '';
       try {
         const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
-        const genderEl = document.querySelector('[name="' + genderField + '"]:checked');
+        const genderEl = document.querySelector('[name="' + this.spGenderField + '"]:checked');
         const fd = new FormData();
         fd.append('mode', 'measurements');
         fd.append('gender', genderEl ? genderEl.value : 'men');
@@ -897,7 +894,7 @@ function measScratchPad(el) {
         this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
         this.startPolling();
         this.$nextTick(() => {
-          const el = document.getElementById(qrElId);
+          const el = document.getElementById('meas-qr-' + this.spPrefix);
           if (el && typeof QRCode !== 'undefined') {
             el.innerHTML = '';
             new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H });
@@ -915,8 +912,9 @@ function measScratchPad(el) {
           const d = await r.json();
           if (d.status === 'processed') {
             clearInterval(iv); this.polling = false; this.done = true;
+            const pfx = this.spPrefix;
             for (const [field, value] of Object.entries(d.result)) {
-              const el = document.querySelector('[name="' + prefix + '-' + field + '"]');
+              const el = document.querySelector('[name="' + pfx + '-' + field + '"]');
               if (el) { el.value = value; el.dispatchEvent(new Event('change',{bubbles:true})); }
             }
           } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }

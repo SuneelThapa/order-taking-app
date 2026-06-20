@@ -134,9 +134,7 @@
 
     {# ── Scratch Pad — AI Handwriting for measurements ── #}
     <div class="mb-3"
-         data-prefix="{{ body_form.prefix }}"
-         data-gender-field="{{ body_form.gender.html_name }}"
-         x-data="measScratchPad($el)">
+         x-data="{ spPrefix: '{{ body_form.prefix }}', spGenderField: '{{ body_form.gender.html_name }}', ...measScratchPadBase() }">
       <button type="button" @click="startSession()" x-show="!qrVisible && !done"
               class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
         <i class="bi bi-pencil-square"></i>✍️ Staff/client writes measurements on tablet

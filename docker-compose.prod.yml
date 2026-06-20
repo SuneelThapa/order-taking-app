@@ -11,6 +11,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=order_taking.settings.prod
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
       - db
 
