@@ -364,19 +364,40 @@
         <i class="bi bi-printer me-1"></i>Print for Factory
       </a>
       <a href="{% url 'orders:production_bill_pdf' pk=bill.pk %}?sig=0"
-         class="btn btn-outline-secondary" target="_blank">
+         class="btn btn-outline-secondary">
         <i class="bi bi-file-earmark-pdf me-1"></i>PDF for Factory
       </a>
+      <button type="button" class="btn btn-outline-info"
+              onclick="shareLink('{% url 'orders:production_bill_share' token=bill.share_token %}?sig=0', 'Production Bill — Factory Copy #{{ order.order_number }}')">
+        <i class="bi bi-share me-1"></i>Share Link (Factory)
+      </button>
       <a href="{% url 'orders:production_bill_print' pk=bill.pk %}?sig=1"
          class="btn btn-success">
-        <i class="bi bi-printer me-1"></i>Print for Shop <span style="font-size:0.75rem">(+ signature)</span>
+        <i class="bi bi-printer me-1"></i>Print for Shop
       </a>
       <a href="{% url 'orders:production_bill_pdf' pk=bill.pk %}?sig=1"
-         class="btn btn-success" target="_blank">
+         class="btn btn-success">
         <i class="bi bi-file-earmark-pdf me-1"></i>PDF for Shop
       </a>
+      <button type="button" class="btn btn-success"
+              onclick="shareLink('{% url 'orders:production_bill_share' token=bill.share_token %}?sig=1', 'Production Bill — Shop Copy #{{ order.order_number }}')">
+        <i class="bi bi-share me-1"></i>Share Link (Shop)
+      </button>
       {% endif %}
     </div>
+
+    <script>
+    function shareLink(path, title) {
+      const url = window.location.origin + path;
+      if (navigator.share) {
+        navigator.share({ title: title, text: title, url: url });
+      } else {
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Link copied to clipboard!\n\n' + url);
+        });
+      }
+    }
+    </script>
 
   </form>
 </div>

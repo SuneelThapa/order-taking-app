@@ -6,7 +6,6 @@ from datetime import date as _date, timedelta as _timedelta
 from urllib.parse import quote as _quote
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -2601,4 +2600,50 @@ def qr_generator(request):
     return render(request, "orders/qr_generator.html", {
         "staff_list": staff_list,
         "categories": categories,
+    })
+
+
+# ─────────────────────────────────────────────────────────
+# Production Bill — Public Share View (no login required)
+# ─────────────────────────────────────────────────────────
+def production_bill_share(request, token):
+    """Public view for production bill — accessible via share token, no login needed."""
+    from orders.models import ProductionBill
+    bill = get_object_or_404(
+        ProductionBill.objects
+        .select_related(
+            "order_item__order__client",
+            "order_item__order__signature",
+            "order_item__product_type",
+            "order_item__measurement",
+            "confirmed_by",
+            "created_by",
+        )
+        .prefetch_related(
+            "style_selections__variation_type",
+            "style_selections__chosen_option",
+            "fabric_sets__zone_entries__zone",
+            "fabric_sets__monogram__style",
+        ),
+        share_token=token,
+    )
+
+    measurement_fields = _get_measurement_fields(bill.order_item)
+    client_photos  = list(bill.order_item.order.client_photos.exclude(image='').order_by('person_number', 'photo_type'))
+    item_photos    = list(bill.order_item.photos.exclude(image='').order_by('pk'))
+    scratch_notes  = list(bill.order_item.order.scratch_notes.exclude(image='').order_by('created_at'))
+    show_signature = request.GET.get("sig", "0") == "1"
+
+    return render(request, "orders/production_bill_print.html", {
+        "bill":               bill,
+        "order":              bill.order_item.order,
+        "item":               bill.order_item,
+        "measurement_fields": measurement_fields,
+        "fabric_sets":        bill.fabric_sets.all().order_by("piece_number"),
+        "style_selections":   bill.style_selections.all().order_by("variation_type__order"),
+        "client_photos":      client_photos,
+        "item_photos":        item_photos,
+        "scratch_notes":      scratch_notes,
+        "show_signature":     show_signature,
+        "share_view":         True,
     })
