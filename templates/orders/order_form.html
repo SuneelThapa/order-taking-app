@@ -824,6 +824,109 @@
 
 {% block extra_js %}
 <script>
+// ── Scratch Pad URL constants ─────────────────────────────────────────
+window._spCreateUrl = '{% url "orders:scratch_pad_create" %}';
+window._spPollBase  = '{% url "orders:scratch_pad_poll" token="00000000-0000-0000-0000-000000000000" %}';
+
+// Contact scratch pad (Step 1 — client form loaded via HTMX)
+function contactScratchPad() {
+  return {
+    createUrl: window._spCreateUrl,
+    pollBase:  window._spPollBase,
+    token: null, tabletUrl: null, polling: false, done: false, error: '', qrVisible: false,
+    async startSession() {
+      this.done = false; this.error = '';
+      try {
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const fd = new FormData();
+        fd.append('mode', 'contact');
+        fd.append('csrfmiddlewaretoken', csrf);
+        const resp = await fetch(this.createUrl, { method: 'POST', body: fd, headers: {'X-CSRFToken': csrf} });
+        const data = await resp.json();
+        this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
+        this.startPolling();
+        this.$nextTick(() => {
+          const el = document.getElementById('contact-qr-canvas');
+          if (el && typeof QRCode !== 'undefined') {
+            el.innerHTML = '';
+            new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H });
+          }
+        });
+      } catch(e) { this.error = 'Error: ' + e.message; console.error(e); }
+    },
+    startPolling() {
+      if (this.polling) return; this.polling = true;
+      const base = this.pollBase;
+      const iv = setInterval(async () => {
+        if (!this.token) { clearInterval(iv); return; }
+        try {
+          const r = await fetch(base.replace('00000000-0000-0000-0000-000000000000', this.token));
+          const d = await r.json();
+          if (d.status === 'processed') {
+            clearInterval(iv); this.polling = false; this.done = true;
+            const map = { name:'[name=name]', phone:'[name=phone]', email:'[name=email]', street_address:'[name=street_address]', city:'[name=city]', state:'[name=state]', postcode:'[name=postcode]', country:'[name=country]', hotel_name:'[name=hotel_name]', room_number:'[name=room_number]', departure_date:'[name=departure_date]' };
+            for (const [k,s] of Object.entries(map)) { if (d.result[k]) { const el = document.querySelector(s); if (el) { el.value = d.result[k]; el.dispatchEvent(new Event('input',{bubbles:true})); }}}
+          } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
+        } catch(e) {}
+      }, 3000);
+    },
+    reset() { this.token=null; this.tabletUrl=null; this.qrVisible=false; this.done=false; this.error=''; this.polling=false; }
+  }
+}
+
+// Measurements scratch pad (Step 3 — inline, prefix passed via data attr)
+function measScratchPad(el) {
+  const prefix      = el.dataset.prefix;
+  const genderField = el.dataset.genderField;
+  const qrElId      = 'meas-qr-' + prefix;
+  return {
+    createUrl: window._spCreateUrl,
+    pollBase:  window._spPollBase,
+    token: null, tabletUrl: null, polling: false, done: false, error: '', qrVisible: false,
+    async startSession() {
+      this.done = false; this.error = '';
+      try {
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const genderEl = document.querySelector('[name="' + genderField + '"]:checked');
+        const fd = new FormData();
+        fd.append('mode', 'measurements');
+        fd.append('gender', genderEl ? genderEl.value : 'men');
+        fd.append('csrfmiddlewaretoken', csrf);
+        const resp = await fetch(this.createUrl, { method: 'POST', body: fd, headers: {'X-CSRFToken': csrf} });
+        const data = await resp.json();
+        this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
+        this.startPolling();
+        this.$nextTick(() => {
+          const el = document.getElementById(qrElId);
+          if (el && typeof QRCode !== 'undefined') {
+            el.innerHTML = '';
+            new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H });
+          }
+        });
+      } catch(e) { this.error = 'Error: ' + e.message; console.error(e); }
+    },
+    startPolling() {
+      if (this.polling) return; this.polling = true;
+      const base = this.pollBase;
+      const iv = setInterval(async () => {
+        if (!this.token) { clearInterval(iv); return; }
+        try {
+          const r = await fetch(base.replace('00000000-0000-0000-0000-000000000000', this.token));
+          const d = await r.json();
+          if (d.status === 'processed') {
+            clearInterval(iv); this.polling = false; this.done = true;
+            for (const [field, value] of Object.entries(d.result)) {
+              const el = document.querySelector('[name="' + prefix + '-' + field + '"]');
+              if (el) { el.value = value; el.dispatchEvent(new Event('change',{bubbles:true})); }
+            }
+          } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
+        } catch(e) {}
+      }, 3000);
+    },
+    reset() { this.token=null; this.tabletUrl=null; this.qrVisible=false; this.done=false; this.error=''; this.polling=false; }
+  }
+}
+
 // Global reference so saveClientInline() (outside Alpine) can call selectClient()
 let _orderWizardRef = null;
 
