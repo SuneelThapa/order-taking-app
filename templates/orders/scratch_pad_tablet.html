@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>{% if session.mode == 'contact' %}Your Details{% else %}Measurements{% endif %} — Emporium Armani</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #FAF9F7; font-family: 'Georgia', serif; }
+
+    .header {
+      background: #1A1A1A;
+      color: #FAF9F7;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .header-brand { font-size: 0.75rem; letter-spacing: 0.25em; color: #B8A96A; text-transform: uppercase; }
+    .header-title { font-size: 1rem; letter-spacing: 0.1em; }
+
+    .hint {
+      background: #fffbe6;
+      border-bottom: 1px solid #e8d97e;
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      color: #555;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .hint code { background: #f0e8b0; padding: 1px 5px; border-radius: 3px; font-size: 0.75rem; }
+
+    .canvas-wrapper {
+      position: relative;
+      background: #fff;
+      touch-action: none;
+    }
+
+    #drawing-canvas {
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      background: #1A1A1A;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .tool-btn {
+      background: #2a2a2a;
+      border: 2px solid transparent;
+      color: #FAF9F7;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: all 0.2s;
+    }
+    .tool-btn.active { border-color: #B8A96A; color: #B8A96A; }
+    .tool-btn:hover { background: #333; }
+
+    .size-slider { width: 80px; accent-color: #B8A96A; }
+
+    .spacer { flex: 1; }
+
+    .btn-clear {
+      background: transparent;
+      border: 1px solid #666;
+      color: #aaa;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .btn-clear:hover { border-color: #999; color: #eee; }
+
+    .btn-done {
+      background: #B8A96A;
+      border: none;
+      color: #1A1A1A;
+      padding: 10px 28px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-done:hover { background: #9A8B55; }
+    .btn-done:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+    /* Processing overlay */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,26,26,0.92);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+      color: #FAF9F7;
+      text-align: center;
+      padding: 40px;
+    }
+    .overlay.show { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid #333;
+      border-top-color: #B8A96A;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .overlay-title { font-size: 1.2rem; letter-spacing: 0.1em; color: #B8A96A; }
+    .overlay-sub { font-size: 0.85rem; color: #aaa; }
+
+    /* Success overlay */
+    .success-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #1A1A1A;
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      color: #FAF9F7;
+      text-align: center;
+      padding: 40px;
+    }
+    .success-overlay.show { display: flex; }
+    .check { font-size: 4rem; color: #B8A96A; }
+    .success-title { font-size: 1.4rem; letter-spacing: 0.1em; }
+    .success-sub { font-size: 0.85rem; color: #888; line-height: 1.6; }
+    .success-items { background: #2a2a2a; border-radius: 8px; padding: 16px; width: 100%; max-width: 360px; text-align: left; font-size: 0.8rem; color: #ccc; }
+    .success-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #333; }
+    .success-item:last-child { border-bottom: none; }
+    .success-key { color: #B8A96A; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <div class="header-brand">Emporium Armani</div>
+      <div class="header-title">
+        {% if session.mode == 'contact' %}Please write your details{% else %}Please write your measurements{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">
+    {% if session.mode == 'contact' %}
+      Write your <strong>name, phone, email</strong> and <strong>hotel / room / departure date</strong> if applicable.<br>
+      Write naturally — one item per line or however feels comfortable.
+    {% else %}
+      Write measurements with labels — e.g. <code>chest 38</code>, <code>waist 34</code>, <code>sh 17.5</code>, <code>sleeve 25</code><br>
+      Write naturally — abbreviations are fine.
+    {% endif %}
+  </div>
+
+  <div class="canvas-wrapper" id="canvas-wrapper">
+    <canvas id="drawing-canvas"></canvas>
+  </div>
+
+  <div class="toolbar">
+    <button class="tool-btn active" id="btn-pen" onclick="setTool('pen')">✏️ Pen</button>
+    <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')">⬜ Eraser</button>
+    <input type="range" class="size-slider" id="size-slider" min="2" max="20" value="3" oninput="updateSize(this.value)">
+
+    <div class="spacer"></div>
+    <button class="btn-clear" onclick="clearCanvas()">Clear</button>
+    <button class="btn-done" id="btn-done" onclick="submitCanvas()">Done ✓</button>
+  </div>
+
+  <!-- Processing overlay -->
+  <div class="overlay" id="overlay">
+    <div class="spinner"></div>
+    <div class="overlay-title">Reading your handwriting…</div>
+    <div class="overlay-sub">Please wait a moment</div>
+  </div>
+
+  <!-- Success overlay -->
+  <div class="success-overlay" id="success-overlay">
+    <div class="check">✓</div>
+    <div class="success-title">Thank you!</div>
+    <div class="success-sub">
+      Your details have been sent to our staff.<br>
+      You can hand the tablet back now.
+    </div>
+    <div class="success-items" id="success-items"></div>
+  </div>
+
+  <script>
+    // ── Canvas setup ──────────────────────────────────────────────
+    const canvas  = document.getElementById('drawing-canvas');
+    const ctx     = canvas.getContext('2d');
+    const wrapper = document.getElementById('canvas-wrapper');
+
+    let tool = 'pen';
+    let size = 3;
+    let drawing = false;
+    let lastX = 0, lastY = 0;
+
+    function resizeCanvas() {
+      const headerH  = document.querySelector('.header').offsetHeight;
+      const hintH    = document.querySelector('.hint').offsetHeight;
+      const toolbarH = document.querySelector('.toolbar').offsetHeight;
+      const h = window.innerHeight - headerH - hintH - toolbarH;
+      const w = window.innerWidth;
+
+      // Save drawing
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      canvas.width  = w;
+      canvas.height = h;
+      wrapper.style.height = h + 'px';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.putImageData(imgData, 0, 0);
+      ctx.lineJoin = 'round';
+      ctx.lineCap  = 'round';
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function setTool(t) {
+      tool = t;
+      document.getElementById('btn-pen').classList.toggle('active', t === 'pen');
+      document.getElementById('btn-eraser').classList.toggle('active', t === 'eraser');
+    }
+
+    function updateSize(v) { size = parseInt(v); }
+
+    function clearCanvas() {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches) {
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function startDraw(e) {
+      e.preventDefault();
+      drawing = true;
+      const pos = getPos(e);
+      lastX = pos.x; lastY = pos.y;
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, (tool === 'eraser' ? size * 4 : size) / 2, 0, Math.PI * 2);
+      ctx.fillStyle = tool === 'eraser' ? '#ffffff' : '#1A1A1A';
+      ctx.fill();
+    }
+
+    function draw(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : '#1A1A1A';
+      ctx.lineWidth   = tool === 'eraser' ? size * 4 : size;
+      ctx.lineJoin    = 'round';
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+      lastX = pos.x; lastY = pos.y;
+    }
+
+    function endDraw(e) { drawing = false; }
+
+    canvas.addEventListener('mousedown',  startDraw);
+    canvas.addEventListener('mousemove',  draw);
+    canvas.addEventListener('mouseup',    endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove',  draw,      { passive: false });
+    canvas.addEventListener('touchend',   endDraw);
+
+    // ── Submit ────────────────────────────────────────────────────
+    async function submitCanvas() {
+      document.getElementById('overlay').classList.add('show');
+      document.getElementById('btn-done').disabled = true;
+
+      try {
+        const imageData = canvas.toDataURL('image/png');
+        const fd = new FormData();
+        fd.append('image', imageData);
+
+        const resp = await fetch('{% url "orders:scratch_pad_submit" token=session.token %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+          body: fd,
+        });
+
+        const data = await resp.json();
+        document.getElementById('overlay').classList.remove('show');
+
+        if (data.success) {
+          // Show extracted fields
+          const el = document.getElementById('success-items');
+          const result = data.result || {};
+          if (Object.keys(result).length) {
+            el.innerHTML = Object.entries(result).map(([k, v]) =>
+              `<div class="success-item"><span class="success-key">${k}</span><span>${v}</span></div>`
+            ).join('');
+          } else {
+            el.innerHTML = '<div style="color:#888;text-align:center">No data extracted — staff will check</div>';
+          }
+          document.getElementById('success-overlay').classList.add('show');
+        } else {
+          alert('Something went wrong. Please try again.');
+          document.getElementById('btn-done').disabled = false;
+        }
+      } catch (e) {
+        document.getElementById('overlay').classList.remove('show');
+        alert('Connection error. Please try again.');
+        document.getElementById('btn-done').disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
