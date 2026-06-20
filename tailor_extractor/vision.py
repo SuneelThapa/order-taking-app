@@ -1,33 +1,51 @@
 import json
 import os
 import urllib.request
+import base64
 
 
-def _call_gemini_vision(prompt: str, image_base64: str) -> str:
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+def _call_claude_vision(prompt: str, image_base64: str) -> str:
+    """Call Claude API with image and return text response."""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY not set in environment")
+        raise ValueError("ANTHROPIC_API_KEY not set in environment")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    url = "https://api.anthropic.com/v1/messages"
     payload = json.dumps({
-        "contents": [{
-            "parts": [
-                {"text": prompt},
-                {"inline_data": {"mime_type": "image/png", "data": image_base64}}
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 600,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": image_base64,
+                    }
+                },
+                {
+                    "type": "text",
+                    "text": prompt
+                }
             ]
-        }],
-        "generationConfig": {"temperature": 0, "maxOutputTokens": 600}
+        }]
     }).encode("utf-8")
 
     req = urllib.request.Request(
         url,
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type":      "application/json",
+            "x-api-key":         api_key,
+            "anthropic-version": "2023-06-01",
+        },
         method="POST"
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read())
-    return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    return data["content"][0]["text"].strip()
 
 
 CONTACT_VISION_PROMPT = """This is a handwritten note from a customer in a tailor shop.
@@ -91,14 +109,13 @@ Rules:
 
 
 def extract_contact_from_image(image_base64: str) -> dict:
-    """Extract contact details from handwritten canvas image."""
+    """Extract contact details from handwritten canvas image using Claude."""
     if not image_base64:
         return {}
     try:
-        # Strip data URL prefix if present
         if ',' in image_base64:
             image_base64 = image_base64.split(',')[1]
-        raw = _call_gemini_vision(CONTACT_VISION_PROMPT, image_base64)
+        raw = _call_claude_vision(CONTACT_VISION_PROMPT, image_base64)
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -109,13 +126,13 @@ def extract_contact_from_image(image_base64: str) -> dict:
 
 
 def extract_measurements_from_image(image_base64: str) -> dict:
-    """Extract body measurements from handwritten canvas image."""
+    """Extract body measurements from handwritten canvas image using Claude."""
     if not image_base64:
         return {}
     try:
         if ',' in image_base64:
             image_base64 = image_base64.split(',')[1]
-        raw = _call_gemini_vision(MEASUREMENT_VISION_PROMPT, image_base64)
+        raw = _call_claude_vision(MEASUREMENT_VISION_PROMPT, image_base64)
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
