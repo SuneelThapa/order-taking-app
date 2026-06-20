@@ -133,53 +133,56 @@
     {# ── Universal fields — rendered ONCE, always submitted ── #}
 
     {# ── Scratch Pad — AI Handwriting for measurements ── #}
-    <div class="mb-3"
-         data-create-url="{% url 'orders:scratch_pad_create' %}"
-         data-poll-url="{% url 'orders:scratch_pad_poll' token='00000000-0000-0000-0000-000000000000' %}"
-         x-data="{
-           token: null, tabletUrl: null, polling: false, done: false, error: '', qrVisible: false,
-           prefix: '{{ body_form.prefix }}',
-           async startSession() {
-             this.done = false; this.error = '';
-             try {
-               const genderEl = document.querySelector('[name=\'{{ body_form.gender.html_name }}\']:checked');
-               const gender = genderEl ? genderEl.value : 'men';
-               const fd = new FormData();
-               fd.append('mode', 'measurements');
-               fd.append('gender', gender);
-               fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-               const createUrl = this.$el.dataset.createUrl;
-               const resp = await fetch(createUrl, { method: 'POST', body: fd });
-               const data = await resp.json();
-               this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
-               this.startPolling();
-               this.$nextTick(() => {
-                 const el = document.getElementById('meas-qr-{{ body_form.prefix }}');
-                 if (el && typeof QRCode !== 'undefined') { el.innerHTML = ''; new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H }); }
-               });
-             } catch(e) { this.error = 'Could not start session.'; }
-           },
-           startPolling() {
-             if (this.polling) return; this.polling = true;
-             const pollBase = this.$el.dataset.pollUrl;
-             const pfx = this.prefix;
-             const iv = setInterval(async () => {
-               if (!this.token) { clearInterval(iv); return; }
-               try {
-                 const r = await fetch(pollBase.replace('00000000-0000-0000-0000-000000000000', this.token));
-                 const d = await r.json();
-                 if (d.status === 'processed') {
-                   clearInterval(iv); this.polling = false; this.done = true;
-                   for (const [field, value] of Object.entries(d.result)) {
-                     const el = document.querySelector('[name=' + pfx + '-' + field + ']');
-                     if (el) { el.value = value; el.dispatchEvent(new Event('change', {bubbles:true})); }
-                   }
-                 } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
-               } catch(e) {}
-             }, 3000);
-           },
-           reset() { this.token=null; this.tabletUrl=null; this.qrVisible=false; this.done=false; this.error=''; this.polling=false; }
-         }">
+    <script>
+    function measScratchPad_{{ body_form.prefix|slugify }}() {
+      return {
+        createUrl: '{% url "orders:scratch_pad_create" %}',
+        pollBase:  '{% url "orders:scratch_pad_poll" token="00000000-0000-0000-0000-000000000000" %}',
+        prefix:    '{{ body_form.prefix }}',
+        genderField: '{{ body_form.gender.html_name }}',
+        token: null, tabletUrl: null, polling: false, done: false, error: '', qrVisible: false,
+        async startSession() {
+          this.done = false; this.error = '';
+          try {
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const genderEl = document.querySelector('[name="' + this.genderField + '"]:checked');
+            const fd = new FormData();
+            fd.append('mode', 'measurements');
+            fd.append('gender', genderEl ? genderEl.value : 'men');
+            fd.append('csrfmiddlewaretoken', csrf);
+            const resp = await fetch(this.createUrl, { method: 'POST', body: fd, headers: {'X-CSRFToken': csrf} });
+            const data = await resp.json();
+            this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
+            this.startPolling();
+            this.$nextTick(() => {
+              const el = document.getElementById('meas-qr-' + this.prefix);
+              if (el && typeof QRCode !== 'undefined') { el.innerHTML = ''; new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H }); }
+            });
+          } catch(e) { this.error = 'Error: ' + e.message; console.error(e); }
+        },
+        startPolling() {
+          if (this.polling) return; this.polling = true;
+          const base = this.pollBase; const pfx = this.prefix;
+          const iv = setInterval(async () => {
+            if (!this.token) { clearInterval(iv); return; }
+            try {
+              const r = await fetch(base.replace('00000000-0000-0000-0000-000000000000', this.token));
+              const d = await r.json();
+              if (d.status === 'processed') {
+                clearInterval(iv); this.polling = false; this.done = true;
+                for (const [field, value] of Object.entries(d.result)) {
+                  const el = document.querySelector('[name="' + pfx + '-' + field + '"]');
+                  if (el) { el.value = value; el.dispatchEvent(new Event('change', {bubbles:true})); }
+                }
+              } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
+            } catch(e) {}
+          }, 3000);
+        },
+        reset() { this.token=null; this.tabletUrl=null; this.qrVisible=false; this.done=false; this.error=''; this.polling=false; }
+      }
+    }
+    </script>
+    <div class="mb-3" x-data="measScratchPad_{{ body_form.prefix|slugify }}()">
       <button type="button" @click="startSession()" x-show="!qrVisible && !done"
               class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
         <i class="bi bi-pencil-square"></i>✍️ Staff/client writes measurements on tablet
@@ -203,6 +206,7 @@
         <button type="button" @click="reset()" class="btn btn-sm btn-outline-success">New session</button>
       </div>
       <div x-show="error" class="alert alert-danger py-2 small" x-text="error"></div>
+    </div>
     </div>
 
     {# ── SECTION 1: Body Measurements ── #}
