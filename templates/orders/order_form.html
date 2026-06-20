@@ -1281,8 +1281,8 @@ const GARMENT_BODY_FIELDS = {
   'PantsMeasurement':  ['pants_waist','pants_hip','belly','crotch','thigh','knee','cuff','pants_length','height','weight','stomach_description'],
   'ShortsMeasurement': ['pants_waist','pants_hip','belly','crotch','thigh','knee','cuff','height','weight','stomach_description'],
   'SkirtMeasurement':  ['pants_waist','hips','height','weight'],
-  'DressMeasurement':  ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','deep_front','deep_back','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','height','weight'],
-  'BlouseMeasurement': ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','height','weight'],
+  'DressMeasurement':  ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','deep_front','deep_back','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','shoulder_to_back','shoulder_to_waist','height','weight'],
+  'BlouseMeasurement': ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','shoulder_to_back','shoulder_to_waist','height','weight'],
 };
 
 // Server-side mapping of product type PK → measurement model name
@@ -1296,6 +1296,7 @@ const ALL_BODY_FIELDS = [
   'shoulder_posture','stomach_description','chest_description',
   'high_chest','upper_hips','deep_front','deep_back',
   'shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast',
+  'shoulder_to_back','shoulder_to_waist',
 ];
 
 function copyBodyMeasurements(fromPrefix, toPrefix) {
