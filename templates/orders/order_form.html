@@ -66,14 +66,12 @@
   <div id="draft-banner" class="alert alert-info d-flex align-items-center justify-content-between gap-3 mb-3 d-none">
     <div>
       <i class="bi bi-clock-history me-2"></i>
-      <strong>Unsaved draft found</strong> — last saved at <span id="draft-saved-at"></span>
+      <strong>Draft restored</strong> — last saved at <span id="draft-saved-at"></span>.
+      Your data has been automatically restored across all steps.
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
-      <button type="button" class="btn btn-sm btn-primary" onclick="restoreDraft()">
-        <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
-      </button>
       <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearDraft()">
-        Discard
+        <i class="bi bi-trash me-1"></i>Discard Draft
       </button>
     </div>
   </div>
@@ -959,16 +957,15 @@ async function saveClientInline(btn) {
 }
 
 // ── Draft persistence ────────────────────────────────────────────────
-// Saves all form data to localStorage on every change.
-// Restores on page load. Clears on successful submit.
-
 const DRAFT_KEY  = '{% if is_edit %}ea_draft_{{ edit_order.pk }}{% else %}ea_draft_new{% endif %}';
 const SKIP_NAMES = new Set([
   'csrfmiddlewaretoken', 'signature_canvas_image',
   'scratch_canvas_image', 'inquiry_id', 'inquiry_name', 'inquiry_phone'
 ]);
+let _draftDiscarded = false;  // Flag to stop auto-save after discard
 
 function saveDraft() {
+  if (_draftDiscarded) return;  // Don't save after discard
   const form = document.getElementById('orderForm');
   if (!form) return;
   const data = {};
@@ -985,7 +982,7 @@ function saveDraft() {
 }
 
 function restoreDraft() {
-  {% if is_edit %}return;{% endif %}  // don't restore on edit — server has the data
+  {% if is_edit %}return;{% endif %}
   const raw = localStorage.getItem(DRAFT_KEY);
   if (!raw) return;
   let data;
@@ -1009,31 +1006,33 @@ function restoreDraft() {
     _orderWizardRef.clientId = String(data['_clientId']);
   }
 
-  // Show restore banner
+  // Show restored banner
   if (data['_savedAt']) {
     const banner = document.getElementById('draft-banner');
     const time   = document.getElementById('draft-saved-at');
-    if (banner) { banner.classList.remove('d-none'); }
-    if (time)   { time.textContent = data['_savedAt']; }
+    if (banner) banner.classList.remove('d-none');
+    if (time)   time.textContent = data['_savedAt'];
   }
 }
 
 function clearDraft() {
+  clearTimeout(_draftTimer);  // Cancel any pending auto-save
+  _draftDiscarded = true;     // Prevent future saves
   localStorage.removeItem(DRAFT_KEY);
   const banner = document.getElementById('draft-banner');
   if (banner) banner.classList.add('d-none');
 }
 
-// Auto-save on any input change (debounced 1s)
+// Auto-save on any input change (debounced 1.5s)
 let _draftTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('orderForm');
   if (!form) return;
-  form.addEventListener('input',  () => { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveDraft, 1000); });
-  form.addEventListener('change', () => { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveDraft, 1000); });
+  form.addEventListener('input',  () => { if (!_draftDiscarded) { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveDraft, 1500); } });
+  form.addEventListener('change', () => { if (!_draftDiscarded) { clearTimeout(_draftTimer); _draftTimer = setTimeout(saveDraft, 1500); } });
 
-  // Restore after a short delay (Alpine needs to init first)
-  setTimeout(restoreDraft, 300);
+  // Auto-restore draft on page load after Alpine initializes
+  setTimeout(restoreDraft, 500);
 });
 
 // Block form submission if no client, jump back to step 1
