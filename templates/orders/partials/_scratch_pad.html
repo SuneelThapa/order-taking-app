@@ -1,0 +1,147 @@
+{# ── Scratch Pad Widget ──────────────────────────────────────────────
+   Usage:
+     {% include "orders/partials/_scratch_pad.html" with mode="contact" %}
+     {% include "orders/partials/_scratch_pad.html" with mode="measurements" prefix="items-0-body" gender_field="items-0-body-gender" %}
+#}
+<div class="scratch-pad-widget mb-3"
+     x-data="{
+       open: false,
+       text: '',
+       loading: false,
+       done: false,
+       error: '',
+
+       async extract() {
+         if (!this.text.trim()) return;
+         this.loading = true;
+         this.error   = '';
+         this.done    = false;
+         try {
+           const fd = new FormData();
+           fd.append('scratch', this.text);
+           fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+           {% if mode == 'measurements' %}
+           const genderEl = document.querySelector('[name=\'{{ gender_field }}\']:checked');
+           fd.append('gender', genderEl ? genderEl.value : 'men');
+           const url = '{% url 'orders:extract_measurements' %}';
+           {% else %}
+           const url = '{% url 'orders:extract_contact' %}';
+           {% endif %}
+
+           const resp = await fetch(url, { method: 'POST', body: fd });
+           const data = await resp.json();
+
+           if (data._error) { this.error = data._error; return; }
+           if (Object.keys(data).length === 0) { this.error = 'Nothing found — try rephrasing.'; return; }
+
+           {% if mode == 'measurements' %}
+           // Fill measurement fields — prefix like 'items-0-body'
+           let filled = 0;
+           for (const [field, value] of Object.entries(data)) {
+             const el = document.querySelector('[name=\'{{ prefix }}-' + field + '\']');
+             if (el) {
+               el.value = value;
+               el.dispatchEvent(new Event('change', { bubbles: true }));
+               el.classList.add('border-success');
+               setTimeout(() => el.classList.remove('border-success'), 2000);
+               filled++;
+             }
+           }
+           this.done  = true;
+           this.error = filled === 0 ? 'No matching fields found.' : '';
+           {% else %}
+           // Fill contact fields directly
+           const fieldMap = {
+             name:           '[name=\'name\']',
+             phone:          '[name=\'phone\']',
+             email:          '[name=\'email\']',
+             street_address: '[name=\'street_address\']',
+             city:           '[name=\'city\']',
+             state:          '[name=\'state\']',
+             postcode:       '[name=\'postcode\']',
+             country:        '[name=\'country\']',
+             hotel_name:     '[name=\'hotel_name\']',
+             room_number:    '[name=\'room_number\']',
+             departure_date: '[name=\'departure_date\']',
+           };
+           let filled = 0;
+           for (const [key, selector] of Object.entries(fieldMap)) {
+             if (data[key]) {
+               const el = document.querySelector(selector);
+               if (el) {
+                 el.value = data[key];
+                 el.dispatchEvent(new Event('input', { bubbles: true }));
+                 el.classList.add('border-success');
+                 setTimeout(() => el.classList.remove('border-success'), 2000);
+                 filled++;
+               }
+             }
+           }
+           this.done  = true;
+           this.error = filled === 0 ? 'No matching fields found.' : '';
+           {% endif %}
+
+         } catch(e) {
+           this.error = 'Connection error. Please try again.';
+         } finally {
+           this.loading = false;
+         }
+       }
+     }">
+
+  {# Toggle button #}
+  <button type="button"
+          @click="open = !open; if(open) $nextTick(() => $refs.scratchText.focus())"
+          class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+    <i class="bi bi-pencil-square"></i>
+    <span x-text="open ? 'Close scratch pad' : '✨ Quick entry (scratch pad)'"></span>
+  </button>
+
+  {# Expanded pad #}
+  <div x-show="open" x-cloak class="mt-2 border rounded p-3 bg-light">
+
+    <div class="small text-muted mb-2">
+      {% if mode == 'measurements' %}
+        <i class="bi bi-info-circle me-1"></i>
+        Type measurements naturally — e.g. <code>ch38 w34 sh17.5 sl25 neck15 pw34 pl30</code>
+      {% else %}
+        <i class="bi bi-info-circle me-1"></i>
+        Type client details naturally — e.g. <code>John Smith, 081-234-5678, john@gmail.com, Marriott room 502, leaves 25 June</code>
+      {% endif %}
+    </div>
+
+    <textarea x-ref="scratchText"
+              x-model="text"
+              rows="3"
+              class="form-control form-control-sm mb-2 font-monospace"
+              placeholder="{% if mode == 'measurements' %}ch38 w34 sh17.5 sl25 ...{% else %}Name, phone, email, hotel, departure date...{% endif %}"
+              @keydown.ctrl.enter="extract()"></textarea>
+
+    <div class="d-flex align-items-center gap-2">
+      <button type="button"
+              @click="extract()"
+              :disabled="loading || !text.trim()"
+              class="btn btn-sm btn-primary">
+        <span x-show="!loading"><i class="bi bi-stars me-1"></i>Extract & Fill</span>
+        <span x-show="loading"><span class="spinner-border spinner-border-sm me-1"></span>Extracting…</span>
+      </button>
+
+      <button type="button"
+              x-show="text"
+              @click="text=''; done=false; error=''"
+              class="btn btn-sm btn-outline-secondary">
+        Clear
+      </button>
+
+      <span x-show="done && !error" class="text-success small">
+        <i class="bi bi-check-circle me-1"></i>Fields filled!
+      </span>
+      <span x-show="error" class="text-danger small" x-text="error"></span>
+    </div>
+
+    <div class="text-muted mt-2" style="font-size:0.65rem">
+      <i class="bi bi-keyboard me-1"></i>Ctrl+Enter to extract · Fields highlighted in green after fill
+    </div>
+
+  </div>
+</div>

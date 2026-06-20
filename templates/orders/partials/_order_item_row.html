@@ -132,6 +132,9 @@
 
     {# ── Universal fields — rendered ONCE, always submitted ── #}
 
+    {# ── Scratch pad for quick measurement entry ── #}
+    {% include "orders/partials/_scratch_pad.html" with mode="measurements" prefix=body_form.prefix gender_field=body_form.gender.html_name %}
+
     {# ── SECTION 1: Body Measurements ── #}
     <div class="small fw-semibold text-muted mb-2">Body Measurements</div>
     <div class="row g-2 mb-2">

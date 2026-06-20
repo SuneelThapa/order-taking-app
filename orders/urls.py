@@ -24,6 +24,8 @@ from .views import (
     qr_generator,
     production_bill_pdf,
     production_bill_share,
+    extract_contact_view,
+    extract_measurements_view,
 )
 
 app_name = "orders"
@@ -66,8 +68,13 @@ urlpatterns = [
     path("export-csv/",                   export_csv,             name="export_csv"),
     path("sales/",                        sales_report,           name="sales_report"),
     path("sw.js",                         service_worker,         name="service_worker"),
-    path("notifications/",                notifications_list,     name="notifications_list"),
-    path("notifications/count/",          notifications_count,    name="notifications_count"),
-    path("inquiry/<int:inquiry_id>/update/", inquiry_update,      name="inquiry_update"),
-    path("qr/",                              qr_generator,          name="qr_generator"),
+    path("notifications/",                notifications_list,        name="notifications_list"),
+    path("notifications/count/",          notifications_count,        name="notifications_count"),
+    path("inquiry/<int:inquiry_id>/update/", inquiry_update,          name="inquiry_update"),
+    path("qr/",                              qr_generator,            name="qr_generator"),
+    path("bill/<int:pk>/print/",          production_bill_print,      name="production_bill_print"),
+    path("bill/<int:pk>/pdf/",            production_bill_pdf,        name="production_bill_pdf"),
+    path("bill/view/<uuid:token>/",       production_bill_share,      name="production_bill_share"),
+    path("extract/contact/",              extract_contact_view,       name="extract_contact"),
+    path("extract/measurements/",         extract_measurements_view,  name="extract_measurements"),
 ]
