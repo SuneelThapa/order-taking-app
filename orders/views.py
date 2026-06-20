@@ -2580,7 +2580,9 @@ def qr_generator(request):
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
-    staff_list = User.objects.filter(is_staff=True, is_active=True).order_by('first_name')
+    staff_list = User.objects.filter(
+        is_staff=True, is_active=True, is_superuser=False
+    ).order_by('first_name')
 
     # Fetch categories from fashion_01 API
     categories = []
