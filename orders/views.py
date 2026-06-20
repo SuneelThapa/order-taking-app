@@ -861,6 +861,7 @@ BODY_FIELD_NAMES = frozenset([
     'high_chest', 'upper_hips', 'deep_front', 'deep_back',
     'shoulder_to_middle_breast', 'shoulder_to_under_breast',
     'middle_breast_to_middle_breast',
+    'shoulder_to_back', 'shoulder_to_waist',
 ])
 
 BODY_FIELD_ORDER_MEN = [
@@ -881,6 +882,7 @@ BODY_FIELD_ORDER_LADIES = [
     'deep_front', 'deep_back',
     'shoulder_to_middle_breast', 'shoulder_to_under_breast',
     'middle_breast_to_middle_breast',
+    'shoulder_to_back', 'shoulder_to_waist',
     'height', 'weight',
 ]
 
@@ -938,6 +940,7 @@ GARMENT_BODY_FIELDS = {
         'deep_front', 'deep_back',
         'shoulder_to_middle_breast', 'shoulder_to_under_breast',
         'middle_breast_to_middle_breast',
+        'shoulder_to_back', 'shoulder_to_waist',
         'height', 'weight',
     ],
     'BlouseMeasurement': [
@@ -945,6 +948,7 @@ GARMENT_BODY_FIELDS = {
         'high_chest', 'chest', 'stomach', 'upper_hips', 'hips',
         'shoulder_to_middle_breast', 'shoulder_to_under_breast',
         'middle_breast_to_middle_breast',
+        'shoulder_to_back', 'shoulder_to_waist',
         'height', 'weight',
     ],
 }
@@ -997,6 +1001,8 @@ UNIFIED_ORDER = [
     ('shoulder_to_middle_breast',     'Sh. to Middle Breast'),
     ('shoulder_to_under_breast',      'Sh. to Under Breast'),
     ('middle_breast_to_middle_breast','Middle Breast'),
+    ('shoulder_to_back',              'Sh. to Back'),
+    ('shoulder_to_waist',             'Sh. to Waist'),
     ('foot_length',                   'Foot Length'),
     ('foot_width',                    'Foot Width'),
     ('foot_instep',                   'Foot Instep'),

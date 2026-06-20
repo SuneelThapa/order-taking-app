@@ -127,6 +127,12 @@ class BodyMeasurement(models.Model):
     middle_breast_to_middle_breast = models.DecimalField(
         max_digits=6, decimal_places=1, null=True, blank=True,
         verbose_name='Middle Breast to Middle Breast')
+    shoulder_to_back = models.DecimalField(
+        max_digits=6, decimal_places=1, null=True, blank=True,
+        verbose_name='Shoulder to Back')
+    shoulder_to_waist = models.DecimalField(
+        max_digits=6, decimal_places=1, null=True, blank=True,
+        verbose_name='Shoulder to Waist')
 
     class Meta:
         verbose_name        = 'Body Measurement'
@@ -150,4 +156,5 @@ class BodyMeasurement(models.Model):
         'high_chest', 'upper_hips', 'deep_front', 'deep_back',
         'shoulder_to_middle_breast', 'shoulder_to_under_breast',
         'middle_breast_to_middle_breast',
+        'shoulder_to_back', 'shoulder_to_waist',
     ]
