@@ -2698,3 +2698,80 @@ def extract_measurements_view(request):
     except Exception as e:
         from django.http import JsonResponse
         return JsonResponse({"error": str(e)}, status=500)
+
+
+# ─────────────────────────────────────────────────────────
+# Scratch Pad Session — AI handwriting extraction
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def scratch_pad_create(request):
+    """Staff creates a scratch pad session → returns token + QR URL."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    from django.http import JsonResponse
+    from orders.models import ScratchPadSession
+    mode   = request.POST.get("mode", "contact")
+    gender = request.POST.get("gender", "men")
+    session = ScratchPadSession.objects.create(mode=mode, gender=gender)
+    tablet_url = request.build_absolute_uri(f"/scratch/{session.token}/")
+    return JsonResponse({
+        "token":      str(session.token),
+        "tablet_url": tablet_url,
+    })
+
+
+def scratch_pad_tablet(request, token):
+    """Full-screen canvas for client — no login required."""
+    from django.http import JsonResponse
+    from orders.models import ScratchPadSession
+    session = get_object_or_404(ScratchPadSession, token=token)
+    if session.is_expired:
+        return HttpResponse("<h2>This scratch pad has expired. Please ask staff for a new one.</h2>", status=410)
+    return render(request, "orders/scratch_pad_tablet.html", {"session": session})
+
+
+def scratch_pad_submit(request, token):
+    """Client submits canvas image → Gemini reads it → saves result."""
+    from django.http import JsonResponse
+    from orders.models import ScratchPadSession
+    session = get_object_or_404(ScratchPadSession, token=token)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    if session.is_expired:
+        return JsonResponse({"error": "Session expired"}, status=410)
+
+    image_data = request.POST.get("image", "")
+    if not image_data:
+        return JsonResponse({"error": "No image data"}, status=400)
+
+    try:
+        if session.mode == "contact":
+            from tailor_extractor.vision import extract_contact_from_image
+            result = extract_contact_from_image(image_data)
+        else:
+            from tailor_extractor.vision import extract_measurements_from_image
+            result = extract_measurements_from_image(image_data)
+
+        if "_error" in result:
+            return JsonResponse({"success": False, "error": result["_error"]})
+
+        session.result = result
+        session.status = "processed"
+        session.save(update_fields=["result", "status"])
+        return JsonResponse({"success": True, "result": result})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+
+@user_passes_test(staff_check)
+def scratch_pad_poll(request, token):
+    """Staff polls for result — returns status + result when ready."""
+    from django.http import JsonResponse
+    from orders.models import ScratchPadSession
+    session = get_object_or_404(ScratchPadSession, token=token)
+    if session.is_expired and session.status == "pending":
+        return JsonResponse({"status": "expired"})
+    return JsonResponse({
+        "status": session.status,
+        "result": session.result if session.status == "processed" else {},
+    })

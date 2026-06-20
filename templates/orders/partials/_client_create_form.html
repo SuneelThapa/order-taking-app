@@ -1,66 +1,69 @@
 <div class="border rounded p-3 bg-light mt-2" id="client-create-form">
   <div class="fw-semibold mb-3">New client</div>
 
-  {# ── Scratch pad for quick client entry ── #}
-  <div class="scratch-pad-widget mb-3"
+  {# ── Scratch Pad — AI Handwriting (client writes on tablet) ── #}
+  <div class="mb-3"
        x-data="{
-         open: false, text: '', loading: false, done: false, error: '',
-         async extract() {
-           if (!this.text.trim()) return;
-           this.loading = true; this.error = ''; this.done = false;
+         token: null, tabletUrl: null, polling: false, done: false, error: '', qrVisible: false,
+         async startSession() {
+           this.done = false; this.error = '';
            try {
              const fd = new FormData();
-             fd.append('scratch', this.text);
+             fd.append('mode', 'contact');
              fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-             const resp = await fetch('{% url "orders:extract_contact" %}', { method: 'POST', body: fd });
+             const resp = await fetch('{% url &quot;orders:scratch_pad_create&quot; %}', { method: 'POST', body: fd });
              const data = await resp.json();
-             if (data._error) { this.error = data._error; return; }
-             if (!Object.keys(data).length) { this.error = 'Nothing found — try rephrasing.'; return; }
-             const fieldMap = {
-               name: '[name=\'name\']', phone: '[name=\'phone\']', email: '[name=\'email\']',
-               street_address: '[name=\'street_address\']', city: '[name=\'city\']',
-               state: '[name=\'state\']', postcode: '[name=\'postcode\']', country: '[name=\'country\']',
-               hotel_name: '[name=\'hotel_name\']', room_number: '[name=\'room_number\']',
-               departure_date: '[name=\'departure_date\']',
-             };
-             let filled = 0;
-             for (const [key, selector] of Object.entries(fieldMap)) {
-               if (data[key]) {
-                 const el = document.querySelector(selector);
-                 if (el) { el.value = data[key]; el.dispatchEvent(new Event('input', {bubbles:true})); el.classList.add('border-success'); setTimeout(() => el.classList.remove('border-success'), 2000); filled++; }
-               }
-             }
-             this.done = true;
-             this.error = filled === 0 ? 'No matching fields found.' : '';
-           } catch(e) { this.error = 'Connection error. Please try again.'; }
-           finally { this.loading = false; }
-         }
+             this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
+             this.startPolling();
+             this.$nextTick(() => {
+               const el = document.getElementById('contact-qr-canvas');
+               if (el) { el.innerHTML = ''; new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H }); }
+             });
+           } catch(e) { this.error = 'Could not start session.'; }
+         },
+         startPolling() {
+           if (this.polling) return; this.polling = true;
+           const pollUrl = '{% url &quot;orders:scratch_pad_poll&quot; token=&quot;00000000-0000-0000-0000-000000000000&quot; %}';
+           const iv = setInterval(async () => {
+             if (!this.token) { clearInterval(iv); return; }
+             try {
+               const r = await fetch(pollUrl.replace('00000000-0000-0000-0000-000000000000', this.token));
+               const d = await r.json();
+               if (d.status === 'processed') {
+                 clearInterval(iv); this.polling = false; this.done = true;
+                 const map = { name:'[name=name]', phone:'[name=phone]', email:'[name=email]', street_address:'[name=street_address]', city:'[name=city]', state:'[name=state]', postcode:'[name=postcode]', country:'[name=country]', hotel_name:'[name=hotel_name]', room_number:'[name=room_number]', departure_date:'[name=departure_date]' };
+                 for (const [k,s] of Object.entries(map)) { if (d.result[k]) { const el = document.querySelector(s); if (el) { el.value = d.result[k]; el.dispatchEvent(new Event('input',{bubbles:true})); }}}
+               } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
+             } catch(e) {}
+           }, 3000);
+         },
+         reset() { this.token=null; this.tabletUrl=null; this.qrVisible=false; this.done=false; this.error=''; this.polling=false; }
        }">
-    <button type="button" @click="open = !open"
-            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
-      <i class="bi bi-pencil-square"></i>
-      <span x-text="open ? 'Close scratch pad' : '✨ Quick entry (scratch pad)'"></span>
+    <button type="button" @click="startSession()" x-show="!qrVisible && !done"
+            class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
+      <i class="bi bi-pencil-square"></i>✍️ Client writes on tablet
     </button>
-    <div x-show="open" x-cloak class="mt-2 border rounded p-3 bg-light">
-      <div class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>
-        Type client details naturally — e.g. <code>John Smith, 081-234-5678, john@gmail.com, Marriott room 502, leaves 25 June</code>
+    <div x-show="qrVisible && !done" class="border rounded p-3 bg-light">
+      <div class="fw-semibold small mb-2"><i class="bi bi-qr-code me-1"></i>Show QR to client — they scan and write on their device</div>
+      <div class="d-flex align-items-start gap-3 flex-wrap">
+        <div id="contact-qr-canvas" class="bg-white p-2 border rounded"></div>
+        <div>
+          <div class="d-flex align-items-center gap-2 mb-2 mt-1">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <span class="small text-muted">Waiting for client to finish writing…</span>
+          </div>
+          <div class="small text-muted text-break font-monospace mb-2" x-text="tabletUrl" style="font-size:0.65rem"></div>
+          <button type="button" @click="reset()" class="btn btn-sm btn-outline-secondary">Cancel</button>
+        </div>
       </div>
-      <textarea x-model="text" rows="3"
-                class="form-control form-control-sm mb-2 font-monospace"
-                placeholder="Name, phone, email, hotel, departure date..."
-                @keydown.ctrl.enter="extract()"></textarea>
-      <div class="d-flex align-items-center gap-2">
-        <button type="button" @click="extract()" :disabled="loading || !text.trim()" class="btn btn-sm btn-primary">
-          <span x-show="!loading"><i class="bi bi-stars me-1"></i>Extract & Fill</span>
-          <span x-show="loading"><span class="spinner-border spinner-border-sm me-1"></span>Extracting…</span>
-        </button>
-        <button type="button" x-show="text" @click="text=''; done=false; error=''" class="btn btn-sm btn-outline-secondary">Clear</button>
-        <span x-show="done && !error" class="text-success small"><i class="bi bi-check-circle me-1"></i>Fields filled!</span>
-        <span x-show="error" class="text-danger small" x-text="error"></span>
-      </div>
-      <div class="text-muted mt-2" style="font-size:0.65rem"><i class="bi bi-keyboard me-1"></i>Ctrl+Enter to extract</div>
     </div>
+    <div x-show="done" class="alert alert-success d-flex align-items-center justify-content-between gap-2 py-2">
+      <div><i class="bi bi-check-circle me-2"></i><strong>Received!</strong> Fields filled below — please review.</div>
+      <button type="button" @click="reset()" class="btn btn-sm btn-outline-success">New session</button>
+    </div>
+    <div x-show="error" class="alert alert-danger py-2 small" x-text="error"></div>
   </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   {% if client_form.non_field_errors %}
     <div class="alert alert-danger py-2 small">{{ client_form.non_field_errors }}</div>

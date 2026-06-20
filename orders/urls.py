@@ -26,6 +26,10 @@ from .views import (
     production_bill_share,
     extract_contact_view,
     extract_measurements_view,
+    scratch_pad_create,
+    scratch_pad_tablet,
+    scratch_pad_submit,
+    scratch_pad_poll,
 )
 
 app_name = "orders"
@@ -77,4 +81,8 @@ urlpatterns = [
     path("bill/view/<uuid:token>/",       production_bill_share,      name="production_bill_share"),
     path("extract/contact/",              extract_contact_view,       name="extract_contact"),
     path("extract/measurements/",         extract_measurements_view,  name="extract_measurements"),
+    path("scratch/create/",               scratch_pad_create,         name="scratch_pad_create"),
+    path("scratch/<uuid:token>/",         scratch_pad_tablet,         name="scratch_pad_tablet"),
+    path("scratch/<uuid:token>/submit/",  scratch_pad_submit,         name="scratch_pad_submit"),
+    path("scratch/<uuid:token>/poll/",    scratch_pad_poll,           name="scratch_pad_poll"),
 ]
