@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+import uuid
 
 
 class ProductionBill(models.Model):
@@ -31,6 +32,12 @@ class ProductionBill(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default="draft"
+    )
+    share_token        = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        help_text="Token for public share link (no login required)"
     )
     sent_to_factory    = models.BooleanField(default=False)
     sent_to_factory_at = models.DateTimeField(null=True, blank=True)
