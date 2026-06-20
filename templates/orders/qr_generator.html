@@ -43,6 +43,21 @@
     });
   },
 
+  shareQR() {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Emporium Armani — Bespoke Tailoring Bangkok',
+        text:  'Browse our collection and book a consultation.',
+        url:   this.qrUrl,
+      });
+    } else {
+      // Fallback — copy to clipboard
+      navigator.clipboard.writeText(this.qrUrl).then(() => {
+        alert('Link copied to clipboard!\n\n' + this.qrUrl);
+      });
+    }
+  },
+
   printQR() {
     window.print();
   }
@@ -109,9 +124,14 @@ x-init="generateQR()"
       <div class="card">
         <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
           <span>Preview</span>
-          <button class="btn btn-primary btn-sm" @click="printQR()">
-            <i class="bi bi-printer me-1"></i>Print
-          </button>
+          <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm" @click="shareQR()">
+              <i class="bi bi-share me-1"></i>Share
+            </button>
+            <button class="btn btn-primary btn-sm" @click="printQR()">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+          </div>
         </div>
         <div class="card-body text-center py-5" id="print-area">
 
