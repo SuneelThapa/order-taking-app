@@ -380,6 +380,8 @@ BODY_FIELDS_LADIES_EXTRA = [
     'shoulder_to_middle_breast',
     'shoulder_to_under_breast',
     'middle_breast_to_middle_breast',
+    'shoulder_to_back',
+    'shoulder_to_waist',
 ]
 
 _decimal_widget = lambda: forms.NumberInput(attrs={
