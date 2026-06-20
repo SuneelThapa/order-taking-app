@@ -3,6 +3,8 @@
 
   {# ── Scratch Pad — AI Handwriting (client writes on tablet) ── #}
   <div class="mb-3"
+       data-create-url="{% url 'orders:scratch_pad_create' %}"
+       data-poll-url="{% url 'orders:scratch_pad_poll' token='00000000-0000-0000-0000-000000000000' %}"
        x-data="{
          token: null, tabletUrl: null, polling: false, done: false, error: '', qrVisible: false,
          async startSession() {
@@ -11,7 +13,8 @@
              const fd = new FormData();
              fd.append('mode', 'contact');
              fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
-             const resp = await fetch('{% url &quot;orders:scratch_pad_create&quot; %}', { method: 'POST', body: fd });
+             const createUrl = this.$el.dataset.createUrl;
+             const resp = await fetch(createUrl, { method: 'POST', body: fd });
              const data = await resp.json();
              this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
              this.startPolling();
@@ -23,11 +26,11 @@
          },
          startPolling() {
            if (this.polling) return; this.polling = true;
-           const pollUrl = '{% url &quot;orders:scratch_pad_poll&quot; token=&quot;00000000-0000-0000-0000-000000000000&quot; %}';
+           const pollBase = this.$el.dataset.pollUrl;
            const iv = setInterval(async () => {
              if (!this.token) { clearInterval(iv); return; }
              try {
-               const r = await fetch(pollUrl.replace('00000000-0000-0000-0000-000000000000', this.token));
+               const r = await fetch(pollBase.replace('00000000-0000-0000-0000-000000000000', this.token));
                const d = await r.json();
                if (d.status === 'processed') {
                  clearInterval(iv); this.polling = false; this.done = true;
