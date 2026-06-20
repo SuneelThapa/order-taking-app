@@ -1019,8 +1019,8 @@ function clearDraft() {
   clearTimeout(_draftTimer);  // Cancel any pending auto-save
   _draftDiscarded = true;     // Prevent future saves
   localStorage.removeItem(DRAFT_KEY);
-  const banner = document.getElementById('draft-banner');
-  if (banner) banner.classList.add('d-none');
+  // Reload page to get completely clean form state
+  window.location.reload();
 }
 
 // Auto-save on any input change (debounced 1.5s)
