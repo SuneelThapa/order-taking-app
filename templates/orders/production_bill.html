@@ -350,7 +350,7 @@
     </div>
 
     {# ── Action buttons ── #}
-    <div class="d-flex gap-3 justify-content-end">
+    <div class="d-flex gap-3 justify-content-end flex-wrap">
       <a href="{% url 'orders:dashboard' %}?open_order={{ order.pk }}"
          class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i>Back to order
@@ -363,9 +363,17 @@
          class="btn btn-outline-secondary">
         <i class="bi bi-printer me-1"></i>Print for Factory
       </a>
+      <a href="{% url 'orders:production_bill_pdf' pk=bill.pk %}?sig=0"
+         class="btn btn-outline-secondary" target="_blank">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF for Factory
+      </a>
       <a href="{% url 'orders:production_bill_print' pk=bill.pk %}?sig=1"
          class="btn btn-success">
         <i class="bi bi-printer me-1"></i>Print for Shop <span style="font-size:0.75rem">(+ signature)</span>
+      </a>
+      <a href="{% url 'orders:production_bill_pdf' pk=bill.pk %}?sig=1"
+         class="btn btn-success" target="_blank">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF for Shop
       </a>
       {% endif %}
     </div>

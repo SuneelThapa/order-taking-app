@@ -22,6 +22,7 @@ from .views import (
     status_board,
     inquiry_update,
     qr_generator,
+    production_bill_pdf,
 )
 
 app_name = "orders"
@@ -42,6 +43,7 @@ urlpatterns = [
     path("<int:order_pk>/bill/<int:item_pk>/",
                                           production_bill_view,   name="production_bill"),
     path("bill/<int:pk>/print/",          production_bill_print,  name="production_bill_print"),
+    path("bill/<int:pk>/pdf/",            production_bill_pdf,    name="production_bill_pdf"),
     path("bill/<int:pk>/sent/",           bill_toggle_sent,       name="bill_toggle_sent"),
     path("<int:pk>/lock-amount/",         order_toggle_lock,      name="order_toggle_lock"),
     path("<int:pk>/reorder/",             order_reorder,          name="order_reorder"),
