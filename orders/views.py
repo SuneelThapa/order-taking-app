@@ -6,7 +6,6 @@ from datetime import date as _date, timedelta as _timedelta
 from urllib.parse import quote as _quote
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -2656,3 +2655,46 @@ def production_bill_share(request, token):
         "show_signature":     show_signature,
         "share_view":         True,
     })
+
+
+# ─────────────────────────────────────────────────────────
+# Tailor Extractor — AI-powered scratch pad extraction
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def extract_contact_view(request):
+    """Extract contact info from freeform scratch pad text."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    import json as _json
+    text = request.POST.get("scratch", "").strip()
+    if not text:
+        from django.http import JsonResponse
+        return JsonResponse({"error": "No text provided"}, status=400)
+    try:
+        from tailor_extractor import extract_contact
+        result = extract_contact(text)
+        from django.http import JsonResponse
+        return JsonResponse(result)
+    except Exception as e:
+        from django.http import JsonResponse
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@user_passes_test(staff_check)
+def extract_measurements_view(request):
+    """Extract body measurements from freeform scratch pad text."""
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    text = request.POST.get("scratch", "").strip()
+    gender = request.POST.get("gender", "men").strip()
+    if not text:
+        from django.http import JsonResponse
+        return JsonResponse({"error": "No text provided"}, status=400)
+    try:
+        from tailor_extractor import extract_measurements
+        result = extract_measurements(text)
+        from django.http import JsonResponse
+        return JsonResponse(result)
+    except Exception as e:
+        from django.http import JsonResponse
+        return JsonResponse({"error": str(e)}, status=500)

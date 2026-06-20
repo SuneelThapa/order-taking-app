@@ -1,6 +1,9 @@
 <div class="border rounded p-3 bg-light mt-2" id="client-create-form">
   <div class="fw-semibold mb-3">New client</div>
 
+  {# ── Scratch pad for quick client entry ── #}
+  {% include "orders/partials/_scratch_pad.html" with mode="contact" %}
+
   {% if client_form.non_field_errors %}
     <div class="alert alert-danger py-2 small">{{ client_form.non_field_errors }}</div>
   {% endif %}
