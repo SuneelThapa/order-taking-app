@@ -10,11 +10,12 @@
          async startSession() {
            this.done = false; this.error = '';
            try {
+             const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
              const fd = new FormData();
              fd.append('mode', 'contact');
-             fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+             fd.append('csrfmiddlewaretoken', csrf);
              const createUrl = this.$el.dataset.createUrl;
-             const resp = await fetch(createUrl, { method: 'POST', body: fd });
+             const resp = await fetch(createUrl, { method: 'POST', body: fd, headers: {'X-CSRFToken': csrf} });
              const data = await resp.json();
              this.token = data.token; this.tabletUrl = data.tablet_url; this.qrVisible = true;
              this.startPolling();
@@ -22,7 +23,7 @@
                const el = document.getElementById('contact-qr-canvas');
                if (el) { el.innerHTML = ''; new QRCode(el, { text: data.tablet_url, width: 180, height: 180, colorDark: '#1A1A1A', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H }); }
              });
-           } catch(e) { this.error = 'Could not start session.'; }
+           } catch(e) { this.error = 'Could not start session: ' + e.message; console.error('Scratch pad error:', e); }
          },
          startPolling() {
            if (this.polling) return; this.polling = true;
