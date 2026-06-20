@@ -133,7 +133,58 @@
     {# ── Universal fields — rendered ONCE, always submitted ── #}
 
     {# ── Scratch pad for quick measurement entry ── #}
-    {% include "orders/partials/_scratch_pad.html" with mode="measurements" prefix=body_form.prefix gender_field=body_form.gender.html_name %}
+    <div class="scratch-pad-widget mb-3"
+         x-data="{
+           open: false, text: '', loading: false, done: false, error: '',
+           async extract() {
+             if (!this.text.trim()) return;
+             this.loading = true; this.error = ''; this.done = false;
+             try {
+               const fd = new FormData();
+               fd.append('scratch', this.text);
+               fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+               const genderEl = document.querySelector('[name=\'{{ body_form.gender.html_name }}\']:checked');
+               fd.append('gender', genderEl ? genderEl.value : 'men');
+               const resp = await fetch('{% url "orders:extract_measurements" %}', { method: 'POST', body: fd });
+               const data = await resp.json();
+               if (data._error) { this.error = data._error; return; }
+               if (!Object.keys(data).length) { this.error = 'Nothing found — try rephrasing.'; return; }
+               let filled = 0;
+               for (const [field, value] of Object.entries(data)) {
+                 const el = document.querySelector('[name=\'{{ body_form.prefix }}-' + field + '\']');
+                 if (el) { el.value = value; el.dispatchEvent(new Event('change', {bubbles:true})); el.classList.add('border-success'); setTimeout(() => el.classList.remove('border-success'), 2000); filled++; }
+               }
+               this.done = true;
+               this.error = filled === 0 ? 'No matching fields found.' : '';
+             } catch(e) { this.error = 'Connection error. Please try again.'; }
+             finally { this.loading = false; }
+           }
+         }">
+      <button type="button" @click="open = !open"
+              class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+        <i class="bi bi-pencil-square"></i>
+        <span x-text="open ? 'Close scratch pad' : '✨ Quick entry (scratch pad)'"></span>
+      </button>
+      <div x-show="open" x-cloak class="mt-2 border rounded p-3 bg-light">
+        <div class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>
+          Type measurements naturally — e.g. <code>ch38 w34 sh17.5 sl25 neck15 pw34 pl30</code>
+        </div>
+        <textarea x-model="text" rows="3"
+                  class="form-control form-control-sm mb-2 font-monospace"
+                  placeholder="ch38 w34 sh17.5 sl25 ..."
+                  @keydown.ctrl.enter="extract()"></textarea>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" @click="extract()" :disabled="loading || !text.trim()" class="btn btn-sm btn-primary">
+            <span x-show="!loading"><i class="bi bi-stars me-1"></i>Extract & Fill</span>
+            <span x-show="loading"><span class="spinner-border spinner-border-sm me-1"></span>Extracting…</span>
+          </button>
+          <button type="button" x-show="text" @click="text=''; done=false; error=''" class="btn btn-sm btn-outline-secondary">Clear</button>
+          <span x-show="done && !error" class="text-success small"><i class="bi bi-check-circle me-1"></i>Fields filled!</span>
+          <span x-show="error" class="text-danger small" x-text="error"></span>
+        </div>
+        <div class="text-muted mt-2" style="font-size:0.65rem"><i class="bi bi-keyboard me-1"></i>Ctrl+Enter to extract</div>
+      </div>
+    </div>
 
     {# ── SECTION 1: Body Measurements ── #}
     <div class="small fw-semibold text-muted mb-2">Body Measurements</div>
