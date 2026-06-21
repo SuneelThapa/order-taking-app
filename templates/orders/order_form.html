@@ -7,6 +7,7 @@
 <style>[x-cloak]{display:none!important}</style>
 {% endblock %}
 
+{% block content %}
 {# ── Client Warning Modal ── #}
 <div id="client-warning-modal"
      style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5);"
@@ -28,8 +29,6 @@
     </button>
   </div>
 </div>
-
-{% block content %}
 <div x-data="orderWizard()" x-init="init()">
 
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
