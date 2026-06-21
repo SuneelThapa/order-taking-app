@@ -1043,13 +1043,17 @@ async function saveClientInline(btn) {
       }
     } else {
       console.warn('[saveClientInline] no client ID header — form errors');
-      btn.disabled=false; btn.textContent='Save client';
-      return false;
       const html = await res.text();
       const tmp = document.createElement('div'); tmp.innerHTML = html;
       const newForm = tmp.querySelector('#client-create-form') || tmp.firstElementChild;
-      if (newForm) { form.replaceWith(newForm); if (typeof Alpine!=='undefined'&&Alpine.initTree) Alpine.initTree(newForm); }
+      if (newForm) {
+        form.replaceWith(newForm);
+        if (typeof Alpine !== 'undefined' && Alpine.initTree) Alpine.initTree(newForm);
+        // Scroll to show errors
+        newForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       btn.disabled=false; btn.textContent='Save client';
+      return false;
     }
   } catch (err) {
     console.error('[saveClientInline] FETCH ERROR:', err);
