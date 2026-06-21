@@ -107,10 +107,13 @@ SPECIAL STAFF ABBREVIATIONS — these are critical:
   Example: "stw 17x16"   → shoulder_to_waist=17, shoulder_to_back=16
 
 Other common abbreviations:
-ch/C = chest, w/W = stomach/waist, pw = pants_waist, sh = shoulder,
-sl/slv = sleeve, n/nk = neck, bi = biceps, L/len = length,
-fr = front, bk = back, ph = pants_hip, cr = crotch, th = thigh,
-kn = knee, cf = cuff, pl = pants_length, ht = height, wt = weight,
+ch/CH = chest, wa/WA = stomach/waist, hp/HP = hips, sh/SH = shoulder,
+sl/SL = sleeve, f/F = front, b/B = back, n/N = neck,
+JL/jl = length (jacket length), VL/vl = length (vest length),
+cr/CR = crotch, TH/th = thigh, K/k = knee, Bo/bo = cuff,
+PL/pl = pants_length, pwa/PWA = pants_waist, php/PHP = pants_hip,
+bi = biceps, L/len = length, pw = pants_waist, ph = pants_hip,
+ht = height, wt = weight,
 hc = high_chest, uh = upper_hips, df = deep_front, db = deep_back
 
 Rules:
