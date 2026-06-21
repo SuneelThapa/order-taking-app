@@ -93,7 +93,20 @@ Return ONLY a JSON object with these fields (omit any field not mentioned):
   "shoulder_to_waist": number
 }
 
-Common abbreviations the tailor may use:
+SPECIAL STAFF ABBREVIATIONS — these are critical:
+- STB or stb followed by TWO numbers separated by x or X:
+  First number  = shoulder_to_middle_breast
+  Second number = middle_breast_to_middle_breast
+  Example: "STB 12 x 8" → shoulder_to_middle_breast=12, middle_breast_to_middle_breast=8
+  Example: "stb 12x8"   → shoulder_to_middle_breast=12, middle_breast_to_middle_breast=8
+
+- STW or stw followed by TWO numbers separated by x or X:
+  First number  = shoulder_to_waist
+  Second number = shoulder_to_back
+  Example: "STW 17 x 16" → shoulder_to_waist=17, shoulder_to_back=16
+  Example: "stw 17x16"   → shoulder_to_waist=17, shoulder_to_back=16
+
+Other common abbreviations:
 ch/C = chest, w/W = stomach/waist, pw = pants_waist, sh = shoulder,
 sl/slv = sleeve, n/nk = neck, bi = biceps, L/len = length,
 fr = front, bk = back, ph = pants_hip, cr = crotch, th = thigh,
@@ -105,6 +118,7 @@ Rules:
 - All values must be numbers
 - Read carefully — handwriting may be imperfect
 - If illegible, omit that field
+- Pay special attention to STB and STW patterns — they always have two values
 """
 
 
