@@ -1465,9 +1465,9 @@ function copyBodyMeasurements(fromPrefix, toPrefix) {
     ? productTypeSelect.options[productTypeSelect.selectedIndex].text
     : 'this item';
   if (copied > 0) {
-    alert(`✅ Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
+    showClientWarning('✅ Measurements Copied', `Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
   } else {
-    alert('⚠ No measurements found on Item 1 yet.\nPlease fill Item 1 measurements first, then copy.');
+    showClientWarning('⚠️ No Measurements Found', 'No measurements found on Item 1 yet. Please fill Item 1 measurements first, then copy.');
   }
 }
 
