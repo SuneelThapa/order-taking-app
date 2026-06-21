@@ -7,6 +7,28 @@
 <style>[x-cloak]{display:none!important}</style>
 {% endblock %}
 
+{# ── Client Warning Modal ── #}
+<div id="client-warning-modal"
+     style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5);"
+     onclick="if(event.target===this) closeClientWarning()">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+              background:#fff; border-radius:12px; padding:32px 28px; max-width:420px;
+              width:calc(100% - 40px); box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;">
+    <div style="font-size:2.5rem; margin-bottom:12px;">⚠️</div>
+    <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:10px;" id="client-warning-title">
+      No client selected
+    </div>
+    <div style="font-size:0.9rem; color:#555; line-height:1.6; margin-bottom:24px;" id="client-warning-body">
+      Please select a client first.
+    </div>
+    <button onclick="closeClientWarning()"
+            style="background:#1A1A1A; color:#fff; border:none; border-radius:8px;
+                   padding:10px 32px; font-size:0.95rem; cursor:pointer; width:100%;">
+      OK, got it
+    </button>
+  </div>
+</div>
+
 {% block content %}
 <div x-data="orderWizard()" x-init="init()">
 
@@ -925,6 +947,17 @@ function measScratchPadBase() {
   }
 }
 
+// ── Client warning modal ──────────────────────────────────────────
+function showClientWarning(title, body) {
+  document.getElementById('client-warning-title').textContent = title;
+  document.getElementById('client-warning-body').textContent  = body;
+  document.getElementById('client-warning-modal').style.display = 'block';
+}
+function closeClientWarning() {
+  document.getElementById('client-warning-modal').style.display = 'none';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeClientWarning(); });
+
 // Global reference so saveClientInline() (outside Alpine) can call selectClient()
 let _orderWizardRef = null;
 
@@ -972,7 +1005,7 @@ function orderWizard() {
           const ok = await saveClientInlineReturning(btn);
           if (ok) this.step++;
         } else {
-          alert('Please select a client by searching, or click "Create new client" to add one.');
+          showClientWarning('No client selected', 'Search for a client by name or phone, or click "Create new client" to add one first.');
         }
         return;
       }
@@ -1149,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       console.warn('[submit] BLOCKED — no client');
       if (_orderWizardRef) _orderWizardRef.step = 1;
-      alert('No client selected.\n\nStep 1: Search for a client OR click "Create new client", fill the form, then click "Save client".');
+      showClientWarning('No client selected', 'Go to Step 1 — search for a client, or click "Create new client", fill the form, then click "Save client".');
     } else {
       clearDraft(); // Clear draft on successful submit
     }
