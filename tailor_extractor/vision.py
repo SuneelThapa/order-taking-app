@@ -106,6 +106,12 @@ SPECIAL STAFF ABBREVIATIONS — these are critical:
   Example: "STW 17 x 16" → shoulder_to_waist=17, shoulder_to_back=16
   Example: "stw 17x16"   → shoulder_to_waist=17, shoulder_to_back=16
 
+- SL or sl followed by TWO numbers separated by x or X:
+  First number  = sleeve
+  Second number = biceps
+  Example: "SL 25 x 14" → sleeve=25, biceps=14
+  Example: "sl 25x14"   → sleeve=25, biceps=14
+
 Other common abbreviations:
 ch/CH = chest, wa/WA = stomach/waist, hp/HP = hips, sh/SH = shoulder,
 sl/SL = sleeve, f/F = front, b/B = back, n/N = neck,
