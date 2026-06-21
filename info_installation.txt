@@ -28,6 +28,11 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml exec web bash
 
 
 
+docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python manage.py test orders.tests --verbosity=2
+
+
+
+
 
 
 

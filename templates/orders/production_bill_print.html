@@ -99,7 +99,7 @@
       <div>Date: {{ order.created_at|date:"d M Y" }}</div>
       <div>Fitting: {{ item.order.fitting_date|date:"d M Y"|default:"—" }}</div>
       <div>Ready: {{ item.order.ready_date|date:"d M Y"|default:"—" }}</div>
-      <div>Created by: {{ bill.created_by.get_full_name|default:bill.created_by.username }}</div>
+      <div>Created by: {% if bill.created_by %}{{ bill.created_by.get_full_name|default:bill.created_by.username }}{% endif %}</div>
     </div>
   </div>
 
