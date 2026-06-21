@@ -6,6 +6,7 @@ from datetime import date as _date, timedelta as _timedelta
 from urllib.parse import quote as _quote
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.core.paginator import Paginator
