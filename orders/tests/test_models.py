@@ -37,9 +37,8 @@ def make_user(username='jimmy', tenant=None, is_staff=True):
     return user
 
 
-def make_client(tenant):
+def make_client(tenant=None):
     return Client.objects.create(
-        tenant=tenant,
         name='John Smith',
         phone='+66812345678',
     )
@@ -60,7 +59,7 @@ class PaymentModelTest(TestCase):
 
     def setUp(self):
         self.tenant = make_tenant()
-        self.client = make_client(self.tenant)
+        self.client = make_client()
         self.order  = make_order(self.tenant, self.client)
 
     def test_thb_payment_stored_correctly(self):
@@ -138,7 +137,7 @@ class OrderModelTest(TestCase):
 
     def setUp(self):
         self.tenant = make_tenant()
-        self.client = make_client(self.tenant)
+        self.client = make_client()
 
     def test_order_created_with_new_status(self):
         """New orders default to 'new' status."""
@@ -177,7 +176,6 @@ class ClientModelTest(TestCase):
     def test_client_created(self):
         """Client created with required fields."""
         client = Client.objects.create(
-            tenant=self.tenant,
             name='Jane Doe',
             phone='+66898765432',
         )
@@ -186,14 +184,13 @@ class ClientModelTest(TestCase):
 
     def test_client_str(self):
         """Client __str__ includes name and phone."""
-        client = make_client(self.tenant)
+        client = make_client()
         self.assertIn('John Smith', str(client))
 
     def test_client_referral(self):
         """Client can be referred by another client."""
-        referrer = make_client(self.tenant)
+        referrer = make_client()
         referred = Client.objects.create(
-            tenant=self.tenant,
             name='Jane Doe',
             phone='+66898765432',
             referred_by=referrer,
@@ -208,9 +205,9 @@ class ProductionBillTest(TestCase):
 
     def setUp(self):
         self.tenant  = make_tenant()
-        self.client  = make_client(self.tenant)
+        self.client  = make_client()
         self.order   = make_order(self.tenant, self.client)
-        self.pt      = ProductType.objects.create(name='Suit', tenant=self.tenant)
+        self.pt      = ProductType.objects.create(name='Suit', measurement_model='SuitMeasurement')
         self.item    = OrderItem.objects.create(
             order=self.order,
             product_type=self.pt,
@@ -228,7 +225,7 @@ class ProductionBillTest(TestCase):
 
     def test_share_tokens_unique(self):
         """Two bills get different share tokens."""
-        pt2   = ProductType.objects.create(name='Shirt', tenant=self.tenant)
+        pt2   = ProductType.objects.create(name='Shirt', measurement_model='ShirtMeasurement')
         item2 = OrderItem.objects.create(order=self.order, product_type=pt2, quantity=1)
         bill1 = ProductionBill.objects.create(order_item=self.item, gender='men')
         bill2 = ProductionBill.objects.create(order_item=item2, gender='men')

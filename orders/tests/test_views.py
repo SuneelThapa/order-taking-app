@@ -136,12 +136,12 @@ class ProductionBillShareTest(TestCase):
     def setUp(self):
         self.tenant = make_tenant()
         self.client_obj = Client.objects.create(
-            tenant=self.tenant, name='John', phone='+66812345678'
+            name='John', phone='+66812345678'
         )
         self.order = Order.objects.create(
             tenant=self.tenant, client=self.client_obj, status='new'
         )
-        self.pt   = ProductType.objects.create(name='Suit', tenant=self.tenant)
+        self.pt   = ProductType.objects.create(name='Suit', measurement_model='SuitMeasurement')
         self.item = OrderItem.objects.create(
             order=self.order, product_type=self.pt, quantity=1
         )
