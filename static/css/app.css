@@ -194,3 +194,4 @@ body { background: var(--bg); color: var(--ink); }
 .status-badge-alterations{ background:#e2d9f3; color:#432874; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
 .status-badge-delivered  { background:#d3d3d3; color:#333;    font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
 .status-badge-canceled   { background:#f8d7da; color:#721c24; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; text-decoration:line-through; }
+[x-cloak] { display: none !important; }
