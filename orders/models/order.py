@@ -102,20 +102,35 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
+            from django.db import transaction
+            import time
             year_prefix = timezone.now().strftime("%y")
-            last_order  = (
-                Order.objects
-                .filter(order_number__startswith=year_prefix)
-                .order_by('-order_number')
-                .first()
-            )
-            new_number = (int(last_order.order_number[2:]) + 1) if last_order else 1
-            self.order_number = f"{year_prefix}{new_number:04d}"
-
-        if not self.pk and self.client_id and not self.street_address:
-            self._copy_client_address()
-
-        super().save(*args, **kwargs)
+            for attempt in range(5):
+                try:
+                    with transaction.atomic():
+                        last_order = (
+                            Order.objects
+                            .select_for_update()
+                            .filter(order_number__startswith=year_prefix)
+                            .order_by('-order_number')
+                            .first()
+                        )
+                        new_number = (int(last_order.order_number[2:]) + 1) if last_order else 1
+                        self.order_number = f"{year_prefix}{new_number:04d}"
+                        if not self.pk and self.client_id and not self.street_address:
+                            self._copy_client_address()
+                        super().save(*args, **kwargs)
+                        return
+                except Exception as e:
+                    if attempt < 4:
+                        time.sleep(0.05)
+                        self.order_number = ''
+                        continue
+                    raise
+        else:
+            if not self.pk and self.client_id and not self.street_address:
+                self._copy_client_address()
+            super().save(*args, **kwargs)
 
     def _copy_client_address(self):
         c = self.client
