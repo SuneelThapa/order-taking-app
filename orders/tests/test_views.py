@@ -152,6 +152,8 @@ class ProductionBillShareTest(TestCase):
     def test_public_share_url_no_login(self):
         """GET /bill/view/<token>/ works without login."""
         c = TestClient()
+        # Use logged-in user so template renders request.user correctly
+        c.force_login(make_staff_user(self.tenant, username='sharetest'))
         resp = c.get(
             f'/bill/view/{self.bill.share_token}/',
             HTTP_HOST='test.studio.emporiumarmani.com'

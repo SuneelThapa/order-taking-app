@@ -59,6 +59,7 @@ class PaymentModelTest(TestCase):
 
     def setUp(self):
         self.tenant = make_tenant()
+        self.staff  = make_user(tenant=self.tenant)
         self.client = make_client()
         self.order  = make_order(self.tenant, self.client)
 
@@ -72,6 +73,7 @@ class PaymentModelTest(TestCase):
             thb_equivalent=Decimal('5000.00'),
             method='cash',
             type='deposit',
+            recorded_by=self.staff,
         )
         self.assertEqual(p.thb_equivalent, Decimal('5000.00'))
         self.assertEqual(p.currency, 'THB')
@@ -86,6 +88,7 @@ class PaymentModelTest(TestCase):
             thb_equivalent=Decimal('3550.00'),
             method='cash',
             type='deposit',
+            recorded_by=self.staff,
         )
         self.assertEqual(p.thb_equivalent, Decimal('3550.00'))
 
@@ -99,6 +102,7 @@ class PaymentModelTest(TestCase):
             thb_equivalent=Decimal('-1000.00'),
             method='cash',
             type='refund',
+            recorded_by=self.staff,
         )
         self.assertLess(p.thb_equivalent, 0)
         self.assertEqual(p.type, 'refund')
@@ -113,6 +117,7 @@ class PaymentModelTest(TestCase):
             thb_equivalent=Decimal('3000.00'),
             method='cash',
             type='deposit',
+            recorded_by=self.staff,
         )
         Payment.objects.create(
             order=self.order,
@@ -122,6 +127,7 @@ class PaymentModelTest(TestCase):
             thb_equivalent=Decimal('7000.00'),
             method='cash',
             type='balance',
+            recorded_by=self.staff,
         )
         total = sum(
             p.thb_equivalent
