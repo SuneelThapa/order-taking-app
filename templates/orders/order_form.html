@@ -8,7 +8,42 @@
 {% endblock %}
 
 {% block content %}
-{# ── Client Warning Modal ── #}
+{# ── Smart Merge Modal ── #}
+<div id="smart-merge-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); overflow-y:auto;">
+  <div style="position:relative; margin:40px auto; background:#fff; border-radius:12px; padding:28px; max-width:500px; width:calc(100% - 32px); box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:4px;">✍️ Scratch Pad Results</div>
+    <div style="font-size:0.85rem; color:#666; margin-bottom:20px;">Review what was read from the handwriting.</div>
+
+    {# Auto-filled section #}
+    <div id="sm-auto-section">
+      <div style="font-size:0.8rem; font-weight:600; color:#198754; margin-bottom:8px;">✅ Auto-filled (empty fields)</div>
+      <div id="sm-auto-list" style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:16px;"></div>
+    </div>
+
+    {# Conflicts section #}
+    <div id="sm-conflict-section">
+      <div style="font-size:0.8rem; font-weight:600; color:#d97706; margin-bottom:8px;">⚠️ Conflicts — choose which to keep</div>
+      <div id="sm-conflict-list" style="background:#fffbeb; border-radius:8px; padding:12px; margin-bottom:16px;"></div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button onclick="closeSmartMergeModal()" style="background:#f3f4f6; border:none; border-radius:8px; padding:10px 20px; font-size:0.9rem; cursor:pointer; color:#374151;">Cancel</button>
+      <button id="sm-apply-btn" style="background:#1A1A1A; color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer;">Apply ✓</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.sm-auto-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #dcfce7; font-size:0.85rem; }
+.sm-auto-row:last-child { border-bottom:none; }
+.sm-conflict-row { padding:10px 0; border-bottom:1px solid #fde68a; }
+.sm-conflict-row:last-child { border-bottom:none; }
+.sm-label { font-size:0.8rem; color:#666; text-transform:capitalize; margin-bottom:6px; }
+.sm-value { font-size:0.85rem; color:#1A1A1A; font-weight:500; }
+.sm-option { display:inline-flex; align-items:center; gap:6px; margin-right:12px; font-size:0.85rem; cursor:pointer; padding:6px 10px; border-radius:6px; background:#fff; border:1px solid #e5e7eb; }
+.sm-option-pad { border-color:#d97706; color:#d97706; }
+.sm-option input { cursor:pointer; }
+</style>
 <div id="client-warning-modal"
      style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5);"
      onclick="if(event.target===this) closeClientWarning()">
@@ -886,7 +921,24 @@ function contactScratchPad() {
           if (d.status === 'processed') {
             clearInterval(iv); this.polling = false; this.done = true;
             const map = { name:'[name=name]', phone:'[name=phone]', email:'[name=email]', street_address:'[name=street_address]', city:'[name=city]', state:'[name=state]', postcode:'[name=postcode]', country:'[name=country]', hotel_name:'[name=hotel_name]', room_number:'[name=room_number]', departure_date:'[name=departure_date]' };
-            for (const [k,s] of Object.entries(map)) { if (d.result[k]) { const el = document.querySelector(s); if (el) { el.value = d.result[k]; el.dispatchEvent(new Event('input',{bubbles:true})); }}}
+            const labels = { name:'Name', phone:'Phone', email:'Email', street_address:'Street address', city:'City', state:'State', postcode:'Postcode', country:'Country', hotel_name:'Hotel', room_number:'Room', departure_date:'Departure date' };
+            const autoFilled = [], conflicts = [];
+            for (const [k, sel] of Object.entries(map)) {
+              const newVal = d.result[k];
+              if (!newVal) continue;
+              const el = document.querySelector(sel);
+              if (!el) continue;
+              const curVal = el.value.trim();
+              if (!curVal) {
+                // Empty — auto-fill silently
+                el.value = newVal; el.dispatchEvent(new Event('input',{bubbles:true}));
+                autoFilled.push({ label: labels[k], value: newVal });
+              } else if (curVal.toLowerCase() !== newVal.toLowerCase()) {
+                // Conflict — ask
+                conflicts.push({ key: k, sel, label: labels[k], current: curVal, fromPad: newVal });
+              }
+            }
+            showSmartMergeModal(autoFilled, conflicts);
           } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
         } catch(e) {}
       }, 3000);
@@ -934,16 +986,80 @@ function measScratchPadBase() {
           if (d.status === 'processed') {
             clearInterval(iv); this.polling = false; this.done = true;
             const pfx = this.spPrefix;
-            for (const [field, value] of Object.entries(d.result)) {
+            const autoFilled = [], conflicts = [];
+            for (const [field, newVal] of Object.entries(d.result)) {
               const el = document.querySelector('[name="' + pfx + '-' + field + '"]');
-              if (el) { el.value = value; el.dispatchEvent(new Event('change',{bubbles:true})); }
+              if (!el) continue;
+              const curVal = el.value.trim();
+              if (!curVal) {
+                el.value = newVal; el.dispatchEvent(new Event('change',{bubbles:true}));
+                autoFilled.push({ label: field.replace(/_/g,' '), value: newVal });
+              } else if (String(curVal) !== String(newVal)) {
+                conflicts.push({ key: field, sel: '[name="' + pfx + '-' + field + '"]', label: field.replace(/_/g,' '), current: curVal, fromPad: newVal });
+              }
             }
+            showSmartMergeModal(autoFilled, conflicts);
           } else if (d.status === 'expired') { clearInterval(iv); this.polling = false; this.error = 'Session expired.'; }
         } catch(e) {}
       }, 3000);
     },
     reset() { this.token=null; this.tabletUrl=null; this.qrVisible=false; this.done=false; this.error=''; this.polling=false; }
   }
+}
+
+// ── Smart merge modal ─────────────────────────────────────────────
+function showSmartMergeModal(autoFilled, conflicts) {
+  const modal = document.getElementById('smart-merge-modal');
+  const autoEl = document.getElementById('sm-auto-list');
+  const conflictEl = document.getElementById('sm-conflict-list');
+  const applyBtn = document.getElementById('sm-apply-btn');
+
+  // Auto-filled section
+  if (autoFilled.length) {
+    autoEl.innerHTML = autoFilled.map(f =>
+      `<div class="sm-auto-row"><span class="sm-label">${f.label}</span><span class="sm-value">${f.value}</span></div>`
+    ).join('');
+    document.getElementById('sm-auto-section').style.display = 'block';
+  } else {
+    document.getElementById('sm-auto-section').style.display = 'none';
+  }
+
+  // Conflicts section
+  if (conflicts.length) {
+    conflictEl.innerHTML = conflicts.map((c, i) => `
+      <div class="sm-conflict-row">
+        <div class="sm-label">${c.label}</div>
+        <label class="sm-option">
+          <input type="radio" name="sm_${i}" value="keep" checked> Keep <strong>${c.current}</strong>
+        </label>
+        <label class="sm-option sm-option-pad">
+          <input type="radio" name="sm_${i}" value="pad"> Use pad <strong>${c.fromPad}</strong>
+        </label>
+      </div>
+    `).join('');
+    document.getElementById('sm-conflict-section').style.display = 'block';
+  } else {
+    document.getElementById('sm-conflict-section').style.display = 'none';
+  }
+
+  // Apply button
+  applyBtn.onclick = () => {
+    conflicts.forEach((c, i) => {
+      const chosen = document.querySelector(`input[name="sm_${i}"]:checked`)?.value;
+      if (chosen === 'pad') {
+        const el = document.querySelector(c.sel);
+        if (el) { el.value = c.fromPad; el.dispatchEvent(new Event('input',{bubbles:true})); }
+      }
+    });
+    closeSmartMergeModal();
+  };
+
+  if (autoFilled.length === 0 && conflicts.length === 0) return; // nothing to show
+  modal.style.display = 'block';
+}
+
+function closeSmartMergeModal() {
+  document.getElementById('smart-merge-modal').style.display = 'none';
 }
 
 // ── Client warning modal ──────────────────────────────────────────
