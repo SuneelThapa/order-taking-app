@@ -26,3 +26,11 @@ CSRF_TRUSTED_ORIGINS = [
     "https://studio.emporiumarmani.com",
     "http://143.198.207.146",
 ]
+
+# -- WhatsApp API --------------------------------------------------
+import os
+WHATSAPP_ACCESS_TOKEN    = os.environ.get('WHATSAPP_ACCESS_TOKEN', '')
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID', '')
+
+# -- Anthropic API -------------------------------------------------
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
