@@ -30,6 +30,54 @@
     {% endif %}
   </dl>
 
+  {# ── WhatsApp Quick Send ── #}
+  {% if selected_order.phone %}
+  {% with phone=selected_order.phone|slice:"1:" name=selected_order.first_name order_num=selected_order.order_number %}
+  <h6 class="text-uppercase text-muted small">WhatsApp</h6>
+  <div class="d-flex flex-column gap-2 mb-3">
+
+    {# Order Confirmed #}
+    {% with msg="Hello "|add:name|add:"! 👋 Your order *#"|add:order_num|add:"* has been confirmed at *Emporium Armani*. We'll keep you updated on the progress. Thank you for choosing us! 🎩" %}
+    <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}"
+       target="_blank"
+       class="btn btn-sm btn-outline-success d-flex align-items-center gap-2">
+      <i class="bi bi-whatsapp"></i> Order Confirmed
+    </a>
+    {% endwith %}
+
+    {# Fitting Reminder #}
+    {% if selected_order.fitting_date %}
+    {% with msg="Hello " |add:name|add:"! 👔 Reminder — your *fitting appointment* is scheduled for *"|add:selected_order.fitting_date|date:"l, F d"|add:"*. 📍 Emporium Armani, Sukhumvit. Please reply if you need to reschedule." %}
+    <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}"
+       target="_blank"
+       class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2">
+      <i class="bi bi-whatsapp"></i> Fitting Reminder
+    </a>
+    {% endwith %}
+    {% endif %}
+
+    {# Order Ready #}
+    {% with msg="Hello " |add:name|add:"! 🎉 Great news! Your order *#"|add:order_num|add:"* is *ready*. Please contact us to arrange pickup or delivery. 📍 Emporium Armani, Sukhumvit 📱 Reply to arrange." %}
+    <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}"
+       target="_blank"
+       class="btn btn-sm btn-outline-warning d-flex align-items-center gap-2">
+      <i class="bi bi-whatsapp"></i> Order Ready
+    </a>
+    {% endwith %}
+
+    {# Delivery Sent #}
+    {% with msg="Hello " |add:name|add:"! 🎩 Your order *#"|add:order_num|add:"* has been delivered. We hope you love it! Thank you for choosing *Emporium Armani*. 🙏" %}
+    <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}"
+       target="_blank"
+       class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2">
+      <i class="bi bi-whatsapp"></i> Delivered
+    </a>
+    {% endwith %}
+
+  </div>
+  {% endwith %}
+  {% endif %}
+
   <!-- Address -->
   <h6 class="text-uppercase text-muted small">Shipping address</h6>
   <p class="small mb-3">
