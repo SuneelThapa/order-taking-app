@@ -30,8 +30,12 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml exec web bash
 
 docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python manage.py test orders.tests --verbosity=2
 
+docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python manage.py test orders.tests
 
 
+# After EVERY deploy/rebuild — always run these two: # it is on Server
+docker cp /opt/order-taking-app/orders/views.py order-taking-app-web-1:/code/orders/views.py
+docker compose -f docker-compose.yml -f docker-compose.prod.yml restart web
 
 
 
