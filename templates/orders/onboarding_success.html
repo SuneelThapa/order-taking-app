@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Tenant Created Successfully{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:640px">
+  <div class="text-center mb-4">
+    <div style="font-size:4rem">🎉</div>
+    <h4>Tenant Created Successfully!</h4>
+    <p class="text-muted">{{ tenant.name }} is ready to use.</p>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">📋 Setup Details</div>
+    <div class="card-body">
+      <table class="table table-sm mb-0">
+        <tr>
+          <td class="text-muted">Shop Name</td>
+          <td class="fw-semibold">{{ tenant.name }}</td>
+        </tr>
+        <tr>
+          <td class="text-muted">Studio URL</td>
+          <td>
+            <a href="{{ studio_url }}" target="_blank" class="text-primary">
+              {{ studio_url }}
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td class="text-muted">Subdomain</td>
+          <td><code>{{ subdomain }}</code></td>
+        </tr>
+        <tr>
+          <td class="text-muted">Created</td>
+          <td>{{ tenant.created_at|date:"M d, Y H:i" }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card mb-3 border-warning">
+    <div class="card-header fw-semibold text-warning">⚠️ Next Steps</div>
+    <div class="card-body">
+      <ol class="mb-0 small">
+        <li class="mb-2">Add <strong>{{ subdomain }}</strong> subdomain to Nginx config on server</li>
+        <li class="mb-2">Add DNS record: <code>{{ subdomain }}.studio.emporiumarmani.com</code> → server IP</li>
+        <li class="mb-2">Share login credentials with shop owner</li>
+        <li class="mb-2">Add staff accounts for the shop</li>
+        <li>Set up product types if needed</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a href="{% url 'orders:onboarding' %}" class="btn btn-primary">
+      ➕ Add Another Tenant
+    </a>
+    <a href="/" class="btn btn-outline-secondary">Back to Dashboard</a>
+  </div>
+</div>
+{% endblock %}

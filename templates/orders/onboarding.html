@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}New Tenant Onboarding{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:640px">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div style="font-size:2rem">🏪</div>
+    <div>
+      <h4 class="mb-0">New Shop Onboarding</h4>
+      <div class="text-muted small">Create a new tenant account</div>
+    </div>
+  </div>
+
+  {% if errors.__all__ %}
+  <div class="alert alert-danger">{{ errors.__all__ }}</div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {# ── Shop Details ── #}
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">🏪 Shop Details</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Shop Name *</label>
+            <input type="text" name="shop_name" class="form-control {% if errors.shop_name %}is-invalid{% endif %}"
+                   value="{{ form_data.shop_name|default:'' }}"
+                   placeholder="e.g. Sukhumvit Bespoke Tailors">
+            {% if errors.shop_name %}<div class="invalid-feedback">{{ errors.shop_name }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Subdomain *</label>
+            <div class="input-group">
+              <input type="text" name="subdomain" class="form-control {% if errors.subdomain %}is-invalid{% endif %}"
+                     value="{{ form_data.subdomain|default:'' }}"
+                     placeholder="sukhumvit"
+                     pattern="[a-z0-9\-]+"
+                     oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9\-]/g,'')">
+              <span class="input-group-text small text-muted">.studio.emporiumarmani.com</span>
+            </div>
+            {% if errors.subdomain %}<div class="text-danger small mt-1">{{ errors.subdomain }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Package</label>
+            <select name="package" class="form-select">
+              <option value="studio" {% if form_data.package == 'studio' %}selected{% endif %}>
+                Studio only — ฿80,000 + ฿3,000/mo
+              </option>
+              <option value="studio_catalogue" {% if form_data.package == 'studio_catalogue' %}selected{% endif %}>
+                Studio + Catalogue — ฿110,000 + ฿5,000/mo
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Owner Account ── #}
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">👤 Owner Account</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Owner Full Name *</label>
+            <input type="text" name="owner_name" class="form-control {% if errors.owner_name %}is-invalid{% endif %}"
+                   value="{{ form_data.owner_name|default:'' }}"
+                   placeholder="e.g. Somchai Jaidee">
+            {% if errors.owner_name %}<div class="invalid-feedback">{{ errors.owner_name }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone</label>
+            <input type="text" name="owner_phone" class="form-control"
+                   value="{{ form_data.owner_phone|default:'' }}"
+                   placeholder="+66812345678">
+          </div>
+          <div class="col-12">
+            <label class="form-label">Email</label>
+            <input type="email" name="owner_email" class="form-control"
+                   value="{{ form_data.owner_email|default:'' }}"
+                   placeholder="owner@shop.com">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Username *</label>
+            <input type="text" name="username" class="form-control {% if errors.username %}is-invalid{% endif %}"
+                   value="{{ form_data.username|default:'' }}"
+                   placeholder="e.g. sukhumvit_owner"
+                   oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9_]/g,'')">
+            {% if errors.username %}<div class="invalid-feedback">{{ errors.username }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Password *</label>
+            <input type="password" name="password" class="form-control {% if errors.password %}is-invalid{% endif %}"
+                   placeholder="Min 8 characters">
+            {% if errors.password %}<div class="invalid-feedback">{{ errors.password }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        🚀 Create Tenant
+      </button>
+      <a href="/" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
