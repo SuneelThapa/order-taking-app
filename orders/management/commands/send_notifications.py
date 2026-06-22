@@ -72,7 +72,6 @@ class Command(BaseCommand):
     def _send_fitting_reminders_3hr(self, now, dry_run):
         """Send reminder 3 hours before fitting time."""
         from datetime import datetime, timezone as dt_timezone
-        import pytz
 
         # Target window: fittings happening in 3h ± 15 minutes
         target      = now + timedelta(hours=3)
@@ -91,12 +90,10 @@ class Command(BaseCommand):
         for order in orders:
             if not order.fitting_time:
                 continue
-            # Combine date + time to compare
             fitting_dt = datetime.combine(
                 order.fitting_date,
                 order.fitting_time,
-                tzinfo=dt_timezone.utc
-            )
+            ).replace(tzinfo=dt_timezone.utc)
             if window_from <= fitting_dt <= window_to:
                 self.stdout.write(
                     f'[3HR FITTING] {order.client.name} — {order.order_number} at {order.fitting_time}'
