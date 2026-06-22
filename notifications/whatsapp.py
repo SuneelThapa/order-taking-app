@@ -89,13 +89,29 @@ def notify_fitting_reminder(client, order):
     """Sent 1 day before fitting date."""
     if not client.is_eligible_for_notifications:
         return
-    fitting_date = order.fitting_date.strftime('%A, %B %d') if order.fitting_date else 'tomorrow'
+    fitting_str = order.fitting_date.strftime('%A, %B %d') if order.fitting_date else 'tomorrow'
+    if order.fitting_time:
+        fitting_str += f' at {order.fitting_time.strftime("%I:%M %p")}'
     msg = (
         f"Hello {client.name}! 👔\n\n"
         f"Friendly reminder — your *fitting appointment* is scheduled for "
-        f"*{fitting_date}*.\n\n"
+        f"*{fitting_str}*.\n\n"
         f"📍 Emporium Armani, Sukhumvit\n\n"
         f"Please reply if you need to reschedule. See you soon!"
+    )
+    return send_text(client.phone, msg)
+
+
+def notify_fitting_reminder_3hr(client, order):
+    """Sent 3 hours before fitting time."""
+    if not client.is_eligible_for_notifications:
+        return
+    fitting_time = order.fitting_time.strftime('%I:%M %p') if order.fitting_time else 'today'
+    msg = (
+        f"Hello {client.name}! ⏰\n\n"
+        f"Just a reminder — your *fitting appointment* is in *3 hours* at *{fitting_time}*.\n\n"
+        f"📍 Emporium Armani, Sukhumvit\n\n"
+        f"We look forward to seeing you! Reply if you need to reschedule."
     )
     return send_text(client.phone, msg)
 

@@ -18,6 +18,7 @@ from django.db.models import Q
 from orders.models import Client, Order
 from notifications.whatsapp import (
     notify_fitting_reminder,
+    notify_fitting_reminder_3hr,
     notify_return_3_months,
     notify_return_6_months,
     notify_birthday,
@@ -39,11 +40,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         dry_run = options['dry_run']
         today   = date.today()
+        now     = timezone.now()
 
         if dry_run:
             self.stdout.write('=== DRY RUN — no messages sent ===')
 
         self._send_fitting_reminders(today, dry_run)
+        self._send_fitting_reminders_3hr(now, dry_run)
         self._send_return_3_months(today, dry_run)
         self._send_return_6_months(today, dry_run)
         self._send_birthdays(today, dry_run)
@@ -60,6 +63,46 @@ class Command(BaseCommand):
             client__marketing_consent=True,
             client__exclude_from_marketing=False,
         ).select_related('client')
+
+        for order in orders:
+            self.stdout.write(f'[FITTING] {order.client.name} — {order.order_number}')
+            if not dry_run:
+                notify_fitting_reminder(order.client, order)
+
+    def _send_fitting_reminders_3hr(self, now, dry_run):
+        """Send reminder 3 hours before fitting time."""
+        from datetime import datetime, timezone as dt_timezone
+        import pytz
+
+        # Target window: fittings happening in 3h ± 15 minutes
+        target      = now + timedelta(hours=3)
+        window_from = target - timedelta(minutes=15)
+        window_to   = target + timedelta(minutes=15)
+
+        orders = Order.objects.filter(
+            fitting_date=target.date(),
+            fitting_time__isnull=False,
+            status__in=['new', 'pending', 'processing'],
+            client__is_active=True,
+            client__marketing_consent=True,
+            client__exclude_from_marketing=False,
+        ).select_related('client')
+
+        for order in orders:
+            if not order.fitting_time:
+                continue
+            # Combine date + time to compare
+            fitting_dt = datetime.combine(
+                order.fitting_date,
+                order.fitting_time,
+                tzinfo=dt_timezone.utc
+            )
+            if window_from <= fitting_dt <= window_to:
+                self.stdout.write(
+                    f'[3HR FITTING] {order.client.name} — {order.order_number} at {order.fitting_time}'
+                )
+                if not dry_run:
+                    notify_fitting_reminder_3hr(order.client, order)
 
         for order in orders:
             self.stdout.write(f'[FITTING] {order.client.name} — {order.order_number}')
