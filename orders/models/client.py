@@ -82,6 +82,14 @@ class Client(models.Model):
         default=True,
         help_text="Client has consented to receive marketing communications (PDPA)"
     )
+    exclude_from_marketing = models.BooleanField(
+        default=False,
+        help_text="Exclude from all promotional notifications (unhappy client, refund, etc.)"
+    )
+    birthday = models.DateField(
+        null=True, blank=True,
+        help_text="Optional — for birthday promotions"
+    )
 
     # Meta
     is_active = models.BooleanField(default=True)
@@ -110,3 +118,34 @@ class Client(models.Model):
             .filter(order__client=self, original_amount__gt=0)
             .aggregate(total=Sum('thb_equivalent'))['total'] or 0
         )
+
+    @property
+    def is_eligible_for_notifications(self):
+        """True if client can receive marketing/promotional notifications."""
+        return (
+            self.is_active and
+            self.marketing_consent and
+            not self.exclude_from_marketing
+        )
+
+    @property
+    def loyalty_tier(self):
+        """Calculate loyalty tier based on total spending."""
+        spent = self.total_spent()
+        if spent >= 80000:
+            return 'gold'
+        elif spent >= 30000:
+            return 'silver'
+        elif spent > 0:
+            return 'bronze'
+        return 'none'
+
+    @property
+    def loyalty_discount(self):
+        """Discount percentage based on loyalty tier."""
+        return {
+            'gold':   15,
+            'silver': 10,
+            'bronze':  5,
+            'none':    0,
+        }.get(self.loyalty_tier, 0)
