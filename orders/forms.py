@@ -38,7 +38,7 @@ class ClientForm(StyledModelForm):
             "name", "phone", "email", "contact_method",
             "acquisition_channel", "referral_source", "referred_by",
             "street_address", "city", "state", "postcode", "country",
-            "notes", "marketing_consent",
+            "notes", "marketing_consent", "birthday", "exclude_from_marketing",
         ]
         widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
         help_texts = {"phone": "E.164 format, e.g. +66812345678"}
@@ -326,7 +326,7 @@ class ClientEditForm(StyledModelForm):
             "name", "phone", "email", "contact_method",
             "acquisition_channel", "referral_source", "referred_by",
             "street_address", "city", "state", "postcode", "country",
-            "notes", "marketing_consent", "is_active",
+            "notes", "marketing_consent", "birthday", "exclude_from_marketing", "is_active",
         ]
         labels = {
             "contact_method":    "Preferred contact",
@@ -335,6 +335,8 @@ class ClientEditForm(StyledModelForm):
             "referred_by":       "Referred by client",
             "marketing_consent": "Marketing consent (PDPA)",
             "is_active":         "Active client",
+            "birthday":          "Birthday (optional)",
+            "exclude_from_marketing": "Exclude from marketing notifications",
         }
         widgets = {
             "notes": forms.Textarea(attrs={
