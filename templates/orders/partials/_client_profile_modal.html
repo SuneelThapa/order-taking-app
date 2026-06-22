@@ -178,6 +178,20 @@
           </div>
         </div>
 
+        <div class="col-md-4">
+          <label class="form-label form-label-sm">Birthday <span class="text-muted">(optional)</span></label>
+          {{ form.birthday }}
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            {{ form.exclude_from_marketing }}
+            <label class="form-check-label small text-danger">
+              {{ form.exclude_from_marketing.label }}
+              <span class="text-muted">(unhappy client, refund, etc.)</span>
+            </label>
+          </div>
+        </div>
+
       </div>
     </form>
   </div>
