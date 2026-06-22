@@ -11,8 +11,8 @@
     </div>
   </div>
 
-  {% if errors.__all__ %}
-  <div class="alert alert-danger">{{ errors.__all__ }}</div>
+  {% if errors.non_field_error %}
+  <div class="alert alert-danger">{{ errors.non_field_error }}</div>
   {% endif %}
 
   <form method="post" novalidate>

@@ -81,7 +81,7 @@ def onboarding_view(request):
                     return redirect('orders:onboarding_success', subdomain=subdomain)
             except Exception as e:
                 logger.error(f'Tenant creation error: {e}')
-                errors['__all__'] = f'Error creating tenant: {str(e)}'
+                errors['non_field_error'] = f'Error creating tenant: {str(e)}'
 
     return render(request, 'orders/onboarding.html', {
         'errors':    errors,
