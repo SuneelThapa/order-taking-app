@@ -31,8 +31,8 @@
   </dl>
 
   {# ── WhatsApp Quick Send ── #}
-  {% if selected_order.phone %}
-  {% with phone=selected_order.phone|slice:"1:" name=selected_order.first_name order_num=selected_order.order_number %}
+  {% if selected_order.client.phone %}
+  {% with phone=selected_order.client.phone|slice:"1:" name=selected_order.client.name order_num=selected_order.order_number %}
   <h6 class="text-uppercase text-muted small">WhatsApp</h6>
   <div class="d-flex flex-column gap-2 mb-3">
 
