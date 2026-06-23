@@ -34,7 +34,11 @@ def onboarding_view(request):
         owner_phone  = request.POST.get('owner_phone', '').strip()
         username     = request.POST.get('username', '').strip().lower()
         password     = request.POST.get('password', '')
-        package      = request.POST.get('package', 'studio')
+        package              = request.POST.get('package', 'studio')
+        whatsapp_token       = request.POST.get('whatsapp_token', '').strip()
+        whatsapp_phone_id    = request.POST.get('whatsapp_phone_number_id', '').strip()
+        has_catalogue        = bool(request.POST.get('has_catalogue'))
+        catalogue_subdomain  = request.POST.get('catalogue_subdomain', '').strip().lower()
 
         # Validate
         if not shop_name:
@@ -63,6 +67,10 @@ def onboarding_view(request):
                         subdomain=subdomain,
                         is_active=True,
                         package=package,
+                        whatsapp_token=whatsapp_token,
+                        whatsapp_phone_number_id=whatsapp_phone_id,
+                        has_catalogue=has_catalogue,
+                        catalogue_subdomain=catalogue_subdomain,
                     )
                     # Handle logo upload
                     if request.FILES.get('logo'):

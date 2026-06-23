@@ -122,7 +122,56 @@
       </div>
     </div>
 
-    <div class="d-flex gap-2">
+    {# ── WhatsApp API ── #}
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">📱 WhatsApp API <span class="text-muted fw-normal small">(optional — can add later)</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">WhatsApp Access Token</label>
+            <input type="text" name="whatsapp_token" class="form-control font-monospace"
+                   value="{{ form_data.whatsapp_token|default:'' }}"
+                   placeholder="EAANtJWSmPh0BR...">
+            <div class="form-text">Permanent token from Meta Business → System Users → Generate token</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Phone Number ID</label>
+            <input type="text" name="whatsapp_phone_number_id" class="form-control font-monospace"
+                   value="{{ form_data.whatsapp_phone_number_id|default:'' }}"
+                   placeholder="1178411782018657">
+            <div class="form-text">From Meta Developer → WhatsApp → API Setup</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Catalogue ── #}
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">🛍️ Catalogue <span class="text-muted fw-normal small">(optional)</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-check">
+              <input type="checkbox" name="has_catalogue" class="form-check-input"
+                     id="has_catalogue" {% if form_data.has_catalogue %}checked{% endif %}>
+              <label class="form-check-label" for="has_catalogue">
+                Enable catalogue app for this shop
+              </label>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Catalogue Subdomain <span class="text-muted">(optional)</span></label>
+            <div class="input-group">
+              <input type="text" name="catalogue_subdomain" class="form-control"
+                     value="{{ form_data.catalogue_subdomain|default:'' }}"
+                     placeholder="sukhumvit"
+                     oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9\-]/g,'')">
+              <span class="input-group-text small text-muted">.catalogue.emporiumarmani.com</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
       <button type="submit" class="btn btn-primary px-4">
         🚀 Create Tenant
       </button>
