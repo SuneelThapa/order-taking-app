@@ -35,6 +35,17 @@
           </td>
         </tr>
         {% endif %}
+        {% if tenant.custom_domain %}
+        <tr>
+          <td class="text-muted">Custom Domain</td>
+          <td>
+            <code>{{ tenant.custom_domain }}</code>
+            <div class="small text-muted mt-1">
+              Client must add DNS: <code>{{ tenant.custom_domain }} → CNAME → 143.198.207.146</code>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
         <tr>
           <td class="text-muted">Subdomain</td>
           <td><code>{{ subdomain }}</code></td>

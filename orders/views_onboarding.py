@@ -40,6 +40,7 @@ def onboarding_view(request):
         has_catalogue        = bool(request.POST.get('has_catalogue'))
         catalogue_subdomain  = request.POST.get('catalogue_subdomain', '').strip().lower()
         display_key          = request.POST.get('display_key', '').strip().lower()
+        custom_domain        = request.POST.get('custom_domain', '').strip().lower()
 
         # Validate
         if not shop_name:
@@ -73,6 +74,7 @@ def onboarding_view(request):
                         has_catalogue=has_catalogue,
                         catalogue_subdomain=catalogue_subdomain,
                         display_key=display_key,
+                        custom_domain=custom_domain,
                     )
                     # Handle logo upload
                     if request.FILES.get('logo'):

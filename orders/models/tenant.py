@@ -43,6 +43,11 @@ class Tenant(models.Model):
         max_length=50, blank=True, default='',
         help_text='Secret key for status board URL e.g. shop2026'
     )
+    # Custom domain
+    custom_domain = models.CharField(
+        max_length=255, blank=True, default='',
+        help_text="Client's own domain e.g. studio.sukhumvittailors.com"
+    )
 
     def __str__(self):
         return self.name

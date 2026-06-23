@@ -169,3 +169,96 @@ class ProductionBillShareTest(TestCase):
             HTTP_HOST='test.studio.emporiumarmani.com'
         )
         self.assertEqual(resp.status_code, 404)
+
+
+class OnboardingViewTest(TestCase):
+
+    def setUp(self):
+        self.tenant = make_tenant()
+        # Create superuser
+        self.superuser = User.objects.create_superuser(
+            username='superadmin',
+            password='testpass123',
+            is_staff=True,
+        )
+        self.c = TestClient()
+        self.c.force_login(self.superuser)
+
+    def test_onboarding_page_loads(self):
+        """GET /onboarding/ returns 200 for superuser."""
+        resp = self.c.get(
+            '/onboarding/',
+            HTTP_HOST='test.studio.emporiumarmani.com'
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_onboarding_non_superuser_redirects(self):
+        """Non-superuser cannot access onboarding."""
+        staff = make_staff_user(self.tenant, username='staffonly')
+        c = TestClient()
+        c.force_login(staff)
+        resp = c.get(
+            '/onboarding/',
+            HTTP_HOST='test.studio.emporiumarmani.com'
+        )
+        self.assertIn(resp.status_code, [302, 403])
+
+    def test_onboarding_creates_tenant(self):
+        """POST /onboarding/ creates tenant and owner user."""
+        from orders.models import Tenant as TenantModel
+        resp = self.c.post('/onboarding/', {
+            'shop_name':    'New Tailor Shop',
+            'subdomain':    'newtailor',
+            'package':      'studio',
+            'owner_name':   'John Owner',
+            'owner_email':  'john@newtailor.com',
+            'owner_phone':  '+66812345678',
+            'username':     'newtailor_owner',
+            'password':     'securepass123',
+            'display_key':  'newtailor2026',
+        }, HTTP_HOST='test.studio.emporiumarmani.com')
+
+        # Should redirect to success page
+        self.assertEqual(resp.status_code, 302)
+
+        # Tenant should be created
+        tenant = TenantModel.objects.filter(subdomain='newtailor').first()
+        self.assertIsNotNone(tenant)
+        self.assertEqual(tenant.name, 'New Tailor Shop')
+        self.assertEqual(tenant.display_key, 'newtailor2026')
+
+        # Owner user should be created
+        owner = User.objects.filter(username='newtailor_owner').first()
+        self.assertIsNotNone(owner)
+        self.assertTrue(owner.is_staff)
+        self.assertEqual(owner.tenant, tenant)
+
+        # Cleanup
+        owner.delete()
+        tenant.delete()
+
+
+class StatusBoardTest(TestCase):
+
+    def setUp(self):
+        self.tenant = make_tenant()
+        self.tenant.display_key = 'testkey2026'
+        self.tenant.save()
+
+    def test_status_board_correct_key(self):
+        """Status board accessible with correct key."""
+        c = TestClient()
+        resp = c.get(
+            '/display/?key=testkey2026',
+            HTTP_HOST='test.studio.emporiumarmani.com'
+        )
+        self.assertEqual(resp.status_code, 200)
+
+    def test_status_board_wrong_key(self):
+        """Status board denied with wrong key."""
+        c = TestClient()
+        resp = c.get(
+            '/display/?key=wrongkey',
+            HTTP_HOST='test.studio.emporiumarmani.com'
+        )
+        self.assertEqual(resp.status_code, 403)

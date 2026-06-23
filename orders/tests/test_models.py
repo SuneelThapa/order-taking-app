@@ -286,3 +286,121 @@ class ScratchPadSessionTest(TestCase):
         session.refresh_from_db()
         self.assertEqual(session.status, 'processed')
         self.assertEqual(session.result['name'], 'John')
+
+
+# ─────────────────────────────────────────────────────────────────
+# Client Loyalty + Notification Tests
+# ─────────────────────────────────────────────────────────────────
+class ClientLoyaltyTest(TestCase):
+
+    def setUp(self):
+        self.tenant = make_tenant()
+        self.staff  = make_user(tenant=self.tenant)
+
+    def _client_with_spend(self, spend):
+        """Create a client and add a payment of given amount."""
+        from decimal import Decimal
+        from orders.models import Payment
+        client = Client.objects.create(name='Test Client', phone='+66812345678')
+        order  = Order.objects.create(tenant=self.tenant, client=client, status='delivered')
+        Payment.objects.create(
+            order=order,
+            original_amount=Decimal(str(spend)),
+            currency='THB',
+            exchange_rate_to_thb=Decimal('1.00'),
+            thb_equivalent=Decimal(str(spend)),
+            method='cash',
+            type='deposit',
+            recorded_by=self.staff,
+        )
+        return client
+
+    def test_loyalty_tier_none(self):
+        """Client with no spend has tier 'none'."""
+        client = Client.objects.create(name='New', phone='+66800000001')
+        self.assertEqual(client.loyalty_tier, 'none')
+        self.assertEqual(client.loyalty_discount, 0)
+
+    def test_loyalty_tier_bronze(self):
+        """Client spending ฿9,000 gets bronze tier (5%)."""
+        client = self._client_with_spend(9000)
+        self.assertEqual(client.loyalty_tier, 'bronze')
+        self.assertEqual(client.loyalty_discount, 5)
+
+    def test_loyalty_tier_silver(self):
+        """Client spending ฿30,000 gets silver tier (10%)."""
+        client = self._client_with_spend(30000)
+        self.assertEqual(client.loyalty_tier, 'silver')
+        self.assertEqual(client.loyalty_discount, 10)
+
+    def test_loyalty_tier_gold(self):
+        """Client spending ฿80,000 gets gold tier (15%)."""
+        client = self._client_with_spend(80000)
+        self.assertEqual(client.loyalty_tier, 'gold')
+        self.assertEqual(client.loyalty_discount, 15)
+
+    def test_eligible_for_notifications_default(self):
+        """New client is eligible for notifications by default."""
+        client = Client.objects.create(name='Test', phone='+66800000002')
+        self.assertTrue(client.is_eligible_for_notifications)
+
+    def test_excluded_from_marketing(self):
+        """Client with exclude_from_marketing=True is not eligible."""
+        client = Client.objects.create(
+            name='Unhappy', phone='+66800000003',
+            exclude_from_marketing=True
+        )
+        self.assertFalse(client.is_eligible_for_notifications)
+
+    def test_no_marketing_consent(self):
+        """Client without marketing consent is not eligible."""
+        client = Client.objects.create(
+            name='NoConsent', phone='+66800000004',
+            marketing_consent=False
+        )
+        self.assertFalse(client.is_eligible_for_notifications)
+
+    def test_inactive_client_not_eligible(self):
+        """Inactive client is not eligible for notifications."""
+        client = Client.objects.create(
+            name='Inactive', phone='+66800000005',
+            is_active=False
+        )
+        self.assertFalse(client.is_eligible_for_notifications)
+
+
+# ─────────────────────────────────────────────────────────────────
+# Tenant Model Tests
+# ─────────────────────────────────────────────────────────────────
+class TenantModelTest(TestCase):
+
+    def test_tenant_created(self):
+        """Tenant creates with required fields."""
+        tenant = Tenant.objects.create(name='Test Shop', subdomain='testshop')
+        self.assertEqual(tenant.name, 'Test Shop')
+        self.assertTrue(tenant.is_active)
+
+    def test_tenant_display_key(self):
+        """Tenant display key can be set."""
+        tenant = Tenant.objects.create(
+            name='Shop', subdomain='shop', display_key='shop2026'
+        )
+        self.assertEqual(tenant.display_key, 'shop2026')
+
+    def test_tenant_whatsapp_fallback(self):
+        """Tenant without own token uses system fallback."""
+        tenant = Tenant.objects.create(name='Shop2', subdomain='shop2')
+        # No token set — whatsapp_access_token returns settings value
+        from django.conf import settings
+        expected = getattr(settings, 'WHATSAPP_ACCESS_TOKEN', '')
+        self.assertEqual(tenant.whatsapp_access_token, expected)
+
+    def test_tenant_own_whatsapp_token(self):
+        """Tenant with own token uses it."""
+        tenant = Tenant.objects.create(
+            name='Shop3', subdomain='shop3',
+            whatsapp_token='own_token_123',
+            whatsapp_phone_number_id='123456789'
+        )
+        self.assertEqual(tenant.whatsapp_access_token, 'own_token_123')
+        self.assertEqual(tenant.whatsapp_number_id, '123456789')
