@@ -65,16 +65,38 @@
         {% endwith %}
         {% if order.fitting_date %}
         {% with fitting_str=order.fitting_date|date:"l, F d" %}
+        {% if order.fitting_time %}
         {% with fitting_time_str=order.fitting_time|time:"g:i A" %}
         {% with msg="Hello "|add:name|add:"! Reminder - your fitting is on "|add:fitting_str|add:" at "|add:fitting_time_str|add:". Emporium Armani, Sukhumvit. Please reply if you need to reschedule." %}
         <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:0.75rem;padding:2px 8px">Fitting</a>
         {% endwith %}
         {% endwith %}
+        {% else %}
+        {% with msg="Hello "|add:name|add:"! Reminder - your fitting is on "|add:fitting_str|add:". Emporium Armani, Sukhumvit. Please reply if you need to reschedule." %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:0.75rem;padding:2px 8px">Fitting</a>
         {% endwith %}
         {% endif %}
+        {% endwith %}
+        {% endif %}
+        {% if order.ready_date %}
+        {% with ready_str=order.ready_date|date:"l, F d" %}
+        {% with ready_time_str=order.ready_time|time:"g:i A" %}
+        {% if order.ready_time %}
+        {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" is ready for pickup on "|add:ready_str|add:" at "|add:ready_time_str|add:". Please contact us to arrange. Emporium Armani, Sukhumvit." %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:0.75rem;padding:2px 8px">Ready</a>
+        {% endwith %}
+        {% else %}
         {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" is ready. Please contact us to arrange pickup or delivery. Emporium Armani, Sukhumvit." %}
         <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:0.75rem;padding:2px 8px">Ready</a>
         {% endwith %}
+        {% endif %}
+        {% endwith %}
+        {% endwith %}
+        {% else %}
+        {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" is ready. Please contact us to arrange pickup or delivery. Emporium Armani, Sukhumvit." %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:0.75rem;padding:2px 8px">Ready</a>
+        {% endwith %}
+        {% endif %}
         {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" has been delivered. We hope you love it! Thank you for choosing Emporium Armani." %}
         <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:0.75rem;padding:2px 8px">Delivered</a>
         {% endwith %}
