@@ -27,7 +27,7 @@
     </a>
     {% endif %}
 
-    <a href="{% url 'orders:status_board' %}" class="rail-nav-item" title="Status board" target="_blank">
+    <a href="{% url 'orders:status_board' %}{% if request.tenant.display_key %}?key={{ request.tenant.display_key }}{% endif %}" class="rail-nav-item" title="Status board" target="_blank">
       <i class="bi bi-display"></i>
       <span class="rail-label">Status board</span>
     </a>
