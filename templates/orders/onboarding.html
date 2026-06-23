@@ -15,7 +15,7 @@
   <div class="alert alert-danger">{{ errors.non_field_error }}</div>
   {% endif %}
 
-  <form method="post" novalidate>
+  <form method="post" enctype="multipart/form-data" novalidate>
     {% csrf_token %}
 
     {# ── Shop Details ── #}
@@ -46,13 +46,36 @@
             <label class="form-label">Package</label>
             <select name="package" class="form-select">
               <option value="studio" {% if form_data.package == 'studio' %}selected{% endif %}>
-                Studio only — ฿80,000 + ฿3,000/mo
+                Studio only — ฿80,000 setup + ฿5,000/mo
               </option>
               <option value="studio_catalogue" {% if form_data.package == 'studio_catalogue' %}selected{% endif %}>
-                Studio + Catalogue — ฿110,000 + ฿5,000/mo
+                Studio + Catalogue — ฿110,000 setup + ฿7,000/mo
               </option>
             </select>
           </div>
+
+          {# Logo upload #}
+          <div class="col-md-6">
+            <label class="form-label">Shop Logo <span class="text-muted">(optional)</span></label>
+            <input type="file" name="logo" class="form-control" accept="image/*"
+                   onchange="previewImage(this, 'logo-preview')">
+            <div id="logo-preview" class="mt-2" style="display:none;">
+              <img src="" alt="Logo preview"
+                   style="max-height:80px; max-width:200px; object-fit:contain; border:1px solid #dee2e6; border-radius:6px; padding:4px;">
+            </div>
+          </div>
+
+          {# Favicon upload #}
+          <div class="col-md-6">
+            <label class="form-label">Favicon <span class="text-muted">(32×32 recommended)</span></label>
+            <input type="file" name="favicon" class="form-control" accept="image/*"
+                   onchange="previewImage(this, 'favicon-preview')">
+            <div id="favicon-preview" class="mt-2" style="display:none;">
+              <img src="" alt="Favicon preview"
+                   style="width:32px; height:32px; object-fit:contain; border:1px solid #dee2e6; border-radius:4px;">
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -107,4 +130,17 @@
     </div>
   </form>
 </div>
+<script>
+function previewImage(input, previewId) {
+  const preview = document.getElementById(previewId);
+  const img = preview.querySelector('img');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; preview.style.display = 'block'; };
+    reader.readAsDataURL(input.files[0]);
+  } else {
+    preview.style.display = 'none';
+  }
+}
+</script>
 {% endblock %}

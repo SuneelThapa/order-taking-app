@@ -62,7 +62,16 @@ def onboarding_view(request):
                         name=shop_name,
                         subdomain=subdomain,
                         is_active=True,
+                        package=package,
                     )
+                    # Handle logo upload
+                    if request.FILES.get('logo'):
+                        tenant.logo = request.FILES['logo']
+                        tenant.save(update_fields=['logo'])
+                    # Handle favicon upload
+                    if request.FILES.get('favicon'):
+                        tenant.favicon = request.FILES['favicon']
+                        tenant.save(update_fields=['favicon'])
                     # Create owner user
                     owner = CustomUser.objects.create_user(
                         username=username,
