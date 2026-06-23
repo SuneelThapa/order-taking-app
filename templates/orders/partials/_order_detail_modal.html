@@ -64,8 +64,12 @@
         <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:0.75rem;padding:2px 8px">Confirmed</a>
         {% endwith %}
         {% if order.fitting_date %}
-        {% with msg="Hello "|add:name|add:"! Reminder - your fitting is on "|add:order.fitting_date|date:"l, F d"|add:". Emporium Armani, Sukhumvit. Please reply if you need to reschedule." %}
+        {% with fitting_str=order.fitting_date|date:"l, F d" %}
+        {% with fitting_time_str=order.fitting_time|time:"g:i A" %}
+        {% with msg="Hello "|add:name|add:"! Reminder - your fitting is on "|add:fitting_str|add:" at "|add:fitting_time_str|add:". Emporium Armani, Sukhumvit. Please reply if you need to reschedule." %}
         <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:0.75rem;padding:2px 8px">Fitting</a>
+        {% endwith %}
+        {% endwith %}
         {% endwith %}
         {% endif %}
         {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" is ready. Please contact us to arrange pickup or delivery. Emporium Armani, Sukhumvit." %}
