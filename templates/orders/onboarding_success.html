@@ -25,6 +25,16 @@
             </a>
           </td>
         </tr>
+        {% if tenant.display_key %}
+        <tr>
+          <td class="text-muted">Status Board</td>
+          <td>
+            <a href="{{ studio_url }}/display/?key={{ tenant.display_key }}" target="_blank" class="text-success">
+              /display/?key={{ tenant.display_key }}
+            </a>
+          </td>
+        </tr>
+        {% endif %}
         <tr>
           <td class="text-muted">Subdomain</td>
           <td><code>{{ subdomain }}</code></td>

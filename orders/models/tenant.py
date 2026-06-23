@@ -38,6 +38,12 @@ class Tenant(models.Model):
         help_text='Catalogue subdomain e.g. sukhumvit → sukhumvit.catalogue.emporiumarmani.com'
     )
 
+    # Display board
+    display_key = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text='Secret key for status board URL e.g. shop2026'
+    )
+
     def __str__(self):
         return self.name
 
