@@ -43,6 +43,13 @@
             {% if errors.subdomain %}<div class="text-danger small mt-1">{{ errors.subdomain }}</div>{% endif %}
           </div>
           <div class="col-md-6">
+            <label class="form-label">Custom Domain <span class="text-muted">(optional)</span></label>
+            <input type="text" name="custom_domain" class="form-control"
+                   value="{{ form_data.custom_domain|default:'' }}"
+                   placeholder="studio.sukhumvittailors.com">
+            <div class="form-text">Client's own domain — they must point DNS to 143.198.207.146</div>
+          </div>
+          <div class="col-md-6">
             <label class="form-label">Package</label>
             <select name="package" class="form-select">
               <option value="studio" {% if form_data.package == 'studio' %}selected{% endif %}>
