@@ -39,6 +39,7 @@ def onboarding_view(request):
         whatsapp_phone_id    = request.POST.get('whatsapp_phone_number_id', '').strip()
         has_catalogue        = bool(request.POST.get('has_catalogue'))
         catalogue_subdomain  = request.POST.get('catalogue_subdomain', '').strip().lower()
+        display_key          = request.POST.get('display_key', '').strip().lower()
 
         # Validate
         if not shop_name:
@@ -71,6 +72,7 @@ def onboarding_view(request):
                         whatsapp_phone_number_id=whatsapp_phone_id,
                         has_catalogue=has_catalogue,
                         catalogue_subdomain=catalogue_subdomain,
+                        display_key=display_key,
                     )
                     # Handle logo upload
                     if request.FILES.get('logo'):

@@ -2336,7 +2336,7 @@ def status_board(request):
     from datetime import date as _date2, timedelta as _td2
     from django.db import models
 
-    display_key = getattr(dj_settings, 'DISPLAY_KEY', '')
+    display_key = getattr(request, 'tenant', None) and request.tenant.display_key or getattr(dj_settings, 'DISPLAY_KEY', '')
     if display_key and request.GET.get('key') != display_key:
         return HttpResponse(
             '''<!DOCTYPE html>

@@ -172,6 +172,23 @@
         </div>
       </div>
     </div>
+
+    {# ── Display Board ── #}
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">📺 Status Display Board</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Display Board Key *</label>
+            <input type="text" name="display_key" class="form-control font-monospace"
+                   value="{{ form_data.display_key|default:'' }}"
+                   placeholder="shopname2026"
+                   oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9]/g,'')">
+            <div class="form-text">Staff opens: /display/?key=<strong>shopname2026</strong> on TV/tablet</div>
+          </div>
+        </div>
+      </div>
+    </div>
       <button type="submit" class="btn btn-primary px-4">
         🚀 Create Tenant
       </button>
