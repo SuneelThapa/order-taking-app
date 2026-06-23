@@ -53,6 +53,31 @@
     </div>
     {% endif %}
     {% endwith %}
+
+    {# ── WhatsApp Quick Send ── #}
+    {% if order.client.phone %}
+    {% with phone=order.client.phone|cut:"+" name=order.client.name order_num=order.order_number %}
+    <div class="mt-2">
+      <div class="small fw-semibold text-muted mb-1"><i class="bi bi-whatsapp text-success me-1"></i>Send WhatsApp</div>
+      <div class="d-flex flex-wrap gap-1">
+        {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" has been confirmed at Emporium Armani. We will keep you updated. Thank you!" %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-success" style="font-size:0.75rem;padding:2px 8px">Confirmed</a>
+        {% endwith %}
+        {% if order.fitting_date %}
+        {% with msg="Hello "|add:name|add:"! Reminder - your fitting is on "|add:order.fitting_date|date:"l, F d"|add:". Emporium Armani, Sukhumvit. Please reply if you need to reschedule." %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-primary" style="font-size:0.75rem;padding:2px 8px">Fitting</a>
+        {% endwith %}
+        {% endif %}
+        {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" is ready. Please contact us to arrange pickup or delivery. Emporium Armani, Sukhumvit." %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-warning" style="font-size:0.75rem;padding:2px 8px">Ready</a>
+        {% endwith %}
+        {% with msg="Hello "|add:name|add:"! Your order #"|add:order_num|add:" has been delivered. We hope you love it! Thank you for choosing Emporium Armani." %}
+        <a href="https://wa.me/{{ phone }}?text={{ msg|urlencode }}" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:0.75rem;padding:2px 8px">Delivered</a>
+        {% endwith %}
+      </div>
+    </div>
+    {% endwith %}
+    {% endif %}
   </div>
   <div class="d-flex gap-2 flex-shrink-0 align-items-center flex-wrap">
     <a href="{% url 'orders:order_edit' order.pk %}" class="btn btn-sm btn-outline-primary">
