@@ -88,7 +88,7 @@ class OrderForm(StyledModelForm):
             "street_address", "city", "state", "postcode", "country",
             "fitting_date", "fitting_time", "ready_date", "ready_time", "delivery_date", "delivery_time",
             "total_amount", "total_currency",
-            "note", "internal_notes", "is_urgent",
+            "note", "internal_notes", "is_urgent", "external_order_number",
         ]
         widgets = {
             "departure_date": forms.DateInput(attrs={"type": "date"}),

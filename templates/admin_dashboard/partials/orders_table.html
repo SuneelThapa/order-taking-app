@@ -268,7 +268,12 @@
             hx-target="#order-detail-modal-body"
             hx-swap="innerHTML">
 
-          <td class="fw-semibold">{{ order.order_number }}</td>
+          <td class="fw-semibold">
+            {{ order.order_number }}
+            {% if order.external_order_number %}
+            <div class="text-muted small fw-normal">Ref: {{ order.external_order_number }}</div>
+            {% endif %}
+          </td>
 
           <td>
             <button type="button"

@@ -29,6 +29,13 @@ class Order(models.Model):
 
     # Identity
     order_number = models.CharField(max_length=20, unique=True, db_index=True, blank=True)
+    external_order_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Existing order number from previous system (optional)"
+    )
     created_at   = models.DateTimeField(auto_now_add=True, db_index=True)
 
     # Tenant
@@ -99,8 +106,19 @@ class Order(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Order'
         verbose_name_plural = 'Orders'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tenant', 'external_order_number'],
+                condition=models.Q(external_order_number__isnull=False) &
+                          ~models.Q(external_order_number=''),
+                name='unique_external_order_number_per_tenant',
+            )
+        ]
 
     def save(self, *args, **kwargs):
+        # Normalize empty string to None for external_order_number
+        if self.external_order_number == '':
+            self.external_order_number = None
         if not self.order_number:
             from django.db import transaction
             import time

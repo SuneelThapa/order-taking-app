@@ -32,6 +32,7 @@ from .views import (
     scratch_pad_poll,
 )
 from orders.views_onboarding import onboarding_view, onboarding_success_view
+from orders.views_external_number import check_external_order_number
 
 app_name = "orders"
 
@@ -87,5 +88,6 @@ urlpatterns = [
     path("scratch/<uuid:token>/submit/",  scratch_pad_submit,         name="scratch_pad_submit"),
     path("scratch/<uuid:token>/poll/",    scratch_pad_poll,           name="scratch_pad_poll"),
     path("onboarding/",                   onboarding_view,            name="onboarding"),
+    path("check-external-number/",        check_external_order_number, name="check_external_order_number"),
     path("onboarding/<str:subdomain>/success/", onboarding_success_view, name="onboarding_success"),
 ]
