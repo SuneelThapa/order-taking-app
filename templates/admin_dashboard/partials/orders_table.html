@@ -266,7 +266,8 @@
             style="cursor:pointer"
             hx-get="{% url 'orders:order_detail' order.pk %}"
             hx-target="#order-detail-modal-body"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            hx-no-cache="true">
 
           <td class="fw-semibold">
             {{ order.order_number }}

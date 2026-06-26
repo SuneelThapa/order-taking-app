@@ -62,7 +62,8 @@
             class="btn btn-outline-secondary btn-sm py-0 px-2 ms-auto" style="font-size:0.72rem"
             hx-get="{% url 'orders:order_detail' order.pk %}"
             hx-target="#order-detail-modal-body"
-            hx-swap="innerHTML">
+            hx-swap="innerHTML"
+            hx-no-cache="true">
       View
     </button>
   </div>
