@@ -1,6 +1,6 @@
 ﻿{% load static %}
 
-{% comment %}Order detail modal â€” loaded by HTMX into #order-detail-modal-body{% endcomment %}
+{% comment %}Order detail modal - loaded by HTMX into #order-detail-modal-body{% endcomment %}
 
 {# â”€â”€ Order PK stored for JS refresh after client edit â”€â”€ #}
 <span class="d-none" data-order-pk="{{ order.pk }}"></span>
@@ -252,7 +252,7 @@
               {% endfor %}
             </div>
             {% endif %}
-            {# â”€â”€ Production bill button â€” hidden for no-measurement items â”€â”€ #}
+            {# â”€â”€ Production bill button - hidden for no-measurement items â”€â”€ #}
             {% if row.item.product_type.measurement_model != 'NoMeasurement' %}
             <div class="px-3 pb-2">
               {% if row.item.production_bill %}
@@ -362,7 +362,7 @@
           {% include "orders/partials/_payment_history.html" with order=order payments=payments quick_pay_form=quick_pay_form %}
         </div>
 
-        {# â”€â”€ Client photos â€” grouped by person â”€â”€ #}
+        {# â”€â”€ Client photos - grouped by person â”€â”€ #}
         {% if order.client_photos.exists %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Client photos</div>
