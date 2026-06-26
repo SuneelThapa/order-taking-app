@@ -340,6 +340,92 @@
   </div>
 </div>
 
+{# Reorder Confirmation Modal #}
+<div id="reorder-confirm-modal"
+     style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5);"
+     onclick="if(event.target===this) closeReorderConfirm()">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+              background:#fff; border-radius:12px; padding:32px 28px; max-width:440px;
+              width:calc(100% - 40px); box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;">
+    <div style="font-size:2rem; margin-bottom:12px; color:#198754;"><i class="bi bi-arrow-repeat"></i></div>
+    <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:10px;">Create Reorder?</div>
+    <div style="font-size:0.9rem; color:#555; line-height:1.6; margin-bottom:24px;" id="reorder-confirm-body"></div>
+    <div class="d-flex gap-2 justify-content-center">
+      <button onclick="closeReorderConfirm()"
+              style="background:#f3f4f6; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer; color:#374151;">
+        Cancel
+      </button>
+      <button id="reorder-confirm-btn"
+              style="background:#198754; color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer;">
+        <i class="bi bi-arrow-repeat me-1"></i> Yes, create reorder
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+function showReorderConfirm(orderPk, orderNumber) {
+  document.getElementById("reorder-confirm-body").textContent =
+    "Create a reorder from order #" + orderNumber + "? Items will be copied, measurements won't.";
+  document.getElementById("reorder-confirm-btn").onclick = function() {
+    closeReorderConfirm();
+    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+    fetch("/" + orderPk + "/reorder/", {
+      method: "POST",
+      headers: {"X-CSRFToken": csrf, "HX-Request": "true"}
+    }).then(r => {
+      const redirect = r.headers.get("HX-Redirect");
+      if (redirect) window.location.href = redirect;
+      else window.location.reload();
+    }).catch(() => window.location.reload());
+  };
+  document.getElementById("reorder-confirm-modal").style.display = "block";
+}
+function closeReorderConfirm() {
+  document.getElementById("reorder-confirm-modal").style.display = "none";
+}
+</script>
+
+{# Delete Order Confirmation Modal #}
+<div id="delete-confirm-modal"
+     style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5);"
+     onclick="if(event.target===this) closeDeleteConfirm()">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+              background:#fff; border-radius:12px; padding:32px 28px; max-width:440px;
+              width:calc(100% - 40px); box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;">
+    <div style="font-size:2rem; margin-bottom:12px; color:#dc3545;"><i class="bi bi-trash"></i></div>
+    <div style="font-size:1.1rem; font-weight:600; color:#dc3545; margin-bottom:10px;">Delete Order?</div>
+    <div style="font-size:0.9rem; color:#555; line-height:1.6; margin-bottom:24px;" id="delete-confirm-body"></div>
+    <div class="d-flex gap-2 justify-content-center">
+      <button onclick="closeDeleteConfirm()"
+              style="background:#f3f4f6; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer; color:#374151;">
+        Cancel
+      </button>
+      <button id="delete-confirm-btn"
+              style="background:#dc3545; color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer;">
+        <i class="bi bi-trash me-1"></i> Yes, delete order
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+function showDeleteConfirm(orderPk, orderNumber, htmxTarget) {
+  document.getElementById("delete-confirm-body").textContent =
+    "Delete order #" + orderNumber + "? This cannot be undone.";
+  document.getElementById("delete-confirm-btn").onclick = function() {
+    closeDeleteConfirm();
+    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+    htmx.ajax("DELETE", "/" + orderPk + "/delete/", {
+      target: htmxTarget || "#orders-region",
+      swap: "outerHTML",
+      headers: {"X-CSRFToken": csrf}
+    });
+  };
+  document.getElementById("delete-confirm-modal").style.display = "block";
+}
+function closeDeleteConfirm() {
+  document.getElementById("delete-confirm-modal").style.display = "none";
+}
+</script>
 <script>
   // Register PWA service worker
   if ('serviceWorker' in navigator) {

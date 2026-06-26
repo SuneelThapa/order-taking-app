@@ -325,10 +325,7 @@
           <td class="text-end" onclick="event.stopPropagation()">
             {% if request.user.is_superuser or request.user.staff_profile.role == 'owner' or request.user.staff_profile.role == 'manager' %}
             <button class="btn btn-sm btn-outline-danger"
-                    hx-delete="{% url 'orders:order_delete' order.pk %}"
-                    hx-confirm="Delete order #{{ order.order_number }}? This cannot be undone."
-                    hx-target="#orders-region"
-                    hx-swap="outerHTML">
+                    onclick="showDeleteConfirm('{{ order.pk }}', '{{ order.order_number }}', '#orders-region')">
               <i class="bi bi-trash"></i>
             </button>
             {% endif %}
