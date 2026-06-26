@@ -37,6 +37,7 @@ class Order(models.Model):
         help_text="Existing order number from previous system (optional)"
     )
     created_at   = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at   = models.DateTimeField(auto_now=True, db_index=True)
 
     # Tenant
     tenant = models.ForeignKey('Tenant', on_delete=models.CASCADE, related_name='orders')
