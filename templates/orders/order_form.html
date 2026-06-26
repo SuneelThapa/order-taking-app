@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% load static %}
 
 {% block title %}{% if is_edit %}Edit #{{ edit_order.order_number }}{% else %}New order{% endif %}{% endblock %}
@@ -8,27 +8,27 @@
 {% endblock %}
 
 {% block content %}
-{# ── Smart Merge Modal ── #}
+{# â”€â”€ Smart Merge Modal â”€â”€ #}
 <div id="smart-merge-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5); overflow-y:auto;">
   <div style="position:relative; margin:40px auto; background:#fff; border-radius:12px; padding:28px; max-width:500px; width:calc(100% - 32px); box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:4px;">✍️ Scratch Pad Results</div>
+    <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:4px;">âœï¸ Scratch Pad Results</div>
     <div style="font-size:0.85rem; color:#666; margin-bottom:20px;">Review what was read from the handwriting.</div>
 
     {# Auto-filled section #}
     <div id="sm-auto-section">
-      <div style="font-size:0.8rem; font-weight:600; color:#198754; margin-bottom:8px;">✅ Auto-filled (empty fields)</div>
+      <div style="font-size:0.8rem; font-weight:600; color:#198754; margin-bottom:8px;">âœ… Auto-filled (empty fields)</div>
       <div id="sm-auto-list" style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:16px;"></div>
     </div>
 
     {# Conflicts section #}
     <div id="sm-conflict-section">
-      <div style="font-size:0.8rem; font-weight:600; color:#d97706; margin-bottom:8px;">⚠️ Conflicts — choose which to keep</div>
+      <div style="font-size:0.8rem; font-weight:600; color:#d97706; margin-bottom:8px;">âš ï¸ Conflicts â€” choose which to keep</div>
       <div id="sm-conflict-list" style="background:#fffbeb; border-radius:8px; padding:12px; margin-bottom:16px;"></div>
     </div>
 
     <div class="d-flex gap-2 justify-content-end">
       <button onclick="closeSmartMergeModal()" style="background:#f3f4f6; border:none; border-radius:8px; padding:10px 20px; font-size:0.9rem; cursor:pointer; color:#374151;">Cancel</button>
-      <button id="sm-apply-btn" style="background:#1A1A1A; color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer;">Apply ✓</button>
+      <button id="sm-apply-btn" style="background:#1A1A1A; color:#fff; border:none; border-radius:8px; padding:10px 24px; font-size:0.9rem; cursor:pointer;">Apply âœ“</button>
     </div>
   </div>
 </div>
@@ -50,7 +50,7 @@
   <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
               background:#fff; border-radius:12px; padding:32px 28px; max-width:420px;
               width:calc(100% - 40px); box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;">
-    <div style="font-size:2.5rem; margin-bottom:12px;">⚠️</div>
+    <div style="font-size:2.5rem; margin-bottom:12px;">âš ï¸</div>
     <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:10px;" id="client-warning-title">
       No client selected
     </div>
@@ -85,7 +85,7 @@
   <div class="alert alert-danger">Some fields need attention. Check the steps and fix before saving.</div>
   {% endif %}
 
-  {# ── Inquiry pre-fill banner ── #}
+  {# â”€â”€ Inquiry pre-fill banner â”€â”€ #}
   {% if inquiry_prefill %}
   <div class="alert alert-warning d-flex align-items-start gap-3 mb-3">
     <i class="bi bi-shop fs-4 text-warning"></i>
@@ -94,7 +94,7 @@
         Converting Catalogue Inquiry #{{ inquiry_prefill.id }}
       </div>
       <div class="small">
-        <strong>{{ inquiry_prefill.name }}</strong> · {{ inquiry_prefill.phone }}
+        <strong>{{ inquiry_prefill.name }}</strong> Â· {{ inquiry_prefill.phone }}
       </div>
       {% if inquiry_prefill.message %}
       <div class="small text-muted mt-1" style="white-space:pre-line">{{ inquiry_prefill.message|truncatechars:200 }}</div>
@@ -105,7 +105,7 @@
       </div>
       {% else %}
       <div class="small text-muted mt-1">
-        <i class="bi bi-person-plus me-1"></i>No existing client found — search or create new in Step 1.
+        <i class="bi bi-person-plus me-1"></i>No existing client found â€” search or create new in Step 1.
       </div>
       {% endif %}
     </div>
@@ -117,12 +117,12 @@
   <input type="hidden" name="inquiry_phone" value="{{ inquiry_prefill.phone }}">
   {% endif %}
 
-  {# ── Draft restore banner ── #}
+  {# â”€â”€ Draft restore banner â”€â”€ #}
   {% if not is_edit %}
   <div id="draft-banner" class="alert alert-info d-flex align-items-center justify-content-between gap-3 mb-3 d-none">
     <div>
       <i class="bi bi-clock-history me-2"></i>
-      <strong>Draft restored</strong> — last saved at <span id="draft-saved-at"></span>.
+      <strong>Draft restored</strong> â€” last saved at <span id="draft-saved-at"></span>.
       Your data has been automatically restored across all steps.
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
@@ -144,7 +144,7 @@
       <div class="card">
         <div class="card-header bg-white fw-semibold d-flex justify-content-between">
           <span>Client</span>
-          {% if is_edit and edit_order %}<span class="text-muted small">Order #{{ edit_order.order_number }} · {{ edit_order.created_at|date:"M d, Y" }}</span>{% endif %}
+          {% if is_edit and edit_order %}<span class="text-muted small">Order #{{ edit_order.order_number }} Â· {{ edit_order.created_at|date:"M d, Y" }}</span>{% endif %}
         </div>
         <div class="card-body">
 
@@ -163,7 +163,7 @@
               <div class="border rounded p-3 bg-white d-flex justify-content-between align-items-start">
                 <div>
                   <div class="fw-semibold">{{ selected_client.name }}</div>
-                  <div class="small text-muted">{{ selected_client.phone }}{% if selected_client.email %} · {{ selected_client.email }}{% endif %}</div>
+                  <div class="small text-muted">{{ selected_client.phone }}{% if selected_client.email %} Â· {{ selected_client.email }}{% endif %}</div>
                   {% if selected_client.street_address %}<div class="small text-muted">{{ selected_client.street_address }}, {{ selected_client.city }}</div>{% endif %}
                   {% if selected_client.get_whatsapp_url %}<a href="{{ selected_client.get_whatsapp_url }}" target="_blank" class="small text-success"><i class="bi bi-whatsapp"></i> WhatsApp</a>{% endif %}
                 </div>
@@ -246,6 +246,22 @@
           </div>
 
           
+          {# External Order Number #}
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">External Order Number <span class="text-muted fw-normal small">(from previous system)</span></label>
+              <input type="text" name="external_order_number"
+                     class="form-control font-monospace"
+                     value="{{ order_form.external_order_number.value|default:'' }}"
+                     placeholder="e.g. EA-0045"
+                     hx-get="{% url 'orders:check_external_order_number' %}"
+                     hx-trigger="keyup changed delay:500ms"
+                     hx-target="#external-number-check"
+                     hx-include="[name=external_order_number]">
+              <div id="external-number-check">{% if order_form.external_order_number.errors %}<div class="text-danger small mt-1">{{ order_form.external_order_number.errors|striptags }}</div>{% endif %}</div>
+            </div>
+          </div>
+
           <div class="row g-3 mb-3">
             <div class="col-md-4">
               <label class="form-label">Fitting date &amp; time</label>
@@ -385,7 +401,7 @@
 
     
     <section x-show="step===4" x-cloak>
-      {# ── Multi-person client photos ── #}
+      {# â”€â”€ Multi-person client photos â”€â”€ #}
       <div class="card mb-3"
            x-data="{ persons: {{ initial_persons }} }">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -739,7 +755,7 @@
               </span>
               <span class="text-muted small">
                 {{ edit_order.total_locked_at|date:"d M Y H:i" }}
-                {% if edit_order.total_locked_by %}· {{ edit_order.total_locked_by.get_full_name|default:edit_order.total_locked_by.username }}{% endif %}
+                {% if edit_order.total_locked_by %}Â· {{ edit_order.total_locked_by.get_full_name|default:edit_order.total_locked_by.username }}{% endif %}
               </span>
               {% if can_lock %}
               <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
@@ -771,11 +787,11 @@
       <div class="card mb-3">
         <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
           <span>Payments</span>
-          <span class="text-muted small">Deposit, balance, re-deposit, pickup…</span>
+          <span class="text-muted small">Deposit, balance, re-deposit, pickupâ€¦</span>
         </div>
         <div class="card-body">
 
-          {# ── Existing recorded payments (edit mode) ── #}
+          {# â”€â”€ Existing recorded payments (edit mode) â”€â”€ #}
           {% if existing_payments %}
           <div class="mb-3">
             <div class="small fw-semibold text-muted mb-2">Recorded payments</div>
@@ -789,10 +805,10 @@
                   {% if p.is_refund %}&minus;{% endif %}{{ p.original_amount|floatformat:0 }} {{ p.currency }}
                 </span>
                 {% if p.currency != 'THB' %}
-                  <span class="text-muted small"> = ฿{{ p.thb_equivalent|floatformat:0 }}</span>
+                  <span class="text-muted small"> = à¸¿{{ p.thb_equivalent|floatformat:0 }}</span>
                 {% endif %}
                 <span class="text-muted small ms-2">
-                  {{ p.get_method_display }} · {{ p.created_at|date:"d M Y" }}
+                  {{ p.get_method_display }} Â· {{ p.created_at|date:"d M Y" }}
                 </span>
               </div>
               <span class="text-muted small">{{ p.recorded_by.get_full_name|default:p.recorded_by.username }}</span>
@@ -801,13 +817,13 @@
             <div class="small mt-1">
               <span class="text-muted">Balance due:</span>
               <strong class="{% if edit_order.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
-                ฿{{ edit_order.balance_due|floatformat:0 }}
+                à¸¿{{ edit_order.balance_due|floatformat:0 }}
               </strong>
             </div>
           </div>
           {% endif %}
 
-          {# ── Add new payment ── #}
+          {# â”€â”€ Add new payment â”€â”€ #}
           <div class="small fw-semibold text-muted mb-2">
             {% if existing_payments %}Add another payment{% else %}Record payment{% endif %}
           </div>
@@ -839,11 +855,11 @@
                  alt="Client signature">
             <div class="text-muted small">
               Signed {{ existing_signature.signed_at|date:"d M Y H:i" }}<br>
-              <span class="text-success"><i class="bi bi-check-circle me-1"></i>Signature on file — draw below only to replace</span>
+              <span class="text-success"><i class="bi bi-check-circle me-1"></i>Signature on file â€” draw below only to replace</span>
             </div>
           </div>
           {% elif is_edit %}
-          <div class="mb-2 text-muted small">No signature on file — draw below to capture.</div>
+          <div class="mb-2 text-muted small">No signature on file â€” draw below to capture.</div>
           {% endif %}
           <div class="d-flex align-items-center gap-3 mb-2">
             <select id="sigPenSize" class="form-select form-select-sm" style="width:auto"><option value="2">Thin</option><option value="3" selected>Medium</option></select>
@@ -880,11 +896,11 @@
 
 {% block extra_js %}
 <script>
-// ── Scratch Pad URL constants ─────────────────────────────────────────
+// â”€â”€ Scratch Pad URL constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window._spCreateUrl = '{% url "orders:scratch_pad_create" %}';
 window._spPollBase  = '{% url "orders:scratch_pad_poll" token="00000000-0000-0000-0000-000000000000" %}';
 
-// Contact scratch pad (Step 1 — client form loaded via HTMX)
+// Contact scratch pad (Step 1 â€” client form loaded via HTMX)
 function contactScratchPad() {
   return {
     createUrl: window._spCreateUrl,
@@ -930,11 +946,11 @@ function contactScratchPad() {
               if (!el) continue;
               const curVal = el.value.trim();
               if (!curVal) {
-                // Empty — auto-fill silently
+                // Empty â€” auto-fill silently
                 el.value = newVal; el.dispatchEvent(new Event('input',{bubbles:true}));
                 autoFilled.push({ label: labels[k], value: newVal });
               } else if (curVal.toLowerCase() !== newVal.toLowerCase()) {
-                // Conflict — ask
+                // Conflict â€” ask
                 conflicts.push({ key: k, sel, label: labels[k], current: curVal, fromPad: newVal });
               }
             }
@@ -947,7 +963,7 @@ function contactScratchPad() {
   }
 }
 
-// Measurements scratch pad base (Step 3 — prefix/genderField passed via x-data spread)
+// Measurements scratch pad base (Step 3 â€” prefix/genderField passed via x-data spread)
 function measScratchPadBase() {
   return {
     createUrl: window._spCreateUrl,
@@ -1007,7 +1023,7 @@ function measScratchPadBase() {
   }
 }
 
-// ── Smart merge modal ─────────────────────────────────────────────
+// â”€â”€ Smart merge modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showSmartMergeModal(autoFilled, conflicts) {
   const modal = document.getElementById('smart-merge-modal');
   const autoEl = document.getElementById('sm-auto-list');
@@ -1062,7 +1078,7 @@ function closeSmartMergeModal() {
   document.getElementById('smart-merge-modal').style.display = 'none';
 }
 
-// ── Client warning modal ──────────────────────────────────────────
+// â”€â”€ Client warning modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showClientWarning(title, body) {
   document.getElementById('client-warning-title').textContent = title;
   document.getElementById('client-warning-body').textContent  = body;
@@ -1115,7 +1131,7 @@ function orderWizard() {
     async nextStep() {
       if (this.step === 1 && !this.clientId) {
         if (this.showCreate) {
-          // Create form is open — auto-save client then advance
+          // Create form is open â€” auto-save client then advance
           const btn = { disabled: false, textContent: 'Saving...' };
           const ok = await saveClientInlineReturning(btn);
           if (ok) this.step++;
@@ -1136,7 +1152,7 @@ function orderWizard() {
   }
 }
 
-// Native fetch for client creation — bypasses HTMX event bubbling issues.
+// Native fetch for client creation â€” bypasses HTMX event bubbling issues.
 // HX-Trigger custom events fire on the triggering button, which is removed from
 // the DOM by outerHTML swap before the event dispatches, so it never bubbles.
 // A direct fetch reads response headers immediately with no event needed.
@@ -1147,7 +1163,7 @@ async function saveClientInlineReturning(btn) {
 
 async function saveClientInline(btn) {
   console.log('[saveClientInline] START');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  btn.disabled = true; btn.textContent = 'Savingâ€¦';
 
   const form = document.getElementById('client-create-form');
   if (!form) { console.error('[saveClientInline] #client-create-form not found'); btn.disabled=false; btn.textContent='Save client'; return; }
@@ -1176,7 +1192,7 @@ async function saveClientInline(btn) {
     console.log('[saveClientInline] X-Created-Client-Id:', clientId, '| ref:', !!_orderWizardRef);
 
     if (clientId) {
-      console.log('[saveClientInline] SUCCESS — calling selectClient');
+      console.log('[saveClientInline] SUCCESS â€” calling selectClient');
       if (_orderWizardRef) {
         _orderWizardRef.clientId = '';
         _orderWizardRef.selectClient(clientId, clientName, clientPhone);
@@ -1190,7 +1206,7 @@ async function saveClientInline(btn) {
         console.error('[saveClientInline] _orderWizardRef is null!');
       }
     } else {
-      console.warn('[saveClientInline] no client ID header — form errors');
+      console.warn('[saveClientInline] no client ID header â€” form errors');
       const html = await res.text();
       const tmp = document.createElement('div'); tmp.innerHTML = html;
       const newForm = tmp.querySelector('#client-create-form') || tmp.firstElementChild;
@@ -1209,7 +1225,7 @@ async function saveClientInline(btn) {
   }
 }
 
-// ── Draft persistence ────────────────────────────────────────────────
+// â”€â”€ Draft persistence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DRAFT_KEY  = '{% if is_edit %}ea_draft_{{ edit_order.pk }}{% else %}ea_draft_new{% endif %}';
 const SKIP_NAMES = new Set([
   'csrfmiddlewaretoken', 'signature_canvas_image',
@@ -1295,9 +1311,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[submit] client value:', JSON.stringify(clientVal));
     if (!clientVal) {
       e.preventDefault();
-      console.warn('[submit] BLOCKED — no client');
+      console.warn('[submit] BLOCKED â€” no client');
       if (_orderWizardRef) _orderWizardRef.step = 1;
-      showClientWarning('No client selected', 'Go to Step 1 — search for a client, or click "Create new client", fill the form, then click "Save client".');
+      showClientWarning('No client selected', 'Go to Step 1 â€” search for a client, or click "Create new client", fill the form, then click "Save client".');
     } else {
       clearDraft(); // Clear draft on successful submit
     }
@@ -1321,11 +1337,11 @@ function removeItem(btn) {
   const del    = row.querySelector('input[name$="-DELETE"]');
 
   if (idInput && idInput.value) {
-    // Existing DB item — mark DELETE and hide, Django will delete on save
+    // Existing DB item â€” mark DELETE and hide, Django will delete on save
     if (del) del.checked = true;
     row.style.display = 'none';
   } else {
-    // Brand-new item (never saved) — remove from DOM then renumber
+    // Brand-new item (never saved) â€” remove from DOM then renumber
     row.remove();
     renumberItemForms();
   }
@@ -1524,7 +1540,7 @@ document.addEventListener('change', function(e) {
 </script>
 
 <script>
-// ── Copy body measurements between item rows (smart - garment-aware) ───────
+// â”€â”€ Copy body measurements between item rows (smart - garment-aware) â”€â”€â”€â”€â”€â”€â”€
 const GARMENT_BODY_FIELDS = {
   'JacketMeasurement': ['neck','shoulder','sleeve','biceps','chest','stomach','hips','height','weight','shoulder_posture','chest_description'],
   'ShirtMeasurement':  ['neck','shoulder','sleeve','biceps','chest','stomach','hips','height','weight','shoulder_posture','chest_description'],
@@ -1537,7 +1553,7 @@ const GARMENT_BODY_FIELDS = {
   'BlouseMeasurement': ['neck','shoulder','sleeve','biceps','high_chest','chest','stomach','upper_hips','hips','shoulder_to_middle_breast','shoulder_to_under_breast','middle_breast_to_middle_breast','shoulder_to_back','shoulder_to_waist','height','weight'],
 };
 
-// Server-side mapping of product type PK → measurement model name
+// Server-side mapping of product type PK â†’ measurement model name
 const PRODUCT_TYPE_MAP = {{ product_type_model_map|safe }};
 
 const ALL_BODY_FIELDS = [
@@ -1581,16 +1597,16 @@ function copyBodyMeasurements(fromPrefix, toPrefix) {
     ? productTypeSelect.options[productTypeSelect.selectedIndex].text
     : 'this item';
   if (copied > 0) {
-    showClientWarning('✅ Measurements Copied', `Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
+    showClientWarning('âœ… Measurements Copied', `Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
   } else {
-    showClientWarning('⚠️ No Measurements Found', 'No measurements found on Item 1 yet. Please fill Item 1 measurements first, then copy.');
+    showClientWarning('âš ï¸ No Measurements Found', 'No measurements found on Item 1 yet. Please fill Item 1 measurements first, then copy.');
   }
 }
 
-// ── Temp photo auto-upload ────────────────────────────────────────────────
+// â”€â”€ Temp photo auto-upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Immediately uploads selected file so photo survives form validation errors.
-// ── Client-side image resize before upload ───────────────
-// Tablets take 10-12MB photos — resize to max 1920px / 85% quality
+// â”€â”€ Client-side image resize before upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Tablets take 10-12MB photos â€” resize to max 1920px / 85% quality
 // before uploading. Reduces file size from ~10MB to ~300KB.
 function resizeImageBeforeUpload(file, maxWidth=1920, quality=0.85) {
   return new Promise(resolve => {
@@ -1618,7 +1634,7 @@ function resizeImageBeforeUpload(file, maxWidth=1920, quality=0.85) {
           type: 'image/jpeg',
           lastModified: Date.now(),
         });
-        console.log(`[resize] ${(file.size/1024).toFixed(0)}KB → ${(resized.size/1024).toFixed(0)}KB`);
+        console.log(`[resize] ${(file.size/1024).toFixed(0)}KB â†’ ${(resized.size/1024).toFixed(0)}KB`);
         resolve(resized);
       }, 'image/jpeg', quality);
     };
@@ -1632,7 +1648,7 @@ async function autoUploadPhoto(input, tempFieldName) {
   if (!rawFile) return;
   // Resize before upload
   const file = await resizeImageBeforeUpload(rawFile);
-  // Local preview — find the slot container
+  // Local preview â€” find the slot container
   const slot = input.closest('.photo-upload-slot') || input.parentNode;
   const reader = new FileReader();
   reader.onload = e => {
@@ -1668,7 +1684,7 @@ async function autoUploadPhoto(input, tempFieldName) {
     h.value = d.uuid;
   } catch(e) { console.warn('Temp upload failed:', e); }
 }
-// ── Referred-by client search ────────────────────────────
+// â”€â”€ Referred-by client search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function selectReferredBy(id, label) {
   document.getElementById('referred_by_id').value = id;
   const inp = document.querySelector('[name="referred_q"]');

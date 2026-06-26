@@ -262,3 +262,42 @@ class StatusBoardTest(TestCase):
             HTTP_HOST='test.studio.emporiumarmani.com'
         )
         self.assertEqual(resp.status_code, 403)
+
+
+class CustomDomainMiddlewareTest(TestCase):
+
+    def setUp(self):
+        self.tenant = Tenant.objects.create(
+            name='Custom Domain Shop',
+            subdomain='customshop',
+            custom_domain='studio.customshop.com',
+            is_active=True,
+        )
+
+    def test_custom_domain_resolves_tenant(self):
+        """Request with custom domain resolves correct tenant."""
+        c = TestClient()
+        c.force_login(
+            User.objects.create_user(
+                username='customuser',
+                password='pass',
+                is_staff=True,
+                tenant=self.tenant,
+            )
+        )
+        resp = c.get('/', HTTP_HOST='studio.customshop.com')
+        self.assertIn(resp.status_code, [200, 302])
+
+    def test_subdomain_still_works(self):
+        """Subdomain still resolves when custom domain is set."""
+        c = TestClient()
+        c.force_login(
+            User.objects.create_user(
+                username='subdomainuser',
+                password='pass',
+                is_staff=True,
+                tenant=self.tenant,
+            )
+        )
+        resp = c.get('/', HTTP_HOST='customshop.studio.emporiumarmani.com')
+        self.assertIn(resp.status_code, [200, 302])

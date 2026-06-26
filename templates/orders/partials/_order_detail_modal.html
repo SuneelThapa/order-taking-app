@@ -1,15 +1,18 @@
-{% load static %}
+﻿{% load static %}
 
-{% comment %}Order detail modal — loaded by HTMX into #order-detail-modal-body{% endcomment %}
+{% comment %}Order detail modal â€” loaded by HTMX into #order-detail-modal-body{% endcomment %}
 
-{# ── Order PK stored for JS refresh after client edit ── #}
+{# â”€â”€ Order PK stored for JS refresh after client edit â”€â”€ #}
 <span class="d-none" data-order-pk="{{ order.pk }}"></span>
 
-{# ── Modal header ─────────────────────────────────────── #}
+{# â”€â”€ Modal header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
 <div class="modal-header border-bottom pb-2 d-flex align-items-start gap-3">
   <div class="flex-grow-1">
     <div class="d-flex align-items-center gap-2 flex-wrap">
       <h5 class="modal-title fw-bold mb-0">#{{ order.order_number }}</h5>
+      {% if order.external_order_number %}
+      <span class="badge text-bg-light border text-muted small" title="Previous system order number">Ref: {{ order.external_order_number }}</span>
+      {% endif %}
       {% if order.is_urgent %}
         <span class="badge text-bg-danger">URGENT</span>
       {% endif %}
@@ -54,7 +57,7 @@
     {% endif %}
     {% endwith %}
 
-    {# ── WhatsApp Quick Send ── #}
+    {# â”€â”€ WhatsApp Quick Send â”€â”€ #}
     {% if order.client.phone %}
     {% with phone=order.client.phone|cut:"+" name=order.client.name order_num=order.order_number %}
     <div class="mt-2">
@@ -114,7 +117,7 @@
             hx-confirm="Create a reorder from #{{ order.order_number }}? Items will be copied, measurements won't.">
       <i class="bi bi-arrow-repeat"></i> Reorder
     </button>
-    {# ── Documents dropdown ── #}
+    {# â”€â”€ Documents dropdown â”€â”€ #}
     <div class="dropdown">
       <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
               data-bs-toggle="dropdown">
@@ -145,10 +148,10 @@
   </div>
 </div>
 
-{# ── Modal body ────────────────────────────────────────── #}
+{# â”€â”€ Modal body â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #}
 <div class="modal-body p-0">
 
-  {# ── Quick status + key dates bar ── #}
+  {# â”€â”€ Quick status + key dates bar â”€â”€ #}
   <div class="border-bottom px-4 py-2 bg-light d-flex flex-wrap align-items-center gap-3">
     <div class="d-flex align-items-center gap-2">
       <label class="small text-muted mb-0">Status</label>
@@ -186,10 +189,10 @@
   <div class="p-4">
     <div class="row g-4">
 
-      {# ── LEFT column ── #}
+      {# â”€â”€ LEFT column â”€â”€ #}
       <div class="col-lg-7">
 
-        {# ── Hotel / room ── #}
+        {# â”€â”€ Hotel / room â”€â”€ #}
         {% if order.hotel_name %}
         <div class="mb-3 d-flex gap-3 p-3 border rounded bg-light">
           <i class="bi bi-building text-muted"></i>
@@ -202,7 +205,7 @@
         </div>
         {% endif %}
 
-        {# ── Items ── #}
+        {# â”€â”€ Items â”€â”€ #}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Items</div>
           {% regroup items_with_measurements by item.group_label as grouped_items %}
@@ -220,11 +223,11 @@
               <div>
                 <span class="fw-semibold">{{ row.item.product_name }}</span>
                 <span class="text-muted small ms-2">{{ row.item.product_type }}</span>
-                <span class="badge text-bg-secondary ms-2">× {{ row.item.quantity }}</span>
+                <span class="badge text-bg-secondary ms-2">Ã— {{ row.item.quantity }}</span>
               </div>
               {% if row.item.price %}
               <span class="fw-semibold text-primary">
-                ฿{{ row.item.total_price|floatformat:0 }}
+                à¸¿{{ row.item.total_price|floatformat:0 }}
               </span>
               {% endif %}
             </div>
@@ -249,7 +252,7 @@
               {% endfor %}
             </div>
             {% endif %}
-            {# ── Production bill button — hidden for no-measurement items ── #}
+            {# â”€â”€ Production bill button â€” hidden for no-measurement items â”€â”€ #}
             {% if row.item.product_type.measurement_model != 'NoMeasurement' %}
             <div class="px-3 pb-2">
               {% if row.item.production_bill %}
@@ -280,7 +283,7 @@
           {% endfor %}
         </div>
 
-        {# ── Delivery ── #}
+        {# â”€â”€ Delivery â”€â”€ #}
         {% if order.delivery %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Delivery</div>
@@ -317,7 +320,7 @@
         </div>
         {% endif %}
 
-        {# ── Staff ── #}
+        {# â”€â”€ Staff â”€â”€ #}
         {% if order.staff_assignments.exists %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Staff</div>
@@ -335,7 +338,7 @@
         </div>
         {% endif %}
 
-        {# ── Notes ── #}
+        {# â”€â”€ Notes â”€â”€ #}
         {% if order.note %}
         <div class="mb-3">
           <div class="fw-semibold mb-1 small">Customer notes</div>
@@ -351,15 +354,15 @@
 
       </div>
 
-      {# ── RIGHT column ── #}
+      {# â”€â”€ RIGHT column â”€â”€ #}
       <div class="col-lg-5">
 
-        {# ── Payments ── #}
+        {# â”€â”€ Payments â”€â”€ #}
         <div id="payment-history-{{ order.pk }}">
           {% include "orders/partials/_payment_history.html" with order=order payments=payments quick_pay_form=quick_pay_form %}
         </div>
 
-        {# ── Client photos — grouped by person ── #}
+        {# â”€â”€ Client photos â€” grouped by person â”€â”€ #}
         {% if order.client_photos.exists %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Client photos</div>
@@ -385,7 +388,7 @@
         </div>
         {% endif %}
 
-        {# ── Scratch notes ── #}
+        {# â”€â”€ Scratch notes â”€â”€ #}
         {% if order.scratch_notes.exists %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Scratch notes</div>
@@ -402,7 +405,7 @@
         </div>
         {% endif %}
 
-        {# ── Signature ── #}
+        {# â”€â”€ Signature â”€â”€ #}
         {% if signature and signature.image %}
         <div class="mb-4">
           <div class="fw-semibold mb-2">Client signature</div>
@@ -421,7 +424,7 @@
   </div>
 </div>
 
-{# ── Modal footer ── #}
+{# â”€â”€ Modal footer â”€â”€ #}
 <div class="modal-footer border-top justify-content-between">
   <div>
     <span class="text-muted small me-2">Total:</span>

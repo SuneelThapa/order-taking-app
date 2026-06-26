@@ -37,7 +37,7 @@ docker-compose -f docker-compose.yml -f docker-compose.local.yml exec web python
 docker cp /opt/order-taking-app/orders/views.py order-taking-app-web-1:/code/orders/views.py
 docker compose -f docker-compose.yml -f docker-compose.prod.yml restart web
 
-
+#https://studio.emporiumarmani.com/onboarding/
 
 
 #prod run

@@ -99,7 +99,7 @@ def _orders_table_context(request, tenant):
         orders = orders.filter(status=status)
     if q:
         orders = orders.filter(
-            Q(order_number__icontains=q)
+            Q(order_number__icontains=q) | Q(external_order_number__icontains=q)
             | Q(client__name__icontains=q)
             | Q(client__phone__icontains=q)
             | Q(client__email__icontains=q)
@@ -1464,7 +1464,7 @@ def export_csv(request):
     max_amount = request.GET.get("max_amount") or ""
 
     if status:    orders = orders.filter(status=status)
-    if q:         orders = orders.filter(Q(order_number__icontains=q) | Q(client__name__icontains=q) | Q(client__phone__icontains=q))
+    if q:         orders = orders.filter(Q(order_number__icontains=q) | Q(external_order_number__icontains=q) | Q(client__name__icontains=q) | Q(client__phone__icontains=q))
     if from_date: orders = orders.filter(created_at__date__gte=from_date)
     if to_date:   orders = orders.filter(created_at__date__lte=to_date)
     if staff_id:  orders = orders.filter(staff_assignments__user_id=staff_id).distinct()
