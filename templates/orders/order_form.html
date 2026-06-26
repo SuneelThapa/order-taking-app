@@ -16,13 +16,13 @@
 
     {# Auto-filled section #}
     <div id="sm-auto-section">
-      <div style="font-size:0.8rem; font-weight:600; color:#198754; margin-bottom:8px;">âœ… Auto-filled (empty fields)</div>
+      <div style="font-size:0.8rem; font-weight:600; color:#198754; margin-bottom:8px;">✅ Auto-filled (empty fields)</div>
       <div id="sm-auto-list" style="background:#f0fdf4; border-radius:8px; padding:12px; margin-bottom:16px;"></div>
     </div>
 
     {# Conflicts section #}
     <div id="sm-conflict-section">
-      <div style="font-size:0.8rem; font-weight:600; color:#d97706; margin-bottom:8px;">âš ï¸ Conflicts â€” choose which to keep</div>
+      <div style="font-size:0.8rem; font-weight:600; color:#d97706; margin-bottom:8px;">! Conflicts - choose which to keep</div>
       <div id="sm-conflict-list" style="background:#fffbeb; border-radius:8px; padding:12px; margin-bottom:16px;"></div>
     </div>
 
@@ -50,7 +50,7 @@
   <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
               background:#fff; border-radius:12px; padding:32px 28px; max-width:420px;
               width:calc(100% - 40px); box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;">
-    <div style="font-size:2.5rem; margin-bottom:12px;">âš ï¸</div>
+    <div style="font-size:2.5rem; margin-bottom:12px;">!</div>
     <div style="font-size:1.1rem; font-weight:600; color:#1A1A1A; margin-bottom:10px;" id="client-warning-title">
       No client selected
     </div>
@@ -105,7 +105,7 @@
       </div>
       {% else %}
       <div class="small text-muted mt-1">
-        <i class="bi bi-person-plus me-1"></i>No existing client found â€” search or create new in Step 1.
+        <i class="bi bi-person-plus me-1"></i>No existing client found - search or create new in Step 1.
       </div>
       {% endif %}
     </div>
@@ -122,7 +122,7 @@
   <div id="draft-banner" class="alert alert-info d-flex align-items-center justify-content-between gap-3 mb-3 d-none">
     <div>
       <i class="bi bi-clock-history me-2"></i>
-      <strong>Draft restored</strong> â€” last saved at <span id="draft-saved-at"></span>.
+      <strong>Draft restored</strong> - last saved at <span id="draft-saved-at"></span>.
       Your data has been automatically restored across all steps.
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
@@ -855,11 +855,11 @@
                  alt="Client signature">
             <div class="text-muted small">
               Signed {{ existing_signature.signed_at|date:"d M Y H:i" }}<br>
-              <span class="text-success"><i class="bi bi-check-circle me-1"></i>Signature on file â€” draw below only to replace</span>
+              <span class="text-success"><i class="bi bi-check-circle me-1"></i>Signature on file - draw below only to replace</span>
             </div>
           </div>
           {% elif is_edit %}
-          <div class="mb-2 text-muted small">No signature on file â€” draw below to capture.</div>
+          <div class="mb-2 text-muted small">No signature on file - draw below to capture.</div>
           {% endif %}
           <div class="d-flex align-items-center gap-3 mb-2">
             <select id="sigPenSize" class="form-select form-select-sm" style="width:auto"><option value="2">Thin</option><option value="3" selected>Medium</option></select>
@@ -900,7 +900,7 @@
 window._spCreateUrl = '{% url "orders:scratch_pad_create" %}';
 window._spPollBase  = '{% url "orders:scratch_pad_poll" token="00000000-0000-0000-0000-000000000000" %}';
 
-// Contact scratch pad (Step 1 â€” client form loaded via HTMX)
+// Contact scratch pad (Step 1 - client form loaded via HTMX)
 function contactScratchPad() {
   return {
     createUrl: window._spCreateUrl,
@@ -946,11 +946,11 @@ function contactScratchPad() {
               if (!el) continue;
               const curVal = el.value.trim();
               if (!curVal) {
-                // Empty â€” auto-fill silently
+                // Empty - auto-fill silently
                 el.value = newVal; el.dispatchEvent(new Event('input',{bubbles:true}));
                 autoFilled.push({ label: labels[k], value: newVal });
               } else if (curVal.toLowerCase() !== newVal.toLowerCase()) {
-                // Conflict â€” ask
+                // Conflict - ask
                 conflicts.push({ key: k, sel, label: labels[k], current: curVal, fromPad: newVal });
               }
             }
@@ -963,7 +963,7 @@ function contactScratchPad() {
   }
 }
 
-// Measurements scratch pad base (Step 3 â€” prefix/genderField passed via x-data spread)
+// Measurements scratch pad base (Step 3 - prefix/genderField passed via x-data spread)
 function measScratchPadBase() {
   return {
     createUrl: window._spCreateUrl,
@@ -1131,7 +1131,7 @@ function orderWizard() {
     async nextStep() {
       if (this.step === 1 && !this.clientId) {
         if (this.showCreate) {
-          // Create form is open â€” auto-save client then advance
+          // Create form is open - auto-save client then advance
           const btn = { disabled: false, textContent: 'Saving...' };
           const ok = await saveClientInlineReturning(btn);
           if (ok) this.step++;
@@ -1152,7 +1152,7 @@ function orderWizard() {
   }
 }
 
-// Native fetch for client creation â€” bypasses HTMX event bubbling issues.
+// Native fetch for client creation - bypasses HTMX event bubbling issues.
 // HX-Trigger custom events fire on the triggering button, which is removed from
 // the DOM by outerHTML swap before the event dispatches, so it never bubbles.
 // A direct fetch reads response headers immediately with no event needed.
@@ -1192,7 +1192,7 @@ async function saveClientInline(btn) {
     console.log('[saveClientInline] X-Created-Client-Id:', clientId, '| ref:', !!_orderWizardRef);
 
     if (clientId) {
-      console.log('[saveClientInline] SUCCESS â€” calling selectClient');
+      console.log('[saveClientInline] SUCCESS - calling selectClient');
       if (_orderWizardRef) {
         _orderWizardRef.clientId = '';
         _orderWizardRef.selectClient(clientId, clientName, clientPhone);
@@ -1206,7 +1206,7 @@ async function saveClientInline(btn) {
         console.error('[saveClientInline] _orderWizardRef is null!');
       }
     } else {
-      console.warn('[saveClientInline] no client ID header â€” form errors');
+      console.warn('[saveClientInline] no client ID header - form errors');
       const html = await res.text();
       const tmp = document.createElement('div'); tmp.innerHTML = html;
       const newForm = tmp.querySelector('#client-create-form') || tmp.firstElementChild;
@@ -1311,9 +1311,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('[submit] client value:', JSON.stringify(clientVal));
     if (!clientVal) {
       e.preventDefault();
-      console.warn('[submit] BLOCKED â€” no client');
+      console.warn('[submit] BLOCKED - no client');
       if (_orderWizardRef) _orderWizardRef.step = 1;
-      showClientWarning('No client selected', 'Go to Step 1 â€” search for a client, or click "Create new client", fill the form, then click "Save client".');
+      showClientWarning('No client selected', 'Go to Step 1 - search for a client, or click "Create new client", fill the form, then click "Save client".');
     } else {
       clearDraft(); // Clear draft on successful submit
     }
@@ -1337,11 +1337,11 @@ function removeItem(btn) {
   const del    = row.querySelector('input[name$="-DELETE"]');
 
   if (idInput && idInput.value) {
-    // Existing DB item â€” mark DELETE and hide, Django will delete on save
+    // Existing DB item - mark DELETE and hide, Django will delete on save
     if (del) del.checked = true;
     row.style.display = 'none';
   } else {
-    // Brand-new item (never saved) â€” remove from DOM then renumber
+    // Brand-new item (never saved) - remove from DOM then renumber
     row.remove();
     renumberItemForms();
   }
@@ -1597,16 +1597,16 @@ function copyBodyMeasurements(fromPrefix, toPrefix) {
     ? productTypeSelect.options[productTypeSelect.selectedIndex].text
     : 'this item';
   if (copied > 0) {
-    showClientWarning('âœ… Measurements Copied', `Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
+    showClientWarning('Measurements Copied', `Copied ${copied} relevant measurements for ${garmentName} from Item 1.`);
   } else {
-    showClientWarning('âš ï¸ No Measurements Found', 'No measurements found on Item 1 yet. Please fill Item 1 measurements first, then copy.');
+    showClientWarning('No Measurements Found', 'No measurements found on Item 1 yet. Please fill Item 1 measurements first, then copy.');
   }
 }
 
 // â”€â”€ Temp photo auto-upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Immediately uploads selected file so photo survives form validation errors.
 // â”€â”€ Client-side image resize before upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Tablets take 10-12MB photos â€” resize to max 1920px / 85% quality
+// Tablets take 10-12MB photos - resize to max 1920px / 85% quality
 // before uploading. Reduces file size from ~10MB to ~300KB.
 function resizeImageBeforeUpload(file, maxWidth=1920, quality=0.85) {
   return new Promise(resolve => {
@@ -1648,7 +1648,7 @@ async function autoUploadPhoto(input, tempFieldName) {
   if (!rawFile) return;
   // Resize before upload
   const file = await resizeImageBeforeUpload(rawFile);
-  // Local preview â€” find the slot container
+  // Local preview - find the slot container
   const slot = input.closest('.photo-upload-slot') || input.parentNode;
   const reader = new FileReader();
   reader.onload = e => {

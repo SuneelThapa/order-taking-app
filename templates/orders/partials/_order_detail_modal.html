@@ -112,9 +112,9 @@
     <a href="{% url 'orders:order_edit' order.pk %}" class="btn btn-sm btn-outline-primary">
       <i class="bi bi-pencil"></i> Edit
     </a>
+    {# Reorder confirmation modal trigger #}
     <button type="button" class="btn btn-sm btn-outline-success"
-            hx-post="{% url 'orders:order_reorder' order.pk %}"
-            hx-confirm="Create a reorder from #{{ order.order_number }}? Items will be copied, measurements won't.">
+            onclick="showReorderConfirm('{{ order.pk }}', '{{ order.order_number }}')">
       <i class="bi bi-arrow-repeat"></i> Reorder
     </button>
     {# â”€â”€ Documents dropdown â”€â”€ #}
@@ -451,3 +451,5 @@
     </button>
   </div>
 </div>
+
+{# ?? Reorder Confirmation Modal ?? #}
