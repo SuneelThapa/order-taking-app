@@ -226,7 +226,9 @@ def order_detail(request, pk):
         "status_choices":          Order.STATUS_CHOICES,
         "quick_pay_form":          PaymentForm(prefix="qp"),
     }
-    return render(request, "orders/partials/_order_detail_modal.html", context)
+    response = render(request, "orders/partials/_order_detail_modal.html", context)
+    response["Cache-Control"] = "private, max-age=60"
+    return response
 
 
 @user_passes_test(staff_check)
