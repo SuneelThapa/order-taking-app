@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{% if is_edit %}Edit Fabric{% else %}Add Fabric{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'orders:fabric_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="mb-0">{% if is_edit %}Edit Fabric{% else %}Add New Fabric{% endif %}</h4>
+</div>
+
+<div class="mx-auto" style="max-width:720px"><form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Identity</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">SKU / Article *</label>
+          <input type="text" name="sku_article"
+                 class="form-control font-monospace {% if errors.sku_article %}is-invalid{% endif %}"
+                 value="{{ form_data.sku_article|default:'' }}"
+                 placeholder="e.g. GT5258">
+          {% if errors.sku_article %}
+          <div class="invalid-feedback">{{ errors.sku_article }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-8">
+          <label class="form-label">Fabric Name *</label>
+          <input type="text" name="name"
+                 class="form-control {% if errors.name %}is-invalid{% endif %}"
+                 value="{{ form_data.name|default:'' }}"
+                 placeholder="e.g. Gray Plain">
+          {% if errors.name %}
+          <div class="invalid-feedback">{{ errors.name }}</div>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Category</label>
+          <select name="category" class="form-select">
+            <option value="">-- Select category --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.pk }}"
+              {% if form_data.category|default:'' == cat.pk|stringformat:'s' %}selected{% endif %}>
+              {{ cat.get_name_display }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Brand</label>
+          <input type="text" name="brand" class="form-control"
+                 value="{{ form_data.brand|default:'' }}"
+                 placeholder="e.g. Giovanni Tonella">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Specifications</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Composition</label>
+          <input type="text" name="composition" class="form-control"
+                 value="{{ form_data.composition|default:'' }}"
+                 placeholder="e.g. 100% Wool (Super 150S)">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Weight</label>
+          <input type="text" name="weight" class="form-control"
+                 value="{{ form_data.weight|default:'' }}"
+                 placeholder="e.g. 280 g.">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Width</label>
+          <input type="text" name="width" class="form-control"
+                 value="{{ form_data.width|default:'' }}"
+                 placeholder="e.g. 60 in">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Pattern</label>
+          <input type="text" name="pattern" class="form-control"
+                 value="{{ form_data.pattern|default:'' }}"
+                 placeholder="e.g. Plain, Stripe, Print">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Colour</label>
+          <input type="text" name="colour" class="form-control"
+                 value="{{ form_data.colour|default:'' }}"
+                 placeholder="e.g. Gray">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Collection</label>
+          <input type="text" name="collection" class="form-control"
+                 value="{{ form_data.collection|default:'' }}"
+                 placeholder="e.g. Unity Collection">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Price per Metre</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" name="price_per_metre" class="form-control"
+                   value="{{ form_data.price_per_metre|default:'' }}"
+                   step="0.01" min="0" placeholder="750">
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Details</label>
+          <textarea name="details" class="form-control" rows="2"
+                    placeholder="e.g. Fine fabrics, Timeless appeal">{{ form_data.details|default:'' }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header fw-semibold">Fabric Image</div>
+    <div class="card-body">
+      {% if is_edit and fabric.image %}
+      <div class="mb-2">
+        <img src="{{ fabric.image.url }}" alt="Current image"
+             style="max-height:150px; max-width:200px; object-fit:cover; border-radius:6px; border:1px solid #dee2e6">
+        <div class="small text-muted mt-1">Current image — upload new to replace</div>
+      </div>
+      {% endif %}
+      <input type="file" name="image" class="form-control" accept="image/*"
+             onchange="previewFabricImage(this)">
+      <div id="fabric-image-preview" class="mt-2" style="display:none">
+        <img src="" alt="Preview"
+             style="max-height:150px; max-width:200px; object-fit:cover; border-radius:6px; border:1px solid #dee2e6">
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary px-4">
+      {% if is_edit %}Save Changes{% else %}Add Fabric{% endif %}
+    </button>
+    <a href="{% url 'orders:fabric_list' %}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+
+<script>
+function previewFabricImage(input) {
+  const preview = document.getElementById('fabric-image-preview');
+  const img = preview.querySelector('img');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; preview.style.display = 'block'; };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+{% endblock %}

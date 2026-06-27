@@ -2,7 +2,7 @@
 {% block title %}New Tenant Onboarding{% endblock %}
 
 {% block content %}
-<div class="container py-4" style="max-width:640px">
+<div style="max-width:640px; width:100%; margin:0 auto; padding:1.5rem 0">
   <div class="d-flex align-items-center gap-3 mb-4">
     <div style="font-size:2rem">🏪</div>
     <div>
@@ -180,6 +180,28 @@
       </div>
     </div>
 
+    {# Fabric Library #}
+    <div class="card mb-3">
+      <div class="card-header fw-semibold">&#x1F9F5; Fabric Library <span class="text-muted fw-normal small">(paid add-on)</span></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-check">
+              <input type="checkbox" name="has_fabric_library" class="form-check-input"
+                     id="has_fabric_library" {% if form_data.has_fabric_library %}checked{% endif %}>
+              <label class="form-check-label" for="has_fabric_library">
+                Enable digital fabric library for this shop
+              </label>
+            </div>
+            <div class="form-text">
+              Staff can search fabrics with images from a digital catalogue.
+              Add-on: &#xE3F;20,000 one-time setup fee. Includes setup, training and first 50 fabrics uploaded.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {# ── Display Board ── #}
     <div class="card mb-3">
       <div class="card-header fw-semibold">📺 Status Display Board</div>
@@ -196,10 +218,11 @@
         </div>
       </div>
     </div>
+    <div class="mt-3">
       <button type="submit" class="btn btn-primary px-4">
-        🚀 Create Tenant
+        Create Tenant
       </button>
-      <a href="/" class="btn btn-outline-secondary">Cancel</a>
+      <a href="/" class="btn btn-outline-secondary ms-2">Cancel</a>
     </div>
   </form>
 </div>

@@ -340,6 +340,33 @@
   </div>
 </div>
 
+
+{# Global image zoom modal #}
+<div id="img-zoom-modal"
+     style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.88);"
+     onclick="closeImgZoom()">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+              max-width:90vw; max-height:90vh; text-align:center;">
+    <img id="img-zoom-src" src="" alt=""
+         style="max-width:100%; max-height:85vh; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <div id="img-zoom-caption" style="color:#fff; margin-top:10px; font-size:0.9rem"></div>
+    <div style="color:#aaa; font-size:0.75rem; margin-top:4px;">Click anywhere to close</div>
+  </div>
+</div>
+<script>
+function openImgZoom(url, caption) {
+  document.getElementById('img-zoom-src').src = url;
+  document.getElementById('img-zoom-caption').textContent = caption || '';
+  document.getElementById('img-zoom-modal').style.display = 'block';
+}
+function closeImgZoom() {
+  document.getElementById('img-zoom-modal').style.display = 'none';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeImgZoom();
+});
+</script>
+
 {# Reorder Confirmation Modal #}
 <div id="reorder-confirm-modal"
      style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.5);"

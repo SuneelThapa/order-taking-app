@@ -261,6 +261,33 @@
   {% endif %}
 
   {# ── Fabric sets — side by side ── #}
+  {# Selected Fabric from Order Item #}
+  {% if item.fabric or item.fabric_code %}
+  <div class="mb-2" style="border:1px solid #ccc; border-radius:4px; padding:8px;">
+    <div class="section-title">Selected Fabric</div>
+    {% if item.fabric %}
+    <div style="display:flex; gap:10px; align-items:flex-start;">
+      {% if item.fabric.image %}
+      <img src="{{ item.fabric.image.url }}"
+           style="width:60px; height:60px; object-fit:cover; border-radius:4px; border:1px solid #ccc; flex-shrink:0;">
+      {% endif %}
+      <div>
+        <div style="font-weight:600; font-size:11px;">{{ item.fabric.sku_article }} - {{ item.fabric.name }}</div>
+        {% if item.fabric.brand %}<div style="font-size:10px; color:#666;">{{ item.fabric.brand }}</div>{% endif %}
+        {% if item.fabric.composition %}<div style="font-size:10px; color:#666;">{{ item.fabric.composition }}</div>{% endif %}
+        <div style="font-size:10px; color:#666; margin-top:2px;">
+          {% if item.fabric.colour %}Colour: {{ item.fabric.colour }}{% endif %}
+          {% if item.fabric.pattern %} &nbsp;|&nbsp; Pattern: {{ item.fabric.pattern }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% elif item.fabric_code %}
+    <div style="font-size:11px;">
+      <strong>Code:</strong> <span style="font-family:monospace;">{{ item.fabric_code }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
   <div class="section-title" style="break-before:avoid;page-break-before:avoid;">Fabric details</div>
   <div class="row g-2 mb-2"
        style="display:grid;grid-template-columns:repeat({{ fabric_sets|length }},1fr);gap:8px;

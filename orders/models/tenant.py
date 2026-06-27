@@ -38,6 +38,12 @@ class Tenant(models.Model):
         help_text='Catalogue subdomain e.g. sukhumvit → sukhumvit.catalogue.emporiumarmani.com'
     )
 
+    # Fabric library
+    has_fabric_library = models.BooleanField(
+        default=False,
+        help_text="Enable fabric library (paid add-on)"
+    )
+
     # Display board
     display_key = models.CharField(
         max_length=50, blank=True, default='',
