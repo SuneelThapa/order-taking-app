@@ -727,7 +727,7 @@
       <div class="card mb-3">
         <div class="card-header bg-white fw-semibold">Order total</div>
         <div class="card-body">
-          <div class="row g-3 align-items-end">
+          <div class="row g-3 align-items-start">
             <div class="col-md-4">
               <label class="form-label">Total amount</label>
               {{ order_form.total_amount }}
@@ -739,8 +739,8 @@
               <label class="form-label">Currency</label>
               {{ order_form.total_currency }}
             </div>
-            <div class="col-md-5">
-              <div class="form-text pt-1">
+            <div class="col-md-5 d-flex align-items-center" style="padding-top:1.9rem;">
+              <div class="text-muted small">
                 Enter the agreed total in the client's preferred currency.<br>
                 All commission calculations use THB equivalent from payments.
               </div>
