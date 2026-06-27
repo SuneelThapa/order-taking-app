@@ -33,6 +33,10 @@ from .views import (
 )
 from orders.views_onboarding import onboarding_view, onboarding_success_view
 from orders.views_external_number import check_external_order_number
+from orders.views_fabric import (
+    fabric_list, fabric_create, fabric_edit,
+    fabric_delete, fabric_search,
+)
 
 app_name = "orders"
 
@@ -88,6 +92,12 @@ urlpatterns = [
     path("scratch/<uuid:token>/submit/",  scratch_pad_submit,         name="scratch_pad_submit"),
     path("scratch/<uuid:token>/poll/",    scratch_pad_poll,           name="scratch_pad_poll"),
     path("onboarding/",                   onboarding_view,            name="onboarding"),
-    path("check-external-number/",        check_external_order_number, name="check_external_order_number"),
     path("onboarding/<str:subdomain>/success/", onboarding_success_view, name="onboarding_success"),
+    path("check-external-number/", check_external_order_number, name="check_external_order_number"),
+    # Fabric library
+    path("fabrics/",                      fabric_list,                name="fabric_list"),
+    path("fabrics/add/",                  fabric_create,              name="fabric_create"),
+    path("fabrics/<int:pk>/edit/",        fabric_edit,                name="fabric_edit"),
+    path("fabrics/<int:pk>/delete/",      fabric_delete,              name="fabric_delete"),
+    path("fabrics/search/",               fabric_search,              name="fabric_search"),
 ]

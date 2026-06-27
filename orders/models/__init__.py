@@ -73,3 +73,5 @@ from .fabric_zone import *
 # Depends on OrderItem, VariationType, VariationOption, FabricZone
 from .production_bill import *
 from .scratch_pad_session import ScratchPadSession
+# Fabric library (paid add-on)
+from .fabric import FabricCategory, Fabric

@@ -1,0 +1,32 @@
+{% for fabric in fabrics %}
+<div class="fabric-result d-flex align-items-center gap-2 p-2 border-bottom"
+     style="cursor:pointer"
+     onclick="selectFabric('{{ fabric.pk }}', '{{ fabric.sku_article }}', '{{ fabric.name|escapejs }}')">
+  {% if fabric.image %}
+  <img src="{{ fabric.image.url }}" alt="{{ fabric.name }}"
+       style="width:48px; height:48px; object-fit:cover; border-radius:4px; flex-shrink:0">
+  {% else %}
+  <div style="width:48px; height:48px; background:#f0f0eb; border-radius:4px; flex-shrink:0;
+              display:flex; align-items:center; justify-content:center;">
+    <i class="bi bi-image text-muted small"></i>
+  </div>
+  {% endif %}
+  <div style="min-width:0">
+    <div class="small fw-semibold">{{ fabric.sku_article }} — {{ fabric.name }}</div>
+    {% if fabric.brand or fabric.composition %}
+    <div class="text-muted" style="font-size:0.75rem">
+      {% if fabric.brand %}{{ fabric.brand }}{% endif %}
+      {% if fabric.composition %} · {{ fabric.composition }}{% endif %}
+    </div>
+    {% endif %}
+    {% if fabric.colour %}
+    <div class="text-muted" style="font-size:0.72rem">{{ fabric.colour }}</div>
+    {% endif %}
+  </div>
+  {% if fabric.price_per_metre %}
+  <div class="ms-auto text-primary small fw-semibold flex-shrink-0">${{ fabric.price_per_metre }}/m</div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="text-muted small p-2">No fabrics found</div>
+{% endfor %}

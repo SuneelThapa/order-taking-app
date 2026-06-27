@@ -226,6 +226,40 @@
     </div>
     {% endif %}
 
+    {# Selected Fabric from Order Item #}
+    {% if item.fabric or item.fabric_code %}
+    <div class="card mb-3">
+      <div class="card-header bg-white fw-semibold small">Selected Fabric</div>
+      <div class="card-body py-2">
+        {% if item.fabric %}
+        <div class="d-flex align-items-center gap-3">
+          {% if item.fabric.image %}
+          <img src="{{ item.fabric.image.url }}" alt="{{ item.fabric.name }}"
+               style="width:80px; height:80px; object-fit:cover; border-radius:6px; border:1px solid #dee2e6; cursor:zoom-in;"
+               onclick="openImgZoom('{{ item.fabric.image.url }}', '{{ item.fabric.sku_article }} - {{ item.fabric.name }}')">
+          {% endif %}
+          <div>
+            <div class="fw-semibold">{{ item.fabric.sku_article }} - {{ item.fabric.name }}</div>
+            {% if item.fabric.brand %}<div class="text-muted small">{{ item.fabric.brand }}</div>{% endif %}
+            {% if item.fabric.composition %}<div class="text-muted small">{{ item.fabric.composition }}</div>{% endif %}
+            <div class="d-flex gap-2 mt-1 flex-wrap">
+              {% if item.fabric.colour %}<span class="badge text-bg-light border">{{ item.fabric.colour }}</span>{% endif %}
+              {% if item.fabric.pattern %}<span class="badge text-bg-light border">{{ item.fabric.pattern }}</span>{% endif %}
+              {% if item.fabric.category %}<span class="badge text-bg-secondary">{{ item.fabric.category.get_name_display }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% elif item.fabric_code %}
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-tag text-muted"></i>
+          <span class="font-monospace fw-semibold">{{ item.fabric_code }}</span>
+          <span class="text-muted small">(custom code)</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
     {# ── Fabric sets — one per piece ── #}
     <div class="card mb-3">
       <div class="card-header bg-white fw-semibold small">

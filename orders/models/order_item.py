@@ -29,6 +29,19 @@ class OrderItem(models.Model):
         help_text="Optional — leave blank if price not yet confirmed"
     )
 
+    # Fabric — Mode A: plain text, Mode B: FK to Fabric library
+    fabric_code = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text="Fabric code (plain text — used when fabric library is disabled)"
+    )
+    fabric = models.ForeignKey(
+        'orders.Fabric',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='order_items',
+        help_text="Fabric from library (used when fabric library is enabled)"
+    )
+
     class Meta:
         verbose_name = 'Order Item'
         verbose_name_plural = 'Order Items'

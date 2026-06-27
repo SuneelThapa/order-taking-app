@@ -91,6 +91,92 @@
       <label class="form-label small mb-1">Price <span class="text-muted">(optional)</span></label>
       {{ item_form.price }}
     </div>
+    {# Fabric #}
+    <div class="col-12 mt-1">
+      <label class="form-label small mb-1">Fabric <span class="text-muted fw-normal">(optional)</span></label>
+      {% if request.tenant.has_fabric_library %}
+      <div x-data="{
+        mode: 'custom',
+        searchQ: '',
+        results: [],
+        selectedFabric: null,
+        customCode: '',
+        async searchFabrics() {
+          if (this.searchQ.length < 1) { this.results = []; return; }
+          const r = await fetch('/fabrics/search/?q=' + encodeURIComponent(this.searchQ), {headers: {'Accept': 'application/json'}});
+          this.results = await r.json();
+        },
+        selectFabric(f) { this.selectedFabric = f; this.results = []; this.searchQ = ''; },
+        clearLibrary() { this.selectedFabric = null; this.results = []; this.searchQ = ''; }
+      }">
+        <div class="d-flex gap-2 mb-2">
+          <button type="button" class="btn btn-sm"
+                  :class="mode==='library' ? 'btn-primary' : 'btn-outline-secondary'"
+                  @click="mode='library'">
+            <i class="bi bi-grid-3x3-gap me-1"></i>From Library
+          </button>
+          <button type="button" class="btn btn-sm"
+                  :class="mode==='custom' ? 'btn-primary' : 'btn-outline-secondary'"
+                  @click="mode='custom'; clearLibrary()">
+            <i class="bi bi-pencil me-1"></i>Custom Code
+          </button>
+        </div>
+        {# Library picker #}
+        <div x-show="mode==='library'" x-cloak>
+          <div x-show="selectedFabric" x-cloak
+               class="d-flex align-items-center gap-2 p-2 border rounded bg-white mb-2">
+            <img :src="selectedFabric.image" x-show="selectedFabric && selectedFabric.image"
+                 style="width:40px; height:40px; object-fit:cover; border-radius:4px; flex-shrink:0; cursor:zoom-in;" @click.stop="openImgZoom(selectedFabric.image, selectedFabric.code + ' - ' + selectedFabric.name)">
+            <div style="min-width:0">
+              <div class="small fw-semibold" x-text="selectedFabric ? selectedFabric.code + ' - ' + selectedFabric.name : ''"></div>
+              <div class="text-muted" style="font-size:0.75rem" x-text="selectedFabric ? selectedFabric.composition : ''"></div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-auto" @click="clearLibrary()">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+          <div x-show="!selectedFabric" x-cloak>
+            <input type="text" class="form-control form-control-sm"
+                   placeholder="Search fabric by SKU, name, colour..."
+                   x-model="searchQ"
+                   @input.debounce.400ms="searchFabrics()">
+            <div x-show="results.length > 0" x-cloak
+                 style="border:1px solid #dee2e6; border-radius:6px; background:#fff;
+                        max-height:220px; overflow-y:auto; margin-top:4px; z-index:100; position:relative;">
+              <template x-for="f in results" :key="f.pk">
+                <div class="d-flex align-items-center gap-2 p-2 border-bottom"
+                     style="cursor:pointer"
+                     @click="selectFabric(f)"
+                     @mouseover="$el.style.background='#f8f9fa'"
+                     @mouseout="$el.style.background=''">
+                  <img :src="f.image" x-show="f.image"
+                       style="width:36px; height:36px; object-fit:cover; border-radius:4px; flex-shrink:0">
+                  <div style="min-width:0">
+                    <div class="small fw-semibold" x-text="f.code + ' - ' + f.name"></div>
+                    <div class="text-muted" style="font-size:0.72rem" x-text="f.composition"></div>
+                  </div>
+                  <div class="ms-auto text-primary small" x-show="f.price" x-text="'$'+f.price+'/m'"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+          <input type="hidden" name="{{ item_form.fabric.html_name }}" :value="selectedFabric ? selectedFabric.pk : ''">
+        </div>
+        {# Custom code #}
+        <div x-show="mode==='custom'" x-cloak>
+          <input type="text" name="{{ item_form.fabric_code.html_name }}"
+                 class="form-control form-control-sm font-monospace"
+                 :value="customCode" @input="customCode=$el.value"
+                 placeholder="e.g. GT5258">
+        </div>
+      </div>
+      {% else %}
+      <input type="text" name="{{ item_form.fabric_code.html_name }}"
+             class="form-control form-control-sm font-monospace"
+             value="{{ item_form.instance.fabric_code|default:'' }}"
+             placeholder="e.g. GT5258">
+      {% endif %}
+    </div>
   </div>
 
   {# ── Body measurements with gender toggle ── #}

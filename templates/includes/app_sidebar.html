@@ -36,6 +36,12 @@
       <i class="bi bi-bar-chart-line"></i>
       <span class="rail-label">Sales</span>
     </a>
+    {% if request.tenant.has_fabric_library %}
+    <a href="{% url 'orders:fabric_list' %}" class="rail-nav-item {% if 'fabric' in request.resolver_match.url_name %}rail-active{% endif %}" title="Fabric Library">
+      <i class="bi bi-grid-3x3-gap"></i>
+      <span class="rail-label">Fabrics</span>
+    </a>
+    {% endif %}
     <a href="{% url 'orders:qr_generator' %}" class="rail-nav-item {% if request.resolver_match.url_name == 'qr_generator' %}rail-active{% endif %}" title="QR Code">
       <i class="bi bi-qr-code"></i>
       <span class="rail-label">QR Code</span>
