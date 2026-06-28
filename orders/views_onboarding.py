@@ -114,8 +114,12 @@ def onboarding_view(request):
 def onboarding_success_view(request, subdomain):
     """Step 2 — Success page with setup instructions."""
     tenant = Tenant.objects.filter(subdomain=subdomain).first()
+    if tenant and tenant.custom_domain:
+        studio_url = f'https://{tenant.custom_domain}'
+    else:
+        studio_url = f'https://{subdomain}.emporiumarmani.com'
     return render(request, 'orders/onboarding_success.html', {
-        'tenant':    tenant,
-        'subdomain': subdomain,
-        'studio_url': f'https://{subdomain}.studio.emporiumarmani.com',
+        'tenant':     tenant,
+        'subdomain':  subdomain,
+        'studio_url': studio_url,
     })
