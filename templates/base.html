@@ -190,10 +190,15 @@
   <meta name="apple-mobile-web-app-title" content="EA Studio">
   <link rel="apple-touch-icon" href="{% static 'icons/icon-192.png' %}">
   {# ── Favicon ── #}
+  {% if request.tenant and request.tenant.favicon %}
+  <link rel="icon" href="{{ request.tenant.favicon.url }}">
+  <link rel="apple-touch-icon" href="{{ request.tenant.favicon.url }}">
+  {% else %}
   <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'icons/favicon-32.png' %}">
   <link rel="icon" type="image/png" sizes="16x16" href="{% static 'icons/favicon-16.png' %}">
   <link rel="apple-touch-icon" sizes="180x180" href="{% static 'icons/favicon-180.png' %}">
+  {% endif %}
 </head>
 
 <!-- hx-headers puts the CSRF token on every htmx request (GET/POST/DELETE) automatically -->
