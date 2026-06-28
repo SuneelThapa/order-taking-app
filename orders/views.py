@@ -30,7 +30,7 @@ from .forms import (
     ClientForm, OrderForm, OrderItemFormSet,
     DeliveryForm,
     PaymentForm, PaymentCreateFormSet,
-    OrderStaffFormSet, get_measurement_form,
+    OrderStaffFormSet, get_order_staff_formset, get_measurement_form,
     CancellationForm,
     ClientEditForm,
     BodyMeasurementForm,
@@ -352,7 +352,8 @@ def order_form_view(request, pk=None):
         order_form           = OrderForm(request.POST, instance=edit_order,
                                          user=request.user, tenant=tenant)
         item_formset         = OrderItemFormSet(request.POST, request.FILES, instance=edit_order)
-        staff_formset        = OrderStaffFormSet(request.POST, instance=edit_order, prefix="staff")
+        TenantStaffFormSet   = get_order_staff_formset(tenant)
+        staff_formset        = TenantStaffFormSet(request.POST, instance=edit_order, prefix="staff")
         delivery_form        = DeliveryForm(request.POST, instance=existing_delivery, prefix="delivery")
         payment_formset      = PaymentCreateFormSet(request.POST, prefix="payments")
 
@@ -586,7 +587,8 @@ def order_form_view(request, pk=None):
         order_form           = OrderForm(instance=edit_order, user=request.user,
                                          tenant=tenant, initial=initial)
         item_formset         = OrderItemFormSet(instance=edit_order)
-        staff_formset        = OrderStaffFormSet(instance=edit_order, prefix="staff")
+        TenantStaffFormSet   = get_order_staff_formset(tenant)
+        staff_formset        = TenantStaffFormSet(instance=edit_order, prefix="staff")
         delivery_form        = DeliveryForm(instance=existing_delivery, prefix="delivery")
         payment_formset      = PaymentCreateFormSet(prefix="payments")
 
@@ -2590,8 +2592,10 @@ def qr_generator(request):
     from django.contrib.auth import get_user_model
     User = get_user_model()
 
+    tenant = getattr(request, 'tenant', None)
     staff_list = User.objects.filter(
-        is_staff=True, is_active=True, is_superuser=False
+        is_staff=True, is_active=True, is_superuser=False,
+        tenant=tenant
     ).order_by('first_name')
 
     # Fetch categories from fashion_01 API
