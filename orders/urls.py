@@ -32,6 +32,7 @@ from .views import (
     scratch_pad_poll,
 )
 from orders.views_onboarding import onboarding_view, onboarding_success_view
+from orders.views_staff import staff_list, staff_add, staff_edit, staff_toggle
 from orders.views_external_number import check_external_order_number
 from orders.views_fabric import (
     fabric_list, fabric_create, fabric_edit,
@@ -94,6 +95,11 @@ urlpatterns = [
     path("onboarding/",                   onboarding_view,            name="onboarding"),
     path("onboarding/<str:subdomain>/success/", onboarding_success_view, name="onboarding_success"),
     path("check-external-number/", check_external_order_number, name="check_external_order_number"),
+    # Staff management
+    path("staff/",                        staff_list,                 name="staff_list"),
+    path("staff/add/",                    staff_add,                  name="staff_add"),
+    path("staff/<int:pk>/edit/",          staff_edit,                 name="staff_edit"),
+    path("staff/<int:pk>/toggle/",        staff_toggle,               name="staff_toggle"),
     # Fabric library
     path("fabrics/",                      fabric_list,                name="fabric_list"),
     path("fabrics/add/",                  fabric_create,              name="fabric_create"),

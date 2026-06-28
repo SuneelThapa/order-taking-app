@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Staff Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0"><i class="bi bi-people me-2"></i>Staff Management</h4>
+  <a href="{% url 'orders:staff_add' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Add Staff
+  </a>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{{ msg.tags }} alert-dismissible">
+  {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Commission</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in staff %}
+        <tr class="{% if not user.is_active %}opacity-50{% endif %}">
+          <td>
+            <div class="fw-semibold">{{ user.get_full_name|default:user.username }}</div>
+            {% if user.email %}<div class="text-muted small">{{ user.email }}</div>{% endif %}
+          </td>
+          <td class="font-monospace small">{{ user.username }}</td>
+          <td>
+            {% if user.staff_profile %}
+            <span class="badge {% if user.staff_profile.role == 'owner' %}text-bg-dark{% elif user.staff_profile.role == 'manager' %}text-bg-primary{% elif user.staff_profile.role == 'salesman' %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+              {{ user.staff_profile.get_role_display }}
+            </span>
+            {% else %}
+            <span class="badge text-bg-light border text-muted">No role</span>
+            {% endif %}
+          </td>
+          <td>{% if user.staff_profile %}{{ user.staff_profile.default_commission_percentage }}%{% else %}-{% endif %}</td>
+          <td>
+            {% if user.is_active %}<span class="badge text-bg-success">Active</span>
+            {% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'orders:staff_edit' user.pk %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil"></i>
+            </a>
+            {% if user != request.user %}
+            <form method="post" action="{% url 'orders:staff_toggle' user.pk %}" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm {% if user.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                <i class="bi {% if user.is_active %}bi-person-slash{% else %}bi-person-check{% endif %}"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-5">
+            <i class="bi bi-people" style="font-size:2rem"></i>
+            <div class="mt-2">No staff members yet. <a href="{% url 'orders:staff_add' %}">Add your first staff member</a></div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
