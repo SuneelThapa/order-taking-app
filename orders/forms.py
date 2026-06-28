@@ -251,6 +251,31 @@ class OrderStaffForm(StyledModelForm):
         fields = ["user", "role"]
         labels = {"user": "Staff member"}
 
+    def __init__(self, *args, **kwargs):
+        tenant = kwargs.pop("tenant", None)
+        super().__init__(*args, **kwargs)
+        if tenant:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            self.fields["user"].queryset = User.objects.filter(
+                tenant=tenant, is_staff=True, is_active=True
+            ).order_by("first_name", "last_name", "username")
+
+
+def get_order_staff_formset(tenant=None):
+    from functools import partial
+    FormSetClass = inlineformset_factory(
+        Order, OrderStaff, form=OrderStaffForm, extra=1, can_delete=True
+    )
+    if tenant:
+        original_form = FormSetClass.form
+        class TenantOrderStaffForm(original_form):
+            def __init__(self, *args, **kw):
+                kw.setdefault("tenant", tenant)
+                super().__init__(*args, **kw)
+        FormSetClass.form = TenantOrderStaffForm
+    return FormSetClass
+
 
 OrderStaffFormSet = inlineformset_factory(
     Order, OrderStaff, form=OrderStaffForm, extra=1, can_delete=True
