@@ -121,7 +121,8 @@ def _orders_table_context(request, tenant):
         except: pass
 
     staff_users = User.objects.filter(
-        staff_profile__isnull=False
+        staff_profile__isnull=False,
+        tenant=tenant
     ).order_by("first_name", "last_name", "username")
 
     has_filters = any([status, q, from_date, to_date, staff_id, urgent,
