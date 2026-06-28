@@ -13,4 +13,5 @@ class CustomUser(AbstractUser):
 
 
     def __str__(self):
-        return self.username
+        full = self.get_full_name()
+        return full if full else self.username
