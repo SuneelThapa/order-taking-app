@@ -23,6 +23,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://*.emporiumarmani.com",
     "https://studio.emporiumarmani.com",
     "http://143.198.207.146",
 ]
