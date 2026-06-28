@@ -62,11 +62,17 @@
     <div class="card-header fw-semibold text-warning">⚠️ Next Steps</div>
     <div class="card-body">
       <ol class="mb-0 small">
-        <li class="mb-2">Add <strong>{{ subdomain }}</strong> subdomain to Nginx config on server</li>
-        <li class="mb-2">Add DNS record: <code>{{ subdomain }}.studio.emporiumarmani.com</code> → server IP</li>
-        <li class="mb-2">Share login credentials with shop owner</li>
-        <li class="mb-2">Add staff accounts for the shop</li>
-        <li>Set up product types if needed</li>
+        <li class="mb-2">
+          {% if tenant.custom_domain %}
+            Client adds A record in Cloudflare: <code>{{ tenant.custom_domain }}</code> &rarr; <code>143.198.207.146</code> (Proxy: ON)
+          {% else %}
+            Add A record in Cloudflare: <code>{{ subdomain }}.emporiumarmani.com</code> &rarr; <code>143.198.207.146</code>
+          {% endif %}
+        </li>
+        <li class="mb-2">Share login URL with owner: <strong>{{ studio_url }}</strong></li>
+        <li class="mb-2">Add staff accounts via owner account</li>
+        <li class="mb-2">Set up product types if needed</li>
+        <li>Enable fabric library or catalogue if purchased</li>
       </ol>
     </div>
   </div>
