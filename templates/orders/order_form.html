@@ -689,6 +689,14 @@
             Staff assignments are locked. Only an owner or manager can add or remove staff from this order.
           </div>
           {% endif %}
+          {# Hidden template select for cloning staff options in JS #}
+          <select id="staff-user-template" class="d-none">
+            {% for form in staff_formset %}{% if forloop.first %}
+              {% for opt in form.user.field.choices %}
+              <option value="{{ opt.0 }}">{{ opt.1 }}</option>
+              {% endfor %}
+            {% endif %}{% endfor %}
+          </select>
           <div id="staff-container">
             {% for form in staff_formset %}
             <div class="row g-2 mb-2 align-items-end staff-row border rounded p-2">
@@ -1511,7 +1519,7 @@ function addStaffRow() {
     <div class="col-md-5">
       <label class="form-label small mb-1">Staff member</label>
       <select name="staff-${idx}-user" class="form-select"><option value="">---------</option>
-        ${Array.from(document.querySelectorAll('[name="staff-0-user"] option')).map(o=>`<option value="${o.value}">${o.text}</option>`).join('')}
+        ${Array.from(document.getElementById('staff-user-template')?.options || []).map(o=>`<option value="${o.value}">${o.text}</option>`).join('') || '<option value="">---------</option>'}
       </select>
     </div>
     <div class="col-md-4">
