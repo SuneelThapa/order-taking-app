@@ -182,7 +182,8 @@
   </div>
 
   {# ── Body measurements with gender toggle ── #}
-  {% if body_form and item_form.instance.product_type.measurement_model != "NoMeasurement" and item_form.instance.product_type.measurement_model != "ShoesMeasurement" and item_form.instance.product_type.measurement_model != "BeltMeasurement" %}
+  <div class="body-meas-section">
+  {% if body_form %}
   <div class="mt-3 border rounded p-3 bg-white"
        x-data="{ gender: '{{ body_form.instance.gender|default:'men' }}' }">
 
@@ -336,6 +337,7 @@
 
   </div>
   {% endif %}
+</div>
 
   {# ── Garment-specific measurements ── #}
   <div class="mt-2" id="measurement-container-{{ item_form.prefix }}">
