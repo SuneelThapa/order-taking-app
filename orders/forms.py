@@ -254,6 +254,7 @@ class OrderStaffForm(StyledModelForm):
     def __init__(self, *args, **kwargs):
         tenant = kwargs.pop("tenant", None)
         super().__init__(*args, **kwargs)
+        self.fields["user"].required = False
         if tenant:
             from django.contrib.auth import get_user_model
             User = get_user_model()
