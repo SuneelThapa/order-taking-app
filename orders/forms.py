@@ -266,7 +266,7 @@ class OrderStaffForm(StyledModelForm):
 def get_order_staff_formset(tenant=None):
     from functools import partial
     FormSetClass = inlineformset_factory(
-        Order, OrderStaff, form=OrderStaffForm, extra=1, can_delete=True
+        Order, OrderStaff, form=OrderStaffForm, extra=0, can_delete=True
     )
     if tenant:
         original_form = FormSetClass.form
@@ -279,7 +279,7 @@ def get_order_staff_formset(tenant=None):
 
 
 OrderStaffFormSet = inlineformset_factory(
-    Order, OrderStaff, form=OrderStaffForm, extra=1, can_delete=True
+    Order, OrderStaff, form=OrderStaffForm, extra=0, can_delete=True
 )
 
 
