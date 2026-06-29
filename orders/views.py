@@ -763,9 +763,16 @@ def order_form_view(request, pk=None):
                     except TempPhoto.DoesNotExist:
                         pass
 
+    from django.contrib.auth import get_user_model as _gum
+    _User = _gum()
+    staff_users_list = _User.objects.filter(
+        tenant=tenant, is_staff=True, is_active=True, is_superuser=False
+    ).order_by("first_name", "last_name", "username")
+
     context = {
         "is_edit":              is_edit,
         "edit_order":           edit_order,
+        "staff_users_list":     staff_users_list,
         "order_form":           order_form,
         "amount_locked":        amount_locked,
         "can_lock":             can_lock,

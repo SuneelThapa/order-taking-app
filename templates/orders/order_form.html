@@ -691,11 +691,10 @@
           {% endif %}
           {# Hidden template select for cloning staff options in JS #}
           <select id="staff-user-template" class="d-none">
-            {% for form in staff_formset %}{% if forloop.first %}
-              {% for opt in form.user.field.choices %}
-              <option value="{{ opt.0 }}">{{ opt.1 }}</option>
-              {% endfor %}
-            {% endif %}{% endfor %}
+            <option value="">---------</option>
+            {% for u in staff_users_list %}
+            <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+            {% endfor %}
           </select>
           <div id="staff-container">
             {% for form in staff_formset %}
