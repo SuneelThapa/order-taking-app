@@ -703,6 +703,8 @@ def order_form_view(request, pk=None):
             first_error_step = 2
         elif any(item_formset.errors) or item_formset.non_form_errors():
             first_error_step = 3
+        elif staff_formset.errors or staff_formset.non_form_errors():
+            first_error_step = 5
         elif delivery_form.errors:
             first_error_step = 5
 
