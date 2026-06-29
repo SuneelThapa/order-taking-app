@@ -1522,7 +1522,7 @@ function addStaffRow() {
       </select>
     </div>
     <div class="col-md-3">
-      <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove()"><i class="bi bi-x"></i> Remove</button>
+      <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove(); var t=document.getElementById('id_staff-TOTAL_FORMS'); if(t) t.value=Math.max(0,parseInt(t.value)-1);"><i class="bi bi-x"></i> Remove</button>
     </div>
   </div>`;
   container.insertAdjacentHTML('beforeend', html);
