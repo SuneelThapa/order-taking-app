@@ -1663,9 +1663,19 @@ function copyBodyMeasurements(fromPrefix, toPrefix) {
   const measurementModel = productTypePk ? PRODUCT_TYPE_MAP[productTypePk] : null;
 
   // Use garment-specific fields for destination item
-  const fields = (measurementModel && GARMENT_BODY_FIELDS[measurementModel])
+  let fields = (measurementModel && GARMENT_BODY_FIELDS[measurementModel])
     ? GARMENT_BODY_FIELDS[measurementModel]
     : ALL_BODY_FIELDS;
+  // Ladies gender: add ladies-specific fields unless pants/shorts/skirt garment
+  const toGenderEl = document.querySelector(`[name="${toPrefix}-gender"]:checked`);
+  const isLadies = toGenderEl && toGenderEl.value === "ladies";
+  const isPantsGarment = ["PantsMeasurement","ShortsMeasurement","SkirtMeasurement"].includes(measurementModel);
+  if (isLadies && !isPantsGarment) {
+    const ladiesFields = ["high_chest","upper_hips","deep_front","deep_back",
+      "shoulder_to_middle_breast","shoulder_to_under_breast",
+      "middle_breast_to_middle_breast","shoulder_to_back","shoulder_to_waist"];
+    fields = [...new Set([...fields, ...ladiesFields])];
+  }
 
   let copied = 0;
   fields.forEach(field => {
