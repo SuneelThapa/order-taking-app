@@ -482,6 +482,8 @@ def order_form_view(request, pk=None):
                     if not bm.gender:
                         bm.gender = 'men'
                     bm.save()
+                else:
+                    print(f"DEBUG BODY MEASUREMENT SAVE FAILED for item {item.pk}: {body_form.errors.as_data()}")
 
                 for uploaded in request.FILES.getlist(f"item_photos_{form.prefix}"):
                     OrderItemPhoto.objects.create(order_item=item, image=uploaded)
@@ -511,6 +513,8 @@ def order_form_view(request, pk=None):
                         m = mform.save(commit=False)
                         m.base = base
                         m.save()
+                    else:
+                        print(f"DEBUG MEASUREMENT SAVE FAILED for item {item.pk} ({model.__name__}): {mform.errors.as_data()}")
 
             for form in item_formset.deleted_forms:
                 if form.instance.pk:
