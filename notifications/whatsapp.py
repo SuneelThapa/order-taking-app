@@ -120,9 +120,11 @@ def notify_return_3_months(client, tenant=None):
         return
     shop_name = tenant.name if tenant else 'our shop'
     msg = (
-        f"Hello {client.name}! It's been a while since your last visit to *{shop_name}*.\n\n"
-        f"Your measurements are saved — ordering your next suit has never been easier!\n\n"
-        f"Reply to this message or visit us anytime."
+        f"Hello {client.name}! It's been a while since your last order with *{shop_name}*.\n\n"
+        f"Your measurements are safely saved, so ordering your next custom bespoke outfit "
+        f"is quick and easy.\n\n"
+        f"Simply reply to this message to contact us anytime—we'd be happy to help "
+        f"you with your next order!"
     )
     return send_text(client.phone, msg, tenant=tenant)
 
@@ -133,12 +135,14 @@ def notify_return_6_months(client, tenant=None):
     shop_name = tenant.name if tenant else 'our shop'
     discount  = client.loyalty_discount
     tier      = client.loyalty_tier
-    offer = (f"As a valued *{tier.title()} member*, enjoy *{discount}% off* your next order!"
-             if discount > 0 else "Come back and enjoy our premium tailoring service!")
+    offer = (f"🎉 As a valued *{tier.title()} Member*, enjoy *{discount}% off* your next order!"
+             if discount > 0 else "🎉 Come back and enjoy our premium tailoring service!")
     msg = (
-        f"Hello {client.name}! We miss you at *{shop_name}*!\n\n"
+        f"Hello {client.name}! We hope you're doing well. We miss seeing you at *{shop_name}*!\n\n"
+        f"We've prepared a special offer just for our valued customers:\n\n"
         f"{offer}\n\n"
-        f"Your measurements are still on file — just reply to get started."
+        f"Your measurements are still on file, so simply reply to this message to place "
+        f"your next custom order."
     )
     return send_text(client.phone, msg, tenant=tenant)
 

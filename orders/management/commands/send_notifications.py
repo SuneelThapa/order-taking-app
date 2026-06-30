@@ -156,7 +156,7 @@ class Command(BaseCommand):
                 f'[3 MONTHS] {order.client.name} -- {order.order_number} (ref date: {ref_date})'
             )
             if not dry_run:
-                notify_return_3_months(order.client)
+                notify_return_3_months(order.client, tenant=order.tenant)
 
         if not dry_run and matched_order_ids:
             Order.objects.filter(pk__in=matched_order_ids).update(return_3mo_notified_at=now)
@@ -178,7 +178,7 @@ class Command(BaseCommand):
                 f'({order.client.loyalty_discount}%) (ref date: {ref_date})'
             )
             if not dry_run:
-                notify_return_6_months(order.client)
+                notify_return_6_months(order.client, tenant=order.tenant)
 
         if not dry_run and matched_order_ids:
             Order.objects.filter(pk__in=matched_order_ids).update(return_6mo_notified_at=now)
