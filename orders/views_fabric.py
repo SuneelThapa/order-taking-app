@@ -25,6 +25,26 @@ def fabric_check(request):
     return None
 
 
+def ensure_fabric_categories(tenant):
+    """
+    Auto-seed the standard fabric categories for a tenant the first time
+    the fabric pages are visited. The category set is fixed (CATEGORY_CHOICES)
+    so there's nothing for a person to configure -- this just guarantees the
+    dropdown is never empty for any tenant with fabric library enabled,
+    without needing manual Django admin setup.
+    """
+    existing = set(
+        FabricCategory.objects.filter(tenant=tenant).values_list('name', flat=True)
+    )
+    missing = [
+        FabricCategory(tenant=tenant, name=value)
+        for value, _label in FabricCategory.CATEGORY_CHOICES
+        if value not in existing
+    ]
+    if missing:
+        FabricCategory.objects.bulk_create(missing, ignore_conflicts=True)
+
+
 @login_required
 def fabric_list(request):
     """List all fabrics for this tenant, filterable by category."""
@@ -33,6 +53,7 @@ def fabric_list(request):
         return check
 
     tenant   = request.tenant
+    ensure_fabric_categories(tenant)
     category = request.GET.get('category', '')
     q        = request.GET.get('q', '').strip()
 
@@ -67,6 +88,7 @@ def fabric_create(request):
         return check
 
     tenant     = request.tenant
+    ensure_fabric_categories(tenant)
     categories = FabricCategory.objects.filter(tenant=tenant)
     errors     = {}
 
@@ -139,6 +161,7 @@ def fabric_edit(request, pk):
         return check
 
     tenant  = request.tenant
+    ensure_fabric_categories(tenant)
     fabric  = get_object_or_404(Fabric, pk=pk, tenant=tenant)
     categories = FabricCategory.objects.filter(tenant=tenant)
     errors  = {}
