@@ -88,6 +88,10 @@ class Order(models.Model):
         max_length=10, choices=CURRENCY_CHOICES, default='THB',
         help_text="Currency of the quoted total amount"
     )
+    total_exchange_rate_to_thb = models.DecimalField(
+        max_digits=12, decimal_places=6, default=1,
+        help_text="Exchange rate to THB at time total was set. THB=1. Crypto=agreed fixed rate. Others=today's rate."
+    )
     total_locked    = models.BooleanField(default=False)
     total_locked_at = models.DateTimeField(null=True, blank=True)
     total_locked_by = models.ForeignKey(
@@ -160,15 +164,22 @@ class Order(models.Model):
         self.country        = c.country
 
     @property
+    def total_amount_thb(self):
+        """Quoted total converted to THB using the rate locked when the total was set."""
+        return self.total_amount * self.total_exchange_rate_to_thb
+
+    @property
     def balance_due(self):
         """
-        Returns remaining balance.
-        Note: compares total_amount directly against sum of thb_equivalent payments.
-        For non-THB totals this is a rough indicator; accurate balance is in payments tab.
+        Returns remaining balance in THB.
+        Converts total_amount to THB using total_exchange_rate_to_thb before
+        comparing against the sum of each payment's own thb_equivalent
+        (each payment is already correctly converted using its own rate,
+        so this works correctly even if the client paid in multiple currencies).
         """
         from django.db.models import Sum
         collected = self.payments.aggregate(total=Sum('thb_equivalent'))['total'] or 0
-        return self.total_amount - collected
+        return self.total_amount_thb - collected
 
     @property
     def is_canceled(self):

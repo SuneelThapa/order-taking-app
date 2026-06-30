@@ -63,6 +63,10 @@ class OrderForm(StyledModelForm):
         # Make total_amount optional — view calculates it from items if blank
         self.fields["total_amount"].required = False
         self.fields["total_amount"].initial  = 0
+        self.fields["total_exchange_rate_to_thb"].required = False
+        self.fields["total_exchange_rate_to_thb"].initial  = 1
+        self.fields["total_exchange_rate_to_thb"].label    = "Exchange rate to THB"
+        self.fields["total_exchange_rate_to_thb"].help_text = "THB=1 · Crypto=agreed fixed rate · Others=today's rate"
 
         default = self._meta.model._meta.get_field("status").get_default()  # type: ignore
         current = self.instance.status if self.instance and self.instance.pk else default
@@ -87,7 +91,7 @@ class OrderForm(StyledModelForm):
             "hotel_name", "room_number", "departure_date",
             "street_address", "city", "state", "postcode", "country",
             "fitting_date", "fitting_time", "ready_date", "ready_time", "delivery_date", "delivery_time",
-            "total_amount", "total_currency",
+            "total_amount", "total_currency", "total_exchange_rate_to_thb",
             "note", "internal_notes", "is_urgent", "external_order_number",
         ]
         widgets = {

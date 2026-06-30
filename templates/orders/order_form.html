@@ -734,8 +734,8 @@
       <div class="card mb-3">
         <div class="card-header bg-white fw-semibold">Order total</div>
         <div class="card-body">
-          <div class="row g-3 align-items-start">
-            <div class="col-md-4">
+          <div class="row g-3 align-items-start" x-data="{ totalCurrency: '{{ order_form.total_currency.value|default:"THB" }}' }">
+            <div class="col-md-3">
               <label class="form-label">Total amount</label>
               {{ order_form.total_amount }}
               {% if order_form.total_amount.help_text %}
@@ -744,9 +744,19 @@
             </div>
             <div class="col-md-3">
               <label class="form-label">Currency</label>
-              {{ order_form.total_currency }}
+              <select name="{{ order_form.total_currency.html_name }}" class="form-select"
+                      x-model="totalCurrency" id="{{ order_form.total_currency.id_for_label }}">
+                {% for val, label in order_form.fields.total_currency.choices %}
+                <option value="{{ val }}" {% if order_form.total_currency.value == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
             </div>
-            <div class="col-md-5 d-flex align-items-center" style="padding-top:1.9rem;">
+            <div class="col-md-3" x-show="totalCurrency !== 'THB'" x-cloak>
+              <label class="form-label">{{ order_form.total_exchange_rate_to_thb.label }}</label>
+              {{ order_form.total_exchange_rate_to_thb }}
+              <div class="form-text text-muted" style="font-size:0.72rem">{{ order_form.total_exchange_rate_to_thb.help_text }}</div>
+            </div>
+            <div class="col-md-3 d-flex align-items-center" style="padding-top:1.9rem;">
               <div class="text-muted small">
                 Enter the agreed total in the client's preferred currency.<br>
                 All commission calculations use THB equivalent from payments.
