@@ -456,3 +456,25 @@ class BodyMeasurementForm(forms.ModelForm):
             field.required = False
         # Default gender to 'men' if not provided
         self.fields['gender'].initial = 'men'
+        # Round decimal inputs to 1 decimal place instead of rejecting them.
+        # Prevents 'no more than 1 decimal place' silent validation failures
+        # caused by float precision issues (JS copy, AI extraction, typing).
+        from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+        for fname in (BODY_FIELDS_MEN + BODY_FIELDS_LADIES_EXTRA):
+            if fname not in self.fields:
+                continue
+            field_obj = self.fields[fname]
+            if not isinstance(field_obj, forms.DecimalField):
+                continue
+            orig_to_python = field_obj.to_python
+            def _make_rounder(orig):
+                def _rounded(value):
+                    val = orig(value)
+                    if val is not None:
+                        try:
+                            val = val.quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
+                        except InvalidOperation:
+                            pass
+                    return val
+                return _rounded
+            field_obj.to_python = _make_rounder(orig_to_python)
