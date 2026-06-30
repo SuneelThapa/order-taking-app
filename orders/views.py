@@ -2609,8 +2609,8 @@ def qr_generator(request):
         tenant=tenant
     ).order_by('first_name')
 
-    # Fetch categories from fashion_01 API
-    categories = []
+    # Fetch Bespoke Tailoring categories from the old system API
+    tailoring_categories = []
     try:
         import httpx
         r = httpx.get(
@@ -2620,13 +2620,27 @@ def qr_generator(request):
         if r.status_code == 200:
             data = r.json()
             if data:
-                categories = data[0].get('categories', [])
+                tailoring_categories = data[0].get('categories', [])
+    except Exception:
+        pass
+
+    # Fetch Leather Goods categories from the catalogue app's own local DB
+    leather_categories = []
+    try:
+        import httpx
+        r2 = httpx.get(
+            "https://catalogue.emporiumarmani.com/api/leather-categories/",
+            timeout=5,
+        )
+        if r2.status_code == 200:
+            leather_categories = r2.json().get('categories', [])
     except Exception:
         pass
 
     return render(request, "orders/qr_generator.html", {
         "staff_list": staff_list,
-        "categories": categories,
+        "categories": tailoring_categories,
+        "leather_categories": leather_categories,
     })
 
 
