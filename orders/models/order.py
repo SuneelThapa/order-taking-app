@@ -107,6 +107,13 @@ class Order(models.Model):
 
     is_urgent = models.BooleanField(default=False)
 
+    # Loyalty follow-up tracking — prevents duplicate WhatsApp sends and
+    # makes the 3/6-month reminders work as a "has X days passed" window
+    # check instead of an exact-day match, so backfilled/old orders are
+    # caught correctly on the next cron run instead of being silently missed.
+    return_3mo_notified_at = models.DateTimeField(null=True, blank=True)
+    return_6mo_notified_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Order'
