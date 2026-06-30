@@ -292,8 +292,14 @@
             {% if order.delivery.type == "hotel" %}
               {{ order.delivery.hotel_name }}{% if order.delivery.room_number %}, Room {{ order.delivery.room_number }}{% endif %}
             {% elif order.delivery.type == "ship" %}
-              {{ order.delivery.shipping_street }}, {{ order.delivery.shipping_city }}
-              {{ order.delivery.shipping_postcode }}, {{ order.delivery.shipping_country }}
+              {% if order.delivery.has_resolved_address %}
+                {{ order.delivery.full_shipping_address|linebreaksbr }}
+                {% if not order.delivery.shipping_street %}
+                <span class="text-muted small d-block mt-1">(using client's address on file)</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted">No shipping address on file</span>
+              {% endif %}
             {% endif %}
             {% if order.delivery.delivery_notes %}
             <div class="small text-muted mt-1">{{ order.delivery.delivery_notes }}</div>

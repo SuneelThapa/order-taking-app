@@ -643,12 +643,28 @@
             <div class="col-md-6"><label class="form-label small">Hotel name</label>{{ delivery_form.hotel_name }}</div>
             <div class="col-md-6"><label class="form-label small">Room number</label>{{ delivery_form.room_number }}</div>
           </div>
-          <div x-show="dtype==='ship'" class="row g-2 mb-2">
+          <div x-show="dtype==='ship'"
+               x-data="{ shipStreetVal: '{{ delivery_form.shipping_street.value|default:"" }}' }"
+               @input="if ($event.target.name && $event.target.name.includes('shipping_street')) shipStreetVal = $event.target.value"
+               class="row g-2 mb-2">
             <div class="col-12"><label class="form-label small">Street</label>{{ delivery_form.shipping_street }}</div>
             <div class="col-md-4"><label class="form-label small">City</label>{{ delivery_form.shipping_city }}</div>
             <div class="col-md-4"><label class="form-label small">State</label>{{ delivery_form.shipping_state }}</div>
             <div class="col-md-4"><label class="form-label small">Postcode</label>{{ delivery_form.shipping_postcode }}</div>
             <div class="col-md-6"><label class="form-label small">Country</label>{{ delivery_form.shipping_country }}</div>
+            {% if selected_client %}
+            <div class="col-12">
+              <div class="small text-muted mt-1 border rounded p-2 bg-light" x-show="!shipStreetVal" x-cloak>
+                <i class="bi bi-info-circle me-1"></i>
+                No address entered above — will ship to <strong>{{ selected_client.name }}</strong>'s address on file:
+                {% if selected_client.street_address %}
+                <br><strong>{{ selected_client.street_address }}{% if selected_client.city %}, {{ selected_client.city }}{% endif %}{% if selected_client.state %}, {{ selected_client.state }}{% endif %}{% if selected_client.postcode %} {{ selected_client.postcode }}{% endif %}{% if selected_client.country %}, {{ selected_client.country }}{% endif %}</strong>
+                {% else %}
+                <br><span class="text-warning">No address on file for this client — please enter one above.</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
           </div>
 
           
