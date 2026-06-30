@@ -121,7 +121,11 @@
     <div class="from-label">From</div>
     <div class="from-name">{{ tenant.name }}</div>
     <div class="from-addr">
-      {% if tenant.address %}{{ tenant.address }}<br>{% endif %}
+      {% if tenant.street_address %}{{ tenant.street_address }}<br>{% endif %}
+      {% if tenant.city or tenant.state or tenant.postcode %}
+        {{ tenant.city }}{% if tenant.state %}, {{ tenant.state }}{% endif %}{% if tenant.postcode %} {{ tenant.postcode }}{% endif %}<br>
+      {% endif %}
+      {% if tenant.country %}{{ tenant.country }}<br>{% endif %}
       {% if tenant.phone %}Tel: {{ tenant.phone }}{% endif %}
     </div>
   </div>
@@ -136,12 +140,19 @@
           {% if delivery.hotel_name %}{{ delivery.hotel_name }}<br>{% endif %}
           {% if delivery.room_number %}Room {{ delivery.room_number }}<br>{% endif %}
         {% elif delivery.type == 'ship' %}
-          {% if delivery.street %}{{ delivery.street }}<br>{% endif %}
-          {% if delivery.city %}{{ delivery.city }}
-            {% if delivery.state %}, {{ delivery.state }}{% endif %}<br>
+          {% if delivery.shipping_street %}{{ delivery.shipping_street }}<br>
+          {% elif order.street_address %}{{ order.street_address }}<br>
+          {% elif order.client.street_address %}{{ order.client.street_address }}<br>{% endif %}
+          {% if delivery.shipping_city or delivery.shipping_state or delivery.shipping_postcode %}
+            {{ delivery.shipping_city }}{% if delivery.shipping_state %}, {{ delivery.shipping_state }}{% endif %}{% if delivery.shipping_postcode %} {{ delivery.shipping_postcode }}{% endif %}<br>
+          {% elif order.city or order.state or order.postcode %}
+            {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %}{% if order.postcode %} {{ order.postcode }}{% endif %}<br>
+          {% elif order.client.city or order.client.state or order.client.postcode %}
+            {{ order.client.city }}{% if order.client.state %}, {{ order.client.state }}{% endif %}{% if order.client.postcode %} {{ order.client.postcode }}{% endif %}<br>
           {% endif %}
-          {% if delivery.postcode %}{{ delivery.postcode }}<br>{% endif %}
-          {% if delivery.country %}<strong>{{ delivery.country }}</strong><br>{% endif %}
+          {% if delivery.shipping_country %}<strong>{{ delivery.shipping_country }}</strong><br>
+          {% elif order.country %}<strong>{{ order.country }}</strong><br>
+          {% elif order.client.country %}<strong>{{ order.client.country }}</strong><br>{% endif %}
         {% else %}
           In-store Pickup
         {% endif %}
@@ -149,6 +160,13 @@
         {# Fall back to order-level hotel #}
         {{ order.hotel_name }}<br>
         {% if order.room_number %}Room {{ order.room_number }}<br>{% endif %}
+      {% elif order.street_address %}
+        {# No delivery record but order has an address on file #}
+        {{ order.street_address }}<br>
+        {% if order.city or order.state or order.postcode %}
+          {{ order.city }}{% if order.state %}, {{ order.state }}{% endif %}{% if order.postcode %} {{ order.postcode }}{% endif %}<br>
+        {% endif %}
+        {% if order.country %}<strong>{{ order.country }}</strong><br>{% endif %}
       {% endif %}
     </div>
     {% if order.client.phone %}

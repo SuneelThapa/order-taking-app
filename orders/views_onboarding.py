@@ -41,6 +41,12 @@ def onboarding_view(request):
         catalogue_subdomain  = request.POST.get('catalogue_subdomain', '').strip().lower()
         display_key          = request.POST.get('display_key', '').strip().lower()
         custom_domain        = request.POST.get('custom_domain', '').strip().lower()
+        shop_phone           = request.POST.get('shop_phone', '').strip()
+        shop_street_address  = request.POST.get('shop_street_address', '').strip()
+        shop_city            = request.POST.get('shop_city', '').strip()
+        shop_state           = request.POST.get('shop_state', '').strip()
+        shop_postcode        = request.POST.get('shop_postcode', '').strip()
+        shop_country         = request.POST.get('shop_country', '').strip()
 
         # Validate
         if not shop_name:
@@ -75,6 +81,12 @@ def onboarding_view(request):
                         catalogue_subdomain=catalogue_subdomain,
                         display_key=display_key,
                         custom_domain=custom_domain,
+                        phone=shop_phone,
+                        street_address=shop_street_address,
+                        city=shop_city,
+                        state=shop_state,
+                        postcode=shop_postcode,
+                        country=shop_country,
                     )
                     # Handle logo upload
                     if request.FILES.get('logo'):

@@ -4,6 +4,13 @@ from cloudinary.models import CloudinaryField
 
 class Tenant(models.Model):
     name       = models.CharField(max_length=255)
+    phone      = models.CharField(max_length=30, blank=True, default='',
+                                  help_text='Shop contact phone (shown on shipping labels, invoices)')
+    street_address = models.CharField(max_length=255, blank=True, default='')
+    city           = models.CharField(max_length=100, blank=True, default='')
+    state          = models.CharField(max_length=100, blank=True, default='')
+    postcode       = models.CharField(max_length=20,  blank=True, default='')
+    country        = models.CharField(max_length=100, blank=True, default='')
     subdomain  = models.CharField(max_length=100, unique=True)
     is_active  = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -57,6 +64,16 @@ class Tenant(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def full_address(self):
+        parts = [self.street_address]
+        city_line = ', '.join(p for p in [self.city, self.state, self.postcode] if p)
+        if city_line:
+            parts.append(city_line)
+        if self.country:
+            parts.append(self.country)
+        return ', '.join(p for p in parts if p)
 
     @property
     def whatsapp_access_token(self):
