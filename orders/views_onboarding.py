@@ -107,6 +107,13 @@ def onboarding_view(request):
                         is_tenant=True,
                         can_delete=True,
                     )
+                    # Create owner StaffProfile so role-based checks work
+                    from orders.models import StaffProfile
+                    StaffProfile.objects.create(
+                        user=owner,
+                        role='owner',
+                        default_commission_percentage=0,
+                    )
                     logger.info(
                         f'New tenant created: {shop_name} ({subdomain}) '
                         f'by {request.user.username}'
