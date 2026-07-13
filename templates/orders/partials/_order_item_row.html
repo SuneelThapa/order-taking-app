@@ -87,7 +87,17 @@
     </div>
     <div class="col-md-2">
       <label class="form-label small mb-1">Qty</label>
+      {% if item_form.quantity.errors %}
+      {% with item_form.quantity|stringformat:"s" as _ %}
+      <input type="number" name="{{ item_form.quantity.html_name }}"
+             value="{{ item_form.quantity.value|default:'' }}"
+             class="form-control is-invalid" min="1" step="1"
+             id="{{ item_form.quantity.id_for_label }}">
+      {% endwith %}
+      <div class="text-danger small mt-1">{{ item_form.quantity.errors|striptags }}</div>
+      {% else %}
       {{ item_form.quantity }}
+      {% endif %}
     </div>
     <div class="col-md-2">
       <label class="form-label small mb-1">Price <span class="text-muted">(optional)</span></label>
