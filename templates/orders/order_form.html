@@ -123,8 +123,8 @@
     <div>
       <i class="bi bi-clock-history me-2"></i>
       <strong>Draft restored</strong> - last saved at <span id="draft-saved-at"></span>.
-      Form data restored across all steps.
-      <span class="text-warning-emphasis">Note: uploaded photos, client signature, and scratch pad notes need to be re-entered.</span>
+      Form data, signature and scratch pad restored.
+      <span class="text-warning-emphasis">Note: uploaded photos need to be re-uploaded.</span>
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
       <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearDraft()">
@@ -1293,12 +1293,23 @@ function restoreDraft() {
   const form = document.getElementById('orderForm');
   if (!form) return;
 
-  // Restore staff rows first (they're dynamic so must be created before restoring values)
-  const staffUsers = Object.entries(data).filter(([k]) => k.match(/^staff-\d+-user$/) && !k.includes('DELETE'));
+  // Restore staff rows first, then set values after DOM updates
+  const staffEntries = Object.entries(data).filter(([k]) => k.match(/^staff-\d+-(user|role)$/));
+  const staffUserKeys = Object.entries(data).filter(([k]) => k.match(/^staff-\d+-user$/) && !k.includes('DELETE'));
   const currentStaffCount = form.querySelectorAll('.staff-row').length;
-  for (let i = currentStaffCount; i < staffUsers.length; i++) {
+  for (let i = currentStaffCount; i < staffUserKeys.length; i++) {
     if (typeof addStaffRow === 'function') addStaffRow();
   }
+  // Set staff values after rows are created
+  setTimeout(function() {
+    staffEntries.forEach(([name, value]) => {
+      const els = form.querySelectorAll('[name="' + name + '"]');
+      els.forEach(el => {
+        el.value = value;
+        el.dispatchEvent(new Event('change', {bubbles: true}));
+      });
+    });
+  }, 100);
 
   for (const [name, value] of Object.entries(data)) {
     if (name.startsWith('_')) continue;
@@ -1645,8 +1656,8 @@ document.addEventListener('change', function(e) {
   function gp(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:(e.touches[0].clientX-r.left)/scale,y:(e.touches[0].clientY-r.top)/scale};return{x:e.offsetX/scale,y:e.offsetY/scale};}
   function gd(t){const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
   canvas.addEventListener('mousedown',e=>{if(pinching)return;e.preventDefault();drawing=true;const p=gp(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
-  canvas.addEventListener('mouseup',()=>{if(drawing)saveState();drawing=false;ctx.beginPath();});
-  canvas.addEventListener('mouseleave',()=>{if(drawing)saveState();drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseup',()=>{if(drawing){saveState();const inp=document.getElementById('scratchCanvasImage');if(inp){inp.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}}drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseleave',()=>{if(drawing){saveState();const inp=document.getElementById('scratchCanvasImage');if(inp){inp.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}}drawing=false;ctx.beginPath();});
   canvas.addEventListener('mousemove',e=>{if(!drawing||pinching)return;e.preventDefault();const p=gp(e);ctx.lineCap='round';hasDrawing=true;if(erasing){ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#ffffff';ctx.lineWidth=parseInt(document.getElementById('penSize').value)*4;}else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle=document.getElementById('penColor').value;ctx.lineWidth=document.getElementById('penSize').value;}ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);});
   canvas.style.touchAction='none';
   canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinching=true;startDist=gd(e.touches);return;}const now=Date.now(),tap=now-lastTap;if(tap<300&&tap>0){undo();lastTap=0;return;}lastTap=now;e.preventDefault();drawing=true;const p=gp(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
@@ -1675,11 +1686,11 @@ document.addEventListener('change', function(e) {
   canvas.style.touchAction='none';
   function pos(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};return{x:e.offsetX,y:e.offsetY};}
   canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
-  canvas.addEventListener('mouseup',()=>{drawing=false;ctx.beginPath();});
-  canvas.addEventListener('mouseleave',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseup',()=>{drawing=false;ctx.beginPath();if(hasSig&&hiddenInput){hiddenInput.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}});
+  canvas.addEventListener('mouseleave',()=>{drawing=false;ctx.beginPath();if(hasSig&&hiddenInput){hiddenInput.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}});
   canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=pos(e);ctx.lineWidth=parseInt(document.getElementById('sigPenSize')?.value||2);ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
   canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
-  canvas.addEventListener('touchend',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('touchend',()=>{drawing=false;ctx.beginPath();if(hasSig&&hiddenInput){hiddenInput.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}});
   canvas.addEventListener('touchmove',e=>{if(!drawing)return;e.preventDefault();const p=pos(e);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
   const clearBtn=document.getElementById('clearSigCanvas');
   if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;if(hiddenInput)hiddenInput.value='';};
