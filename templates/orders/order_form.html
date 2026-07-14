@@ -123,7 +123,8 @@
     <div>
       <i class="bi bi-clock-history me-2"></i>
       <strong>Draft restored</strong> - last saved at <span id="draft-saved-at"></span>.
-      Your data has been automatically restored across all steps.
+      Form data restored across all steps.
+      <span class="text-warning-emphasis">Note: uploaded photos, client signature, and scratch pad notes need to be re-entered.</span>
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
       <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearDraft()">
@@ -1261,8 +1262,8 @@ async function saveClientInline(btn) {
 // â”€â”€ Draft persistence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DRAFT_KEY  = '{% if is_edit %}ea_draft_{{ edit_order.pk }}{% else %}ea_draft_new{% endif %}';
 const SKIP_NAMES = new Set([
-  'csrfmiddlewaretoken', 'signature_canvas_image',
-  'scratch_canvas_image', 'inquiry_id', 'inquiry_name', 'inquiry_phone'
+  'csrfmiddlewaretoken',
+  'inquiry_id', 'inquiry_name', 'inquiry_phone'
 ]);
 let _draftDiscarded = false;  // Flag to stop auto-save after discard
 
@@ -1292,6 +1293,13 @@ function restoreDraft() {
   const form = document.getElementById('orderForm');
   if (!form) return;
 
+  // Restore staff rows first (they're dynamic so must be created before restoring values)
+  const staffUsers = Object.entries(data).filter(([k]) => k.match(/^staff-\d+-user$/) && !k.includes('DELETE'));
+  const currentStaffCount = form.querySelectorAll('.staff-row').length;
+  for (let i = currentStaffCount; i < staffUsers.length; i++) {
+    if (typeof addStaffRow === 'function') addStaffRow();
+  }
+
   for (const [name, value] of Object.entries(data)) {
     if (name.startsWith('_')) continue;
     const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
@@ -1315,6 +1323,32 @@ function restoreDraft() {
     if (banner) banner.classList.remove('d-none');
     if (time)   time.textContent = data['_savedAt'];
   }
+
+  // Restore canvas visuals from saved base64 data
+  setTimeout(function() {
+    const scratchData = data['scratch_canvas_image'];
+    if (scratchData) {
+      const scratchCanvas = document.getElementById('scratchCanvas');
+      if (scratchCanvas) {
+        const img = new Image();
+        img.onload = function() { scratchCanvas.getContext('2d').drawImage(img, 0, 0); };
+        img.src = scratchData;
+        const inp = document.getElementById('scratchCanvasImage');
+        if (inp) inp.value = scratchData;
+      }
+    }
+    const sigData = data['signature_canvas_image'];
+    if (sigData) {
+      const sigCanvas = document.getElementById('signatureCanvas');
+      if (sigCanvas) {
+        const img = new Image();
+        img.onload = function() { sigCanvas.getContext('2d').drawImage(img, 0, 0); };
+        img.src = sigData;
+        const inp = document.getElementById('signatureCanvasImage');
+        if (inp) inp.value = sigData;
+      }
+    }
+  }, 400);
 }
 
 function clearDraft() {
