@@ -76,13 +76,7 @@ class OrderForm(StyledModelForm):
             self.fields["status"].choices = [
                 (v, l) for v, l in self.fields["status"].choices if v != "canceled"
             ]
-            if user and getattr(user, "is_tenant", False):
-                self.fields["status"].widget = forms.TextInput(attrs={
-                    "class": "form-control",
-                    "readonly": True,
-                    "value": current.capitalize(),
-                })
-                self.fields["status_hidden"].initial = current
+            # All staff can change order status via the dropdown
 
     class Meta:
         model = Order
