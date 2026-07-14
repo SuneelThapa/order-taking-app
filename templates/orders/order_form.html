@@ -653,19 +653,18 @@
             <div class="col-md-4"><label class="form-label small">State</label>{{ delivery_form.shipping_state }}</div>
             <div class="col-md-4"><label class="form-label small">Postcode</label>{{ delivery_form.shipping_postcode }}</div>
             <div class="col-md-6"><label class="form-label small">Country</label>{{ delivery_form.shipping_country }}</div>
-            {% if selected_client %}
             <div class="col-12">
-              <div class="small text-muted mt-1 border rounded p-2 bg-light" x-show="!shipStreetVal" x-cloak>
+              <div class="small text-muted mt-1 border rounded p-2 bg-light"
+                   id="client-address-preview" style="display:none">
                 <i class="bi bi-info-circle me-1"></i>
-                No address entered above — will ship to <strong>{{ selected_client.name }}</strong>'s address on file:
-                {% if selected_client.street_address %}
-                <br><strong>{{ selected_client.street_address }}{% if selected_client.city %}, {{ selected_client.city }}{% endif %}{% if selected_client.state %}, {{ selected_client.state }}{% endif %}{% if selected_client.postcode %} {{ selected_client.postcode }}{% endif %}{% if selected_client.country %}, {{ selected_client.country }}{% endif %}</strong>
-                {% else %}
-                <br><span class="text-warning">No address on file for this client — please enter one above.</span>
-                {% endif %}
+                No address entered above — will ship to
+                <strong id="cap-name"></strong>'s address on file:<br>
+                <strong id="cap-address"></strong>
+                <span id="cap-no-address" class="text-warning" style="display:none">
+                  No address on file for this client — please enter one above.
+                </span>
               </div>
             </div>
-            {% endif %}
           </div>
 
           
@@ -1335,6 +1334,11 @@ function restoreDraft() {
     if (time)   time.textContent = data['_savedAt'];
   }
 
+  // Update client address preview after draft fields are restored
+  setTimeout(function() {
+    if (typeof updateClientAddressPreview === 'function') updateClientAddressPreview();
+  }, 150);
+
   // Restore canvas visuals from saved base64 data
   setTimeout(function() {
     const scratchData = data['scratch_canvas_image'];
@@ -1484,6 +1488,84 @@ function updateAllBodyVis() {
 document.addEventListener('DOMContentLoaded', updateAllBodyVis);
 document.body.addEventListener('htmx:afterSwap', function(e) {
   setTimeout(updateAllBodyVis, 50);
+});
+
+// Client address preview in Step 5 Ship to Address
+function updateClientAddressPreview() {
+  const preview  = document.getElementById('client-address-preview');
+  const capName  = document.getElementById('cap-name');
+  const capAddr  = document.getElementById('cap-address');
+  const capNone  = document.getElementById('cap-no-address');
+  const shipStreet = document.querySelector('[name$="-shipping_street"]') ||
+                     document.querySelector('[name="delivery-shipping_street"]');
+  if (!preview) return;
+
+  // Get client name and address from Step 1 form fields
+  // Client fields - use querySelectorAll and pick first non-empty value
+  const allStreetEls = document.querySelectorAll('[name="street_address"]');
+  const allCityEls   = document.querySelectorAll('[name="city"]');
+  const allStateEls  = document.querySelectorAll('[name="state"]');
+  const allPostEls   = document.querySelectorAll('[name="postcode"]');
+  const allCountryEls= document.querySelectorAll('[name="country"]');
+  const nameEl       = document.querySelector('[name="name"]');
+
+  function firstVal(els) {
+    for (const el of els) { if (el.value && el.value.trim()) return el.value.trim(); }
+    return '';
+  }
+
+  // fields handled by firstVal()
+
+  // Also check draft localStorage for client address (works after draft restore)
+  let _draftClient = {};
+  try { const _dr = localStorage.getItem(DRAFT_KEY); if(_dr){const _dp=JSON.parse(_dr);_draftClient=_dp;} } catch(e){}
+
+  const clientName = (nameEl && nameEl.value.trim()) || _draftClient['_clientName'] || '{% if selected_client %}{{ selected_client.name }}{% endif %}';
+  const street     = firstVal(allStreetEls)  || _draftClient['_clientStreet']   || '{% if selected_client %}{{ selected_client.street_address }}{% endif %}';
+  const city       = firstVal(allCityEls)    || _draftClient['_clientCity']     || '{% if selected_client %}{{ selected_client.city }}{% endif %}';
+  const state      = firstVal(allStateEls)   || _draftClient['_clientState']    || '{% if selected_client %}{{ selected_client.state }}{% endif %}';
+  const postcode   = firstVal(allPostEls)    || _draftClient['_clientPostcode'] || '{% if selected_client %}{{ selected_client.postcode }}{% endif %}';
+  const country    = firstVal(allCountryEls) || _draftClient['_clientCountry']  || '{% if selected_client %}{{ selected_client.country }}{% endif %}';
+
+  const shipStreetVal = shipStreet ? shipStreet.value.trim() : '';
+
+  if (shipStreetVal) { preview.style.display = 'none'; return; }
+  if (!clientName)   { preview.style.display = 'none'; return; }
+
+  preview.style.display = '';
+  if (capName) capName.textContent = clientName;
+
+  const line2 = [city, state, postcode].filter(Boolean).join(', ');
+  const parts = [street, line2, country].filter(Boolean);
+  if (parts.length) {
+    if (capAddr) { capAddr.textContent = parts.join(', '); capAddr.style.display = ''; }
+    if (capNone) capNone.style.display = 'none';
+  } else {
+    if (capAddr) capAddr.style.display = 'none';
+    if (capNone) capNone.style.display = '';
+  }
+}
+
+// Run on delivery type change and ship street change
+document.addEventListener('change', function(e) {
+  if (e.target.name && (
+    e.target.name.includes('type') ||
+    e.target.name.includes('shipping_street') ||
+    e.target.name === 'name' ||
+    e.target.name === 'street_address'
+  )) updateClientAddressPreview();
+});
+document.addEventListener('input', function(e) {
+  if (e.target.name && (
+    e.target.name.includes('shipping_street') ||
+    e.target.name === 'street_address'
+  )) updateClientAddressPreview();
+});
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(updateClientAddressPreview, 200);
+});
+document.body.addEventListener('htmx:afterSwap', function() {
+  setTimeout(updateClientAddressPreview, 200);
 });
 
 function normalizeForm() {
