@@ -179,13 +179,13 @@ class Order(models.Model):
     def balance_due(self):
         """
         Returns remaining balance in THB.
-        Converts total_amount to THB using total_exchange_rate_to_thb before
-        comparing against the sum of each payment's own thb_equivalent
-        (each payment is already correctly converted using its own rate,
-        so this works correctly even if the client paid in multiple currencies).
+        Uses annotated collected_thb if available (set by _orders_table_context
+        to avoid N+1 queries), otherwise falls back to aggregate query.
         """
-        from django.db.models import Sum
-        collected = self.payments.aggregate(total=Sum('thb_equivalent'))['total'] or 0
+        collected = getattr(self, 'collected_thb', None)
+        if collected is None:
+            from django.db.models import Sum
+            collected = self.payments.aggregate(total=Sum('thb_equivalent'))['total'] or 0
         return self.total_amount_thb - collected
 
     @property

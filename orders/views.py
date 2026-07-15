@@ -93,7 +93,22 @@ def _orders_table_context(request, tenant):
         sort = "-created_at"
     page = request.GET.get("page", 1)
 
-    orders = Order.objects.filter(tenant=tenant).select_related("client", "delivery")
+    from django.db.models import Sum, OuterRef, Subquery, DecimalField
+    from django.db.models.functions import Coalesce
+
+    # Annotate collected_thb in one query to avoid N+1 from balance_due property
+    orders = (
+        Order.objects
+        .filter(tenant=tenant)
+        .select_related("client", "delivery")
+        .annotate(
+            collected_thb=Coalesce(
+                Sum('payments__thb_equivalent'),
+                0,
+                output_field=DecimalField()
+            )
+        )
+    )
 
     if status:
         orders = orders.filter(status=status)
