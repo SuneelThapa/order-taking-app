@@ -20,12 +20,10 @@
       <span class="rail-label">Dashboard</span>
     </a>
 
-    {% if not request.user.is_tenant %}
     <a href="{% url 'orders:order_add' %}" class="rail-nav-item" title="New order">
       <i class="bi bi-plus-square"></i>
       <span class="rail-label">New order</span>
     </a>
-    {% endif %}
 
     <a href="{% url 'orders:status_board' %}{% if request.tenant.display_key %}?key={{ request.tenant.display_key }}{% endif %}" class="rail-nav-item" title="Status board" target="_blank">
       <i class="bi bi-display"></i>
