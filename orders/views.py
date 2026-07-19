@@ -1474,6 +1474,7 @@ def export_csv(request):
         ("staff",           "Staff",                 lambda o, x: x.get("staff", "")),
         ("payments",        "Payments",              lambda o, x: x.get("payments", "")),
         ("total_collected", "Total Collected (THB)", lambda o, x: x.get("collected", "")),
+        ("measurements",    "Measurements",          lambda o, x: x.get("measurements", "")),
     ]
 
     # Which columns to include — default is all
@@ -1542,6 +1543,46 @@ def export_csv(request):
         if hasattr(order, "delivery") and order.delivery:
             ctx["d_hotel"] = order.delivery.hotel_name or ""
             ctx["d_room"]  = order.delivery.room_number or ""
+
+        # Build measurements string for each item
+        meas_parts = []
+        for item in order.items.all():
+            item_name = item.product_type.name if item.product_type else "Item"
+            fields = []
+            # Body measurements
+            try:
+                bm = item.body_measurement
+                for f in bm._meta.get_fields():
+                    if not hasattr(f, 'column'): continue
+                    if f.name in ('id', 'order_item'): continue
+                    val = getattr(bm, f.name, None)
+                    if val not in (None, '', 0, 0.0):
+                        get_disp = getattr(bm, f'get_{f.name}_display', None)
+                        label = f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name
+                        fields.append(f"{label}:{get_disp() if get_disp else val}")
+            except Exception:
+                pass
+            # Garment-specific measurements
+            try:
+                from django.apps import apps as _apps
+                model_name = item.product_type.measurement_model if item.product_type else None
+                if model_name:
+                    GModel = _apps.get_model("orders", model_name)
+                    gm = GModel.objects.filter(base=item.measurement).first()
+                    if gm:
+                        for f in gm._meta.get_fields():
+                            if not hasattr(f, 'column'): continue
+                            if f.name in ('id', 'base'): continue
+                            val = getattr(gm, f.name, None)
+                            if val not in (None, '', 0, 0.0):
+                                get_disp = getattr(gm, f'get_{f.name}_display', None)
+                                label = f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name
+                                fields.append(f"{label}:{get_disp() if get_disp else val}")
+            except Exception:
+                pass
+            if fields:
+                meas_parts.append(f"{item_name}: {' | '.join(fields)}")
+        ctx["measurements"] = " || ".join(meas_parts)
 
         writer.writerow([c[2](order, ctx) for c in selected])
 
