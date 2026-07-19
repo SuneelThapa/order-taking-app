@@ -143,9 +143,17 @@ def _orders_table_context(request, tenant):
     has_filters = any([status, q, from_date, to_date, staff_id, urgent,
                        min_amount, max_amount])
 
-    paginator = Paginator(orders.order_by(sort), 10)
+    per_page = request.GET.get("per_page", "10")
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 25, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    paginator = Paginator(orders.order_by(sort), per_page)
     return {
         "page_obj":          paginator.get_page(page),
+        "per_page":          per_page,
         "current_status":    status,
         "current_sort":      sort,
         "current_q":         q,
