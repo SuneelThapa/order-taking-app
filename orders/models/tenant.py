@@ -62,6 +62,9 @@ class Tenant(models.Model):
         help_text="Client's own domain e.g. studio.sukhumvittailors.com"
     )
 
+    class Meta:
+        ordering = ['created_at']
+
     def __str__(self):
         return self.name
 

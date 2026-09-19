@@ -18,6 +18,24 @@ from .models import (
 )
 
 
+
+class TenantScopedAdmin(admin.ModelAdmin):
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        try:
+            tenant = request.user.tenant
+            if hasattr(qs.model, 'tenant'):
+                return qs.filter(tenant=tenant)
+            if hasattr(qs.model, 'order'):
+                return qs.filter(order__tenant=tenant)
+            if hasattr(qs.model, 'client'):
+                return qs.filter(client__order__tenant=tenant).distinct()
+        except Exception:
+            pass
+        return qs.none()
+
 # -------------------------------------------------------
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
@@ -35,7 +53,7 @@ class ReferralSourceAdmin(admin.ModelAdmin):
 
 # -------------------------------------------------------
 @admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
+class ClientAdmin(TenantScopedAdmin):
     list_display = ('name', 'phone', 'email', 'acquisition_channel', 'marketing_consent', 'is_active', 'created_at')
     list_filter = ('acquisition_channel', 'marketing_consent', 'is_active')
     search_fields = ('name', 'phone', 'email')
@@ -45,7 +63,7 @@ class ClientAdmin(admin.ModelAdmin):
 
 # -------------------------------------------------------
 @admin.register(StaffProfile)
-class StaffProfileAdmin(admin.ModelAdmin):
+class StaffProfileAdmin(TenantScopedAdmin):
     list_display = ('user', 'employment_type', 'base_salary', 'default_commission_percentage', 'join_date')
     search_fields = ('user__username', 'user__first_name', 'user__last_name')
 
@@ -92,7 +110,7 @@ class ScratchNoteInline(admin.TabularInline):
 
 
 @admin.register(Order)
-class OrderAdmin(admin.ModelAdmin):
+class OrderAdmin(TenantScopedAdmin):
     list_display = (
         'order_number', 'client', 'status', 'is_urgent',
         'fitting_date', 'ready_date', 'delivery_date',
@@ -130,7 +148,7 @@ class CancellationRecordAdmin(admin.ModelAdmin):
 
 # -------------------------------------------------------
 @admin.register(Delivery)
-class DeliveryAdmin(admin.ModelAdmin):
+class DeliveryAdmin(TenantScopedAdmin):
     list_display = ('order', 'type', 'hotel_name', 'room_number')
     list_filter = ('type',)
     search_fields = ('order__order_number', 'hotel_name')
@@ -138,7 +156,7 @@ class DeliveryAdmin(admin.ModelAdmin):
 
 # -------------------------------------------------------
 @admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
+class PaymentAdmin(TenantScopedAdmin):
     list_display = ('order', 'original_amount', 'currency', 'thb_equivalent', 'method', 'type', 'recorded_by', 'created_at')
     list_filter = ('currency', 'method', 'type')
     search_fields = ('order__order_number',)
