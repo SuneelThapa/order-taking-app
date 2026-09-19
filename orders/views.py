@@ -297,7 +297,8 @@ def client_search(request):
     if len(q) >= 2:
         clients = Client.objects.filter(
             Q(name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q),
-            is_active=True
+            is_active=True,
+            tenant=tenant,
         ).order_by("name")[:10]
     return render(request, "orders/partials/_client_results.html",
                   {"clients": clients, "q": q})
@@ -385,7 +386,7 @@ def order_form_view(request, pk=None):
         client_error = None
         if client_id:
             try:
-                client_obj = Client.objects.get(pk=client_id)
+                client_obj = Client.objects.get(pk=client_id, tenant=tenant)
             except (Client.DoesNotExist, ValueError):
                 client_error = "The selected client is invalid. Please search and select again."
         else:
@@ -700,7 +701,7 @@ def order_form_view(request, pk=None):
     elif request.method == "POST":
         cid = request.POST.get("client")
         if cid:
-            selected_client = Client.objects.filter(pk=cid).first()
+            selected_client = Client.objects.filter(pk=cid, tenant=tenant).first()
 
     # ── Pre-fill from catalogue inquiry (Convert button) ──────────
     inquiry_prefill = None
@@ -719,7 +720,8 @@ def order_form_view(request, pk=None):
             # Try to find existing client by phone
             if inq_phone and not selected_client:
                 selected_client = Client.objects.filter(
-                    phone__icontains=inq_phone.replace("+", "").strip()
+                    phone__icontains=inq_phone.replace("+", "").strip(),
+                    tenant=tenant,
                 ).first()
 
     first_error_step = None
@@ -2392,7 +2394,7 @@ def referred_by_search(request):
         if not q or len(q) < 2:
             return HttpResponse("")
         clients = (
-            Client.objects.filter(is_active=True)
+            Client.objects.filter(is_active=True, tenant=tenant)
             .filter(Q(name__icontains=q) | Q(phone__icontains=q))
             .order_by("name")[:10]
         )
