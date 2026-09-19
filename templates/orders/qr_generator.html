@@ -15,7 +15,12 @@
     let url = this.baseUrl;
     if (this.category) {
       url = this.baseUrl + '/catalogue/';
-      params.push('category=' + this.category);
+      if (this.category.startsWith('leather:')) {
+        params.push('local_category=' + this.category.slice(8));
+        params.push('source=local');
+      } else {
+        params.push('category=' + this.category);
+      }
     }
     if (this.staff) params.push('ref=' + this.staff);
     if (params.length) url += '?' + params.join('&');
@@ -25,8 +30,11 @@
   get displayLabel() {
     if (this.label) return this.label;
     let parts = [];
-    if (this.category) parts.push(this.category.charAt(0).toUpperCase() + this.category.slice(1));
-    if (this.staff)    parts.push(this.staff.charAt(0).toUpperCase() + this.staff.slice(1));
+    if (this.category) {
+      let raw = this.category.startsWith('leather:') ? this.category.slice(8) : this.category;
+      parts.push(raw.charAt(0).toUpperCase() + raw.slice(1));
+    }
+    if (this.staff) parts.push(this.staff.charAt(0).toUpperCase() + this.staff.slice(1));
     return parts.length ? parts.join(' · ') : 'All Products';
   },
 
@@ -94,9 +102,20 @@ x-init="generateQR()"
             <label class="form-label fw-semibold">Category <span class="text-muted fw-normal">(optional)</span></label>
             <select class="form-select" x-model="category" @change="generateQR()">
               <option value="">— All products —</option>
-              {% for cat in categories %}
-              <option value="{{ cat.slug }}">{{ cat.name }}</option>
-              {% endfor %}
+              {% if categories %}
+              <optgroup label="Bespoke Tailoring">
+                {% for cat in categories %}
+                <option value="{{ cat.slug }}">{{ cat.name }}</option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
+              {% if leather_categories %}
+              <optgroup label="Leather Goods">
+                {% for cat in leather_categories %}
+                <option value="leather:{{ cat.slug }}">{{ cat.name }}</option>
+                {% endfor %}
+              </optgroup>
+              {% endif %}
             </select>
             <div class="form-text">Client lands directly on this category.</div>
           </div>
@@ -162,6 +181,14 @@ x-init="generateQR()"
               <button class="btn btn-outline-secondary btn-sm w-100"
                       @click="category='{{ cat.slug }}'; staff=''; generateQR()">
                 <i class="bi bi-qr-code me-1"></i>{{ cat.name }}
+              </button>
+            </div>
+            {% endfor %}
+            {% for cat in leather_categories %}
+            <div class="col-6 col-md-4">
+              <button class="btn btn-outline-secondary btn-sm w-100"
+                      @click="category='leather:{{ cat.slug }}'; staff=''; generateQR()">
+                <i class="bi bi-bag me-1"></i>{{ cat.name }}
               </button>
             </div>
             {% endfor %}

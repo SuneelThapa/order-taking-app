@@ -71,10 +71,10 @@
           <div class="text-muted small mb-1">Avg per Order</div>
           <div class="fs-4 fw-bold">
             {% if order_count %}
-            ฿ {{ shop_total|divisibleby:order_count|yesno:"," }}
+            ฿
             <span id="avg-val">
               {% widthratio shop_total 1 1 as total_int %}
-              ฿ {% if order_count > 0 %}{{ shop_total|floatformat:0 }}{% endif %}
+              {% if order_count > 0 %}{{ shop_total|floatformat:0 }}{% endif %}
             </span>
             {% else %}—{% endif %}
           </div>

@@ -123,7 +123,8 @@
     <div>
       <i class="bi bi-clock-history me-2"></i>
       <strong>Draft restored</strong> - last saved at <span id="draft-saved-at"></span>.
-      Your data has been automatically restored across all steps.
+      Form data, signature and scratch pad restored.
+      <span class="text-warning-emphasis">Note: uploaded photos need to be re-uploaded.</span>
     </div>
     <div class="d-flex gap-2 flex-shrink-0">
       <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearDraft()">
@@ -643,12 +644,27 @@
             <div class="col-md-6"><label class="form-label small">Hotel name</label>{{ delivery_form.hotel_name }}</div>
             <div class="col-md-6"><label class="form-label small">Room number</label>{{ delivery_form.room_number }}</div>
           </div>
-          <div x-show="dtype==='ship'" class="row g-2 mb-2">
+          <div x-show="dtype==='ship'"
+               x-data="{ shipStreetVal: '{{ delivery_form.shipping_street.value|default:"" }}' }"
+               @input="if ($event.target.name && $event.target.name.includes('shipping_street')) shipStreetVal = $event.target.value"
+               class="row g-2 mb-2">
             <div class="col-12"><label class="form-label small">Street</label>{{ delivery_form.shipping_street }}</div>
             <div class="col-md-4"><label class="form-label small">City</label>{{ delivery_form.shipping_city }}</div>
             <div class="col-md-4"><label class="form-label small">State</label>{{ delivery_form.shipping_state }}</div>
             <div class="col-md-4"><label class="form-label small">Postcode</label>{{ delivery_form.shipping_postcode }}</div>
             <div class="col-md-6"><label class="form-label small">Country</label>{{ delivery_form.shipping_country }}</div>
+            <div class="col-12">
+              <div class="small text-muted mt-1 border rounded p-2 bg-light"
+                   id="client-address-preview" style="display:none">
+                <i class="bi bi-info-circle me-1"></i>
+                No address entered above — will ship to
+                <strong id="cap-name"></strong>'s address on file:<br>
+                <strong id="cap-address"></strong>
+                <span id="cap-no-address" class="text-warning" style="display:none">
+                  No address on file for this client — please enter one above.
+                </span>
+              </div>
+            </div>
           </div>
 
           
@@ -689,6 +705,13 @@
             Staff assignments are locked. Only an owner or manager can add or remove staff from this order.
           </div>
           {% endif %}
+          {# Hidden template select for cloning staff options in JS #}
+          <select id="staff-user-template" class="d-none">
+            <option value="">---------</option>
+            {% for u in staff_users_list %}
+            <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+            {% endfor %}
+          </select>
           <div id="staff-container">
             {% for form in staff_formset %}
             <div class="row g-2 mb-2 align-items-end staff-row border rounded p-2">
@@ -706,7 +729,7 @@
                 {% if form.instance.pk %}
                 {% if can_edit_staff %}<div class="form-check mt-4">{{ form.DELETE }}<label class="form-check-label text-danger small">Remove</label></div>{% endif %}
                 {% else %}
-                <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove()"><i class="bi bi-x"></i> Remove</button>
+                <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove(); var t=document.getElementById('id_staff-TOTAL_FORMS'); t.value=Math.max(0,parseInt(t.value)-1);"><i class="bi bi-x"></i> Remove</button>
                 {% endif %}
               </div>
             </div>
@@ -727,8 +750,8 @@
       <div class="card mb-3">
         <div class="card-header bg-white fw-semibold">Order total</div>
         <div class="card-body">
-          <div class="row g-3 align-items-start">
-            <div class="col-md-4">
+          <div class="row g-3 align-items-start" x-data="{ totalCurrency: '{{ order_form.total_currency.value|default:"THB" }}' }">
+            <div class="col-md-3">
               <label class="form-label">Total amount</label>
               {{ order_form.total_amount }}
               {% if order_form.total_amount.help_text %}
@@ -737,9 +760,19 @@
             </div>
             <div class="col-md-3">
               <label class="form-label">Currency</label>
-              {{ order_form.total_currency }}
+              <select name="{{ order_form.total_currency.html_name }}" class="form-select"
+                      x-model="totalCurrency" id="{{ order_form.total_currency.id_for_label }}">
+                {% for val, label in order_form.fields.total_currency.choices %}
+                <option value="{{ val }}" {% if order_form.total_currency.value == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
             </div>
-            <div class="col-md-5 d-flex align-items-center" style="padding-top:1.9rem;">
+            <div class="col-md-3" x-show="totalCurrency !== 'THB'" x-cloak>
+              <label class="form-label">{{ order_form.total_exchange_rate_to_thb.label }}</label>
+              {{ order_form.total_exchange_rate_to_thb }}
+              <div class="form-text text-muted" style="font-size:0.72rem">{{ order_form.total_exchange_rate_to_thb.help_text }}</div>
+            </div>
+            <div class="col-md-3 d-flex align-items-center" style="padding-top:1.9rem;">
               <div class="text-muted small">
                 Enter the agreed total in the client's preferred currency.<br>
                 All commission calculations use THB equivalent from payments.
@@ -1228,8 +1261,8 @@ async function saveClientInline(btn) {
 // â”€â”€ Draft persistence â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DRAFT_KEY  = '{% if is_edit %}ea_draft_{{ edit_order.pk }}{% else %}ea_draft_new{% endif %}';
 const SKIP_NAMES = new Set([
-  'csrfmiddlewaretoken', 'signature_canvas_image',
-  'scratch_canvas_image', 'inquiry_id', 'inquiry_name', 'inquiry_phone'
+  'csrfmiddlewaretoken',
+  'inquiry_id', 'inquiry_name', 'inquiry_phone'
 ]);
 let _draftDiscarded = false;  // Flag to stop auto-save after discard
 
@@ -1259,6 +1292,24 @@ function restoreDraft() {
   const form = document.getElementById('orderForm');
   if (!form) return;
 
+  // Restore staff rows first, then set values after DOM updates
+  const staffEntries = Object.entries(data).filter(([k]) => k.match(/^staff-\d+-(user|role)$/));
+  const staffUserKeys = Object.entries(data).filter(([k]) => k.match(/^staff-\d+-user$/) && !k.includes('DELETE'));
+  const currentStaffCount = form.querySelectorAll('.staff-row').length;
+  for (let i = currentStaffCount; i < staffUserKeys.length; i++) {
+    if (typeof addStaffRow === 'function') addStaffRow();
+  }
+  // Set staff values after rows are created
+  setTimeout(function() {
+    staffEntries.forEach(([name, value]) => {
+      const els = form.querySelectorAll('[name="' + name + '"]');
+      els.forEach(el => {
+        el.value = value;
+        el.dispatchEvent(new Event('change', {bubbles: true}));
+      });
+    });
+  }, 100);
+
   for (const [name, value] of Object.entries(data)) {
     if (name.startsWith('_')) continue;
     const els = form.querySelectorAll(`[name="${CSS.escape(name)}"]`);
@@ -1282,6 +1333,37 @@ function restoreDraft() {
     if (banner) banner.classList.remove('d-none');
     if (time)   time.textContent = data['_savedAt'];
   }
+
+  // Update client address preview after draft fields are restored
+  setTimeout(function() {
+    if (typeof updateClientAddressPreview === 'function') updateClientAddressPreview();
+  }, 150);
+
+  // Restore canvas visuals from saved base64 data
+  setTimeout(function() {
+    const scratchData = data['scratch_canvas_image'];
+    if (scratchData) {
+      const scratchCanvas = document.getElementById('scratchCanvas');
+      if (scratchCanvas) {
+        const img = new Image();
+        img.onload = function() { scratchCanvas.getContext('2d').drawImage(img, 0, 0); };
+        img.src = scratchData;
+        const inp = document.getElementById('scratchCanvasImage');
+        if (inp) inp.value = scratchData;
+      }
+    }
+    const sigData = data['signature_canvas_image'];
+    if (sigData) {
+      const sigCanvas = document.getElementById('signatureCanvas');
+      if (sigCanvas) {
+        const img = new Image();
+        img.onload = function() { sigCanvas.getContext('2d').drawImage(img, 0, 0); };
+        img.src = sigData;
+        const inp = document.getElementById('signatureCanvasImage');
+        if (inp) inp.value = sigData;
+      }
+    }
+  }, 400);
 }
 
 function clearDraft() {
@@ -1408,6 +1490,84 @@ document.body.addEventListener('htmx:afterSwap', function(e) {
   setTimeout(updateAllBodyVis, 50);
 });
 
+// Client address preview in Step 5 Ship to Address
+function updateClientAddressPreview() {
+  const preview  = document.getElementById('client-address-preview');
+  const capName  = document.getElementById('cap-name');
+  const capAddr  = document.getElementById('cap-address');
+  const capNone  = document.getElementById('cap-no-address');
+  const shipStreet = document.querySelector('[name$="-shipping_street"]') ||
+                     document.querySelector('[name="delivery-shipping_street"]');
+  if (!preview) return;
+
+  // Get client name and address from Step 1 form fields
+  // Client fields - use querySelectorAll and pick first non-empty value
+  const allStreetEls = document.querySelectorAll('[name="street_address"]');
+  const allCityEls   = document.querySelectorAll('[name="city"]');
+  const allStateEls  = document.querySelectorAll('[name="state"]');
+  const allPostEls   = document.querySelectorAll('[name="postcode"]');
+  const allCountryEls= document.querySelectorAll('[name="country"]');
+  const nameEl       = document.querySelector('[name="name"]');
+
+  function firstVal(els) {
+    for (const el of els) { if (el.value && el.value.trim()) return el.value.trim(); }
+    return '';
+  }
+
+  // fields handled by firstVal()
+
+  // Also check draft localStorage for client address (works after draft restore)
+  let _draftClient = {};
+  try { const _dr = localStorage.getItem(DRAFT_KEY); if(_dr){const _dp=JSON.parse(_dr);_draftClient=_dp;} } catch(e){}
+
+  const clientName = (nameEl && nameEl.value.trim()) || _draftClient['_clientName'] || '{% if selected_client %}{{ selected_client.name }}{% endif %}';
+  const street     = firstVal(allStreetEls)  || _draftClient['_clientStreet']   || '{% if selected_client %}{{ selected_client.street_address }}{% endif %}';
+  const city       = firstVal(allCityEls)    || _draftClient['_clientCity']     || '{% if selected_client %}{{ selected_client.city }}{% endif %}';
+  const state      = firstVal(allStateEls)   || _draftClient['_clientState']    || '{% if selected_client %}{{ selected_client.state }}{% endif %}';
+  const postcode   = firstVal(allPostEls)    || _draftClient['_clientPostcode'] || '{% if selected_client %}{{ selected_client.postcode }}{% endif %}';
+  const country    = firstVal(allCountryEls) || _draftClient['_clientCountry']  || '{% if selected_client %}{{ selected_client.country }}{% endif %}';
+
+  const shipStreetVal = shipStreet ? shipStreet.value.trim() : '';
+
+  if (shipStreetVal) { preview.style.display = 'none'; return; }
+  if (!clientName)   { preview.style.display = 'none'; return; }
+
+  preview.style.display = '';
+  if (capName) capName.textContent = clientName;
+
+  const line2 = [city, state, postcode].filter(Boolean).join(', ');
+  const parts = [street, line2, country].filter(Boolean);
+  if (parts.length) {
+    if (capAddr) { capAddr.textContent = parts.join(', '); capAddr.style.display = ''; }
+    if (capNone) capNone.style.display = 'none';
+  } else {
+    if (capAddr) capAddr.style.display = 'none';
+    if (capNone) capNone.style.display = '';
+  }
+}
+
+// Run on delivery type change and ship street change
+document.addEventListener('change', function(e) {
+  if (e.target.name && (
+    e.target.name.includes('type') ||
+    e.target.name.includes('shipping_street') ||
+    e.target.name === 'name' ||
+    e.target.name === 'street_address'
+  )) updateClientAddressPreview();
+});
+document.addEventListener('input', function(e) {
+  if (e.target.name && (
+    e.target.name.includes('shipping_street') ||
+    e.target.name === 'street_address'
+  )) updateClientAddressPreview();
+});
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(updateClientAddressPreview, 200);
+});
+document.body.addEventListener('htmx:afterSwap', function() {
+  setTimeout(updateClientAddressPreview, 200);
+});
+
 function normalizeForm() {
   document.querySelectorAll('#orderForm select:not(.form-select)').forEach(s => {
     s.classList.remove('form-control'); s.classList.add('form-select');
@@ -1511,7 +1671,7 @@ function addStaffRow() {
     <div class="col-md-5">
       <label class="form-label small mb-1">Staff member</label>
       <select name="staff-${idx}-user" class="form-select"><option value="">---------</option>
-        ${Array.from(document.querySelectorAll('[name="staff-0-user"] option')).map(o=>`<option value="${o.value}">${o.text}</option>`).join('')}
+        ${Array.from(document.getElementById('staff-user-template')?.options || []).map(o=>`<option value="${o.value}">${o.text}</option>`).join('') || '<option value="">---------</option>'}
       </select>
     </div>
     <div class="col-md-4">
@@ -1522,7 +1682,7 @@ function addStaffRow() {
       </select>
     </div>
     <div class="col-md-3">
-      <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove()"><i class="bi bi-x"></i> Remove</button>
+      <button type="button" class="btn btn-sm btn-outline-danger w-100 mt-4" onclick="this.closest('.staff-row').remove(); var t=document.getElementById('id_staff-TOTAL_FORMS'); if(t) t.value=Math.max(0,parseInt(t.value)-1);"><i class="bi bi-x"></i> Remove</button>
     </div>
   </div>`;
   container.insertAdjacentHTML('beforeend', html);
@@ -1578,8 +1738,8 @@ document.addEventListener('change', function(e) {
   function gp(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:(e.touches[0].clientX-r.left)/scale,y:(e.touches[0].clientY-r.top)/scale};return{x:e.offsetX/scale,y:e.offsetY/scale};}
   function gd(t){const dx=t[0].clientX-t[1].clientX,dy=t[0].clientY-t[1].clientY;return Math.sqrt(dx*dx+dy*dy);}
   canvas.addEventListener('mousedown',e=>{if(pinching)return;e.preventDefault();drawing=true;const p=gp(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
-  canvas.addEventListener('mouseup',()=>{if(drawing)saveState();drawing=false;ctx.beginPath();});
-  canvas.addEventListener('mouseleave',()=>{if(drawing)saveState();drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseup',()=>{if(drawing){saveState();const inp=document.getElementById('scratchCanvasImage');if(inp){inp.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}}drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseleave',()=>{if(drawing){saveState();const inp=document.getElementById('scratchCanvasImage');if(inp){inp.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}}drawing=false;ctx.beginPath();});
   canvas.addEventListener('mousemove',e=>{if(!drawing||pinching)return;e.preventDefault();const p=gp(e);ctx.lineCap='round';hasDrawing=true;if(erasing){ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#ffffff';ctx.lineWidth=parseInt(document.getElementById('penSize').value)*4;}else{ctx.globalCompositeOperation='source-over';ctx.strokeStyle=document.getElementById('penColor').value;ctx.lineWidth=document.getElementById('penSize').value;}ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);});
   canvas.style.touchAction='none';
   canvas.addEventListener('touchstart',e=>{if(e.touches.length===2){pinching=true;startDist=gd(e.touches);return;}const now=Date.now(),tap=now-lastTap;if(tap<300&&tap>0){undo();lastTap=0;return;}lastTap=now;e.preventDefault();drawing=true;const p=gp(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
@@ -1608,11 +1768,11 @@ document.addEventListener('change', function(e) {
   canvas.style.touchAction='none';
   function pos(e){const r=canvas.getBoundingClientRect();if(e.touches)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};return{x:e.offsetX,y:e.offsetY};}
   canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
-  canvas.addEventListener('mouseup',()=>{drawing=false;ctx.beginPath();});
-  canvas.addEventListener('mouseleave',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('mouseup',()=>{drawing=false;ctx.beginPath();if(hasSig&&hiddenInput){hiddenInput.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}});
+  canvas.addEventListener('mouseleave',()=>{drawing=false;ctx.beginPath();if(hasSig&&hiddenInput){hiddenInput.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}});
   canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=pos(e);ctx.lineWidth=parseInt(document.getElementById('sigPenSize')?.value||2);ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
   canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);});
-  canvas.addEventListener('touchend',()=>{drawing=false;ctx.beginPath();});
+  canvas.addEventListener('touchend',()=>{drawing=false;ctx.beginPath();if(hasSig&&hiddenInput){hiddenInput.value=canvas.toDataURL('image/png');if(typeof saveDraft==='function')saveDraft();}});
   canvas.addEventListener('touchmove',e=>{if(!drawing)return;e.preventDefault();const p=pos(e);ctx.lineWidth=2;ctx.lineCap='round';ctx.strokeStyle='#000';ctx.lineTo(p.x,p.y);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x,p.y);hasSig=true;});
   const clearBtn=document.getElementById('clearSigCanvas');
   if(clearBtn)clearBtn.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasSig=false;if(hiddenInput)hiddenInput.value='';};
@@ -1663,9 +1823,19 @@ function copyBodyMeasurements(fromPrefix, toPrefix) {
   const measurementModel = productTypePk ? PRODUCT_TYPE_MAP[productTypePk] : null;
 
   // Use garment-specific fields for destination item
-  const fields = (measurementModel && GARMENT_BODY_FIELDS[measurementModel])
+  let fields = (measurementModel && GARMENT_BODY_FIELDS[measurementModel])
     ? GARMENT_BODY_FIELDS[measurementModel]
     : ALL_BODY_FIELDS;
+  // Ladies gender: add ladies-specific fields unless pants/shorts/skirt garment
+  const toGenderEl = document.querySelector(`[name="${toPrefix}-gender"]:checked`);
+  const isLadies = toGenderEl && toGenderEl.value === "ladies";
+  const isPantsGarment = ["PantsMeasurement","ShortsMeasurement","SkirtMeasurement"].includes(measurementModel);
+  if (isLadies && !isPantsGarment) {
+    const ladiesFields = ["high_chest","upper_hips","deep_front","deep_back",
+      "shoulder_to_middle_breast","shoulder_to_under_breast",
+      "middle_breast_to_middle_breast","shoulder_to_back","shoulder_to_waist"];
+    fields = [...new Set([...fields, ...ladiesFields])];
+  }
 
   let copied = 0;
   fields.forEach(field => {

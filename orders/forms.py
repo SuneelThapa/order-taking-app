@@ -63,6 +63,10 @@ class OrderForm(StyledModelForm):
         # Make total_amount optional — view calculates it from items if blank
         self.fields["total_amount"].required = False
         self.fields["total_amount"].initial  = 0
+        self.fields["total_exchange_rate_to_thb"].required = False
+        self.fields["total_exchange_rate_to_thb"].initial  = 1
+        self.fields["total_exchange_rate_to_thb"].label    = "Exchange rate to THB"
+        self.fields["total_exchange_rate_to_thb"].help_text = "THB=1 · Crypto=agreed fixed rate · Others=today's rate"
 
         default = self._meta.model._meta.get_field("status").get_default()  # type: ignore
         current = self.instance.status if self.instance and self.instance.pk else default
@@ -72,13 +76,7 @@ class OrderForm(StyledModelForm):
             self.fields["status"].choices = [
                 (v, l) for v, l in self.fields["status"].choices if v != "canceled"
             ]
-            if user and getattr(user, "is_tenant", False):
-                self.fields["status"].widget = forms.TextInput(attrs={
-                    "class": "form-control",
-                    "readonly": True,
-                    "value": current.capitalize(),
-                })
-                self.fields["status_hidden"].initial = current
+            # All staff can change order status via the dropdown
 
     class Meta:
         model = Order
@@ -87,7 +85,7 @@ class OrderForm(StyledModelForm):
             "hotel_name", "room_number", "departure_date",
             "street_address", "city", "state", "postcode", "country",
             "fitting_date", "fitting_time", "ready_date", "ready_time", "delivery_date", "delivery_time",
-            "total_amount", "total_currency",
+            "total_amount", "total_currency", "total_exchange_rate_to_thb",
             "note", "internal_notes", "is_urgent", "external_order_number",
         ]
         widgets = {
@@ -254,6 +252,7 @@ class OrderStaffForm(StyledModelForm):
     def __init__(self, *args, **kwargs):
         tenant = kwargs.pop("tenant", None)
         super().__init__(*args, **kwargs)
+        self.fields["user"].required = False
         if tenant:
             from django.contrib.auth import get_user_model
             User = get_user_model()
@@ -265,7 +264,7 @@ class OrderStaffForm(StyledModelForm):
 def get_order_staff_formset(tenant=None):
     from functools import partial
     FormSetClass = inlineformset_factory(
-        Order, OrderStaff, form=OrderStaffForm, extra=1, can_delete=True
+        Order, OrderStaff, form=OrderStaffForm, extra=0, can_delete=True
     )
     if tenant:
         original_form = FormSetClass.form
@@ -278,7 +277,7 @@ def get_order_staff_formset(tenant=None):
 
 
 OrderStaffFormSet = inlineformset_factory(
-    Order, OrderStaff, form=OrderStaffForm, extra=1, can_delete=True
+    Order, OrderStaff, form=OrderStaffForm, extra=0, can_delete=True
 )
 
 
@@ -455,3 +454,25 @@ class BodyMeasurementForm(forms.ModelForm):
             field.required = False
         # Default gender to 'men' if not provided
         self.fields['gender'].initial = 'men'
+        # Round decimal inputs to 1 decimal place instead of rejecting them.
+        # Prevents 'no more than 1 decimal place' silent validation failures
+        # caused by float precision issues (JS copy, AI extraction, typing).
+        from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+        for fname in (BODY_FIELDS_MEN + BODY_FIELDS_LADIES_EXTRA):
+            if fname not in self.fields:
+                continue
+            field_obj = self.fields[fname]
+            if not isinstance(field_obj, forms.DecimalField):
+                continue
+            orig_to_python = field_obj.to_python
+            def _make_rounder(orig):
+                def _rounded(value):
+                    val = orig(value)
+                    if val is not None:
+                        try:
+                            val = val.quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
+                        except InvalidOperation:
+                            pass
+                    return val
+                return _rounded
+            field_obj.to_python = _make_rounder(orig_to_python)

@@ -93,7 +93,22 @@ def _orders_table_context(request, tenant):
         sort = "-created_at"
     page = request.GET.get("page", 1)
 
-    orders = Order.objects.filter(tenant=tenant).select_related("client", "delivery")
+    from django.db.models import Sum, OuterRef, Subquery, DecimalField
+    from django.db.models.functions import Coalesce
+
+    # Annotate collected_thb in one query to avoid N+1 from balance_due property
+    orders = (
+        Order.objects
+        .filter(tenant=tenant)
+        .select_related("client", "delivery")
+        .annotate(
+            collected_thb=Coalesce(
+                Sum('payments__thb_equivalent'),
+                0,
+                output_field=DecimalField()
+            )
+        )
+    )
 
     if status:
         orders = orders.filter(status=status)
@@ -128,9 +143,17 @@ def _orders_table_context(request, tenant):
     has_filters = any([status, q, from_date, to_date, staff_id, urgent,
                        min_amount, max_amount])
 
-    paginator = Paginator(orders.order_by(sort), 10)
+    per_page = request.GET.get("per_page", "10")
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 25, 50, 100]:
+            per_page = 10
+    except (ValueError, TypeError):
+        per_page = 10
+    paginator = Paginator(orders.order_by(sort), per_page)
     return {
         "page_obj":          paginator.get_page(page),
+        "per_page":          per_page,
         "current_status":    status,
         "current_sort":      sort,
         "current_q":         q,
@@ -482,6 +505,8 @@ def order_form_view(request, pk=None):
                     if not bm.gender:
                         bm.gender = 'men'
                     bm.save()
+                else:
+                    print(f"DEBUG BODY MEASUREMENT SAVE FAILED for item {item.pk}: {body_form.errors.as_data()}")
 
                 for uploaded in request.FILES.getlist(f"item_photos_{form.prefix}"):
                     OrderItemPhoto.objects.create(order_item=item, image=uploaded)
@@ -511,6 +536,8 @@ def order_form_view(request, pk=None):
                         m = mform.save(commit=False)
                         m.base = base
                         m.save()
+                    else:
+                        print(f"DEBUG MEASUREMENT SAVE FAILED for item {item.pk} ({model.__name__}): {mform.errors.as_data()}")
 
             for form in item_formset.deleted_forms:
                 if form.instance.pk:
@@ -703,8 +730,8 @@ def order_form_view(request, pk=None):
             first_error_step = 2
         elif any(item_formset.errors) or item_formset.non_form_errors():
             first_error_step = 3
-        elif any(f.errors for f in client_photo_formset.forms):
-            first_error_step = 4
+        elif staff_formset.errors or staff_formset.non_form_errors():
+            first_error_step = 5
         elif delivery_form.errors:
             first_error_step = 5
 
@@ -763,9 +790,16 @@ def order_form_view(request, pk=None):
                     except TempPhoto.DoesNotExist:
                         pass
 
+    from django.contrib.auth import get_user_model as _gum
+    _User = _gum()
+    staff_users_list = _User.objects.filter(
+        tenant=tenant, is_staff=True, is_active=True, is_superuser=False
+    ).order_by("first_name", "last_name", "username")
+
     context = {
         "is_edit":              is_edit,
         "edit_order":           edit_order,
+        "staff_users_list":     staff_users_list,
         "order_form":           order_form,
         "amount_locked":        amount_locked,
         "can_lock":             can_lock,
@@ -1440,6 +1474,7 @@ def export_csv(request):
         ("staff",           "Staff",                 lambda o, x: x.get("staff", "")),
         ("payments",        "Payments",              lambda o, x: x.get("payments", "")),
         ("total_collected", "Total Collected (THB)", lambda o, x: x.get("collected", "")),
+        ("measurements",    "Measurements",          lambda o, x: x.get("measurements", "")),
     ]
 
     # Which columns to include — default is all
@@ -1508,6 +1543,46 @@ def export_csv(request):
         if hasattr(order, "delivery") and order.delivery:
             ctx["d_hotel"] = order.delivery.hotel_name or ""
             ctx["d_room"]  = order.delivery.room_number or ""
+
+        # Build measurements string for each item
+        meas_parts = []
+        for item in order.items.all():
+            item_name = item.product_type.name if item.product_type else "Item"
+            fields = []
+            # Body measurements
+            try:
+                bm = item.body_measurement
+                for f in bm._meta.get_fields():
+                    if not hasattr(f, 'column'): continue
+                    if f.name in ('id', 'order_item'): continue
+                    val = getattr(bm, f.name, None)
+                    if val not in (None, '', 0, 0.0):
+                        get_disp = getattr(bm, f'get_{f.name}_display', None)
+                        label = f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name
+                        fields.append(f"{label}:{get_disp() if get_disp else val}")
+            except Exception:
+                pass
+            # Garment-specific measurements
+            try:
+                from django.apps import apps as _apps
+                model_name = item.product_type.measurement_model if item.product_type else None
+                if model_name:
+                    GModel = _apps.get_model("orders", model_name)
+                    gm = GModel.objects.filter(base=item.measurement).first()
+                    if gm:
+                        for f in gm._meta.get_fields():
+                            if not hasattr(f, 'column'): continue
+                            if f.name in ('id', 'base'): continue
+                            val = getattr(gm, f.name, None)
+                            if val not in (None, '', 0, 0.0):
+                                get_disp = getattr(gm, f'get_{f.name}_display', None)
+                                label = f.verbose_name.title() if hasattr(f, 'verbose_name') else f.name
+                                fields.append(f"{label}:{get_disp() if get_disp else val}")
+            except Exception:
+                pass
+            if fields:
+                meas_parts.append(f"{item_name}: {' | '.join(fields)}")
+        ctx["measurements"] = " || ".join(meas_parts)
 
         writer.writerow([c[2](order, ctx) for c in selected])
 
@@ -2598,8 +2673,8 @@ def qr_generator(request):
         tenant=tenant
     ).order_by('first_name')
 
-    # Fetch categories from fashion_01 API
-    categories = []
+    # Fetch Bespoke Tailoring categories from the old system API
+    tailoring_categories = []
     try:
         import httpx
         r = httpx.get(
@@ -2609,13 +2684,27 @@ def qr_generator(request):
         if r.status_code == 200:
             data = r.json()
             if data:
-                categories = data[0].get('categories', [])
+                tailoring_categories = data[0].get('categories', [])
+    except Exception:
+        pass
+
+    # Fetch Leather Goods categories from the catalogue app's own local DB
+    leather_categories = []
+    try:
+        import httpx
+        r2 = httpx.get(
+            "https://catalogue.emporiumarmani.com/api/leather-categories/",
+            timeout=5,
+        )
+        if r2.status_code == 200:
+            leather_categories = r2.json().get('categories', [])
     except Exception:
         pass
 
     return render(request, "orders/qr_generator.html", {
         "staff_list": staff_list,
-        "categories": categories,
+        "categories": tailoring_categories,
+        "leather_categories": leather_categories,
     })
 
 

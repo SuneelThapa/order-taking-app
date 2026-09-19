@@ -88,6 +88,10 @@ class Order(models.Model):
         max_length=10, choices=CURRENCY_CHOICES, default='THB',
         help_text="Currency of the quoted total amount"
     )
+    total_exchange_rate_to_thb = models.DecimalField(
+        max_digits=12, decimal_places=6, default=1,
+        help_text="Exchange rate to THB at time total was set. THB=1. Crypto=agreed fixed rate. Others=today's rate."
+    )
     total_locked    = models.BooleanField(default=False)
     total_locked_at = models.DateTimeField(null=True, blank=True)
     total_locked_by = models.ForeignKey(
@@ -102,6 +106,13 @@ class Order(models.Model):
     internal_notes = models.TextField(blank=True, null=True)
 
     is_urgent = models.BooleanField(default=False)
+
+    # Loyalty follow-up tracking — prevents duplicate WhatsApp sends and
+    # makes the 3/6-month reminders work as a "has X days passed" window
+    # check instead of an exact-day match, so backfilled/old orders are
+    # caught correctly on the next cron run instead of being silently missed.
+    return_3mo_notified_at = models.DateTimeField(null=True, blank=True)
+    return_6mo_notified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -160,15 +171,22 @@ class Order(models.Model):
         self.country        = c.country
 
     @property
+    def total_amount_thb(self):
+        """Quoted total converted to THB using the rate locked when the total was set."""
+        return self.total_amount * self.total_exchange_rate_to_thb
+
+    @property
     def balance_due(self):
         """
-        Returns remaining balance.
-        Note: compares total_amount directly against sum of thb_equivalent payments.
-        For non-THB totals this is a rough indicator; accurate balance is in payments tab.
+        Returns remaining balance in THB.
+        Uses annotated collected_thb if available (set by _orders_table_context
+        to avoid N+1 queries), otherwise falls back to aggregate query.
         """
-        from django.db.models import Sum
-        collected = self.payments.aggregate(total=Sum('thb_equivalent'))['total'] or 0
-        return self.total_amount - collected
+        collected = getattr(self, 'collected_thb', None)
+        if collected is None:
+            from django.db.models import Sum
+            collected = self.payments.aggregate(total=Sum('thb_equivalent'))['total'] or 0
+        return self.total_amount_thb - collected
 
     @property
     def is_canceled(self):

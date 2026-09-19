@@ -24,11 +24,15 @@ class TenantMiddleware:
             try:
                 tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
             except Tenant.DoesNotExist:
-                # 3. Fallback: localhost, IP, DEBUG mode
-                if (host in ["127.0.0.1", "localhost"]
-                        or host == "143.198.207.146"
-                        or settings.DEBUG
-                        or len(parts) < 3):
+                # 3. Fallback: only known bare domains and local dev
+                BARE_DOMAINS = {
+                    "emporiumarmani.com",
+                    "www.emporiumarmani.com",
+                    "143.198.207.146",
+                    "127.0.0.1",
+                    "localhost",
+                }
+                if host in BARE_DOMAINS or settings.DEBUG:
                     tenant = Tenant.objects.first()
                 else:
                     raise Http404("Tenant not found")

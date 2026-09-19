@@ -2,6 +2,12 @@ from django.db import models
 from django.core.validators import RegexValidator
 
 from .referral_source import ReferralSource
+from .tenant import Tenant
+
+
+class TenantManager(models.Manager):
+    def for_tenant(self, tenant):
+        return self.get_queryset().filter(tenant=tenant)
 
 
 # E.164 format: +[country code][number] e.g. +66812345678
@@ -91,9 +97,20 @@ class Client(models.Model):
         help_text="Optional — for birthday promotions"
     )
 
+    # Tenant
+    tenant = models.ForeignKey(
+        Tenant,
+        on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='clients',
+        help_text="The shop this client belongs to"
+    )
+
     # Meta
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = TenantManager()
 
     class Meta:
         ordering = ['name']
