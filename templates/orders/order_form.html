@@ -210,11 +210,6 @@
           
           <div class="row g-2 mt-2">
             <div class="col-md-4">
-              <label class="form-label small">Order Date <span class="text-muted">(optional)</span></label>
-              {{ order_form.order_date }}
-              <div class="form-text text-muted">Leave blank to use today's date. Use this for historical orders from order books.</div>
-            </div>
-            <div class="col-md-4">
               <label class="form-label small">Client departure date</label>
               {{ order_form.departure_date }}
             </div>
@@ -265,6 +260,11 @@
                      hx-target="#external-number-check"
                      hx-include="[name=external_order_number]">
               <div id="external-number-check">{% if order_form.external_order_number.errors %}<div class="text-danger small mt-1">{{ order_form.external_order_number.errors|striptags }}</div>{% endif %}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Order Date <span class="text-muted fw-normal small">(optional - for historical orders)</span></label>
+              {{ order_form.order_date }}
+              <div class="form-text text-muted">Leave blank to use today. Use this when entering old orders from order books.</div>
             </div>
           </div>
 
