@@ -71,6 +71,10 @@ class Order(models.Model):
     country        = models.CharField(max_length=100, blank=True, null=True)
 
     # Key dates
+    order_date = models.DateField(
+        blank=True, null=True,
+        help_text="Actual order date — use when entering historical orders from order books. Leave blank to use today."
+    )
     departure_date = models.DateField(blank=True, null=True)
     fitting_date   = models.DateField(blank=True, null=True)
     fitting_time   = models.TimeField(blank=True, null=True)
@@ -191,6 +195,10 @@ class Order(models.Model):
     @property
     def is_canceled(self):
         return self.status == 'canceled'
+
+    @property
+    def effective_date(self):
+        return self.order_date or self.created_at.date()
 
     def __str__(self):
         return self.order_number
