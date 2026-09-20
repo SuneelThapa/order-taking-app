@@ -2584,10 +2584,14 @@ def sales_report(request):
 
     # ── Payments in period ────────────────────────────────────────
     from .models import Payment, OrderStaff
+    # Filter by order's effective date (order_date if set, else created_at)
+    # This ensures historical orders entered from order books appear in
+    # the correct period, not the date they were entered into the system.
+    from django.db.models import Q as DQ
     payments_qs = Payment.objects.filter(
+        DQ(order__order_date__isnull=False, order__order_date__gte=start, order__order_date__lte=end) |
+        DQ(order__order_date__isnull=True,  order__created_at__date__gte=start, order__created_at__date__lte=end),
         order__tenant=tenant,
-        created_at__date__gte=start,
-        created_at__date__lte=end,
         original_amount__gt=0,   # exclude refunds
     ).select_related('order', 'order__client')
 
