@@ -122,13 +122,13 @@ def _orders_table_context(request, tenant):
         )
     if from_date:
         orders = orders.filter(
-            models.Q(order_date__isnull=False, order_date__gte=from_date) |
-            models.Q(order_date__isnull=True,  created_at__date__gte=from_date)
+            Q(order_date__isnull=False, order_date__gte=from_date) |
+            Q(order_date__isnull=True,  created_at__date__gte=from_date)
         )
     if to_date:
         orders = orders.filter(
-            models.Q(order_date__isnull=False, order_date__lte=to_date) |
-            models.Q(order_date__isnull=True,  created_at__date__lte=to_date)
+            Q(order_date__isnull=False, order_date__lte=to_date) |
+            Q(order_date__isnull=True,  created_at__date__lte=to_date)
         )
     if staff_id:
         orders = orders.filter(staff_assignments__user_id=staff_id).distinct()
