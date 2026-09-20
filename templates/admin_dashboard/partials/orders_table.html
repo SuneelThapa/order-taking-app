@@ -14,7 +14,7 @@
   {# Filter bar — all inputs include the whole form so filters combine #}
   <form id="orders-filter"
         hx-get="{% url 'orders:orders_table' %}"
-        hx-trigger="change, input delay:600ms from:[name=min_amount], input delay:600ms from:[name=max_amount]"
+        hx-trigger="change from:[name=from_date], change from:[name=to_date], change, input delay:600ms from:[name=min_amount], input delay:600ms from:[name=max_amount]"
         hx-target="#orders-region"
         hx-swap="innerHTML"
         class="border-bottom pb-3 mb-3">
@@ -53,24 +53,14 @@
       <div class="col-md-2">
         <input type="date" name="from_date" value="{{ current_from }}"
                class="form-control form-control-sm"
-               title="From date"
-               hx-get="{% url 'orders:orders_table' %}"
-               hx-trigger="change"
-               hx-target="#orders-region"
-               hx-swap="innerHTML"
-               hx-include="#orders-filter">
+               title="From date">
       </div>
 
       {# To date #}
       <div class="col-md-2">
         <input type="date" name="to_date" value="{{ current_to }}"
                class="form-control form-control-sm"
-               title="To date"
-               hx-get="{% url 'orders:orders_table' %}"
-               hx-trigger="change"
-               hx-target="#orders-region"
-               hx-swap="innerHTML"
-               hx-include="#orders-filter">
+               title="To date">
       </div>
 
       {# Staff #}
