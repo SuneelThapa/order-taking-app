@@ -316,7 +316,9 @@ def client_create_inline(request):
         return HttpResponse(status=405)
     form = ClientForm(request.POST)
     if form.is_valid():
-        client = form.save()
+        client = form.save(commit=False)
+        client.tenant = getattr(request, 'tenant', None)
+        client.save()
         response = render(request, "orders/partials/_client_card.html", {"client": client})
         response["HX-Trigger"] = json.dumps({
             "clientSelected": {
@@ -1381,7 +1383,7 @@ def client_edit(request, pk):
     tenant = getattr(request, "tenant", None)
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, tenant=tenant)
     if request.method != "POST":
         return HttpResponse(status=405)
 
