@@ -90,6 +90,7 @@ class OrderForm(StyledModelForm):
         ]
         widgets = {
             "order_date":     forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "parent_order":   forms.Select(attrs={"class": "form-select form-select-sm", "size": "8", "id": "id_parent_order"}),
             "departure_date": forms.DateInput(attrs={"type": "date"}),
             "fitting_date":   forms.DateInput(attrs={"type": "date"}),
             "fitting_time":   forms.TimeInput(attrs={"type": "time"}),

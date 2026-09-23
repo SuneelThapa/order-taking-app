@@ -936,31 +936,33 @@
 {% block extra_js %}
 <script>
 // Parent order search filter
-document.addEventListener('DOMContentLoaded', function() {
+function initParentOrderSearch() {
   const searchInput = document.getElementById('parent-order-search');
   if (!searchInput) return;
 
+  const select = document.querySelector('select[name="parent_order"]');
+  if (!select) return;
+
   searchInput.addEventListener('input', function() {
     const q = this.value.toLowerCase().trim();
-    const select = document.getElementById('id_parent_order');
-    if (!select) return;
 
     Array.from(select.options).forEach(opt => {
-      if (opt.value === '') {
+      if (!opt.value) {
         opt.style.display = '';
         return;
       }
       const text = opt.text.toLowerCase();
-      opt.style.display = (q === '' || text.includes(q)) ? '' : 'none';
+      opt.style.display = (!q || text.includes(q)) ? '' : 'none';
     });
 
-    // Auto-select if only one match
+    // Auto-select if only one visible match
     const visible = Array.from(select.options).filter(o => o.value && o.style.display !== 'none');
-    if (visible.length === 1) {
-      select.value = visible[0].value;
-    }
+    if (visible.length === 1) select.value = visible[0].value;
   });
-});
+}
+
+document.addEventListener('DOMContentLoaded', initParentOrderSearch);
+document.addEventListener('htmx:afterSwap', initParentOrderSearch);
 </script>
 
 <script>
