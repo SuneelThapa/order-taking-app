@@ -23,10 +23,13 @@ def whatsapp_webhook(request):
 
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
+            body = request.body
+            logger.info(f"Webhook POST received: {body[:500]}")
+            data = json.loads(body)
+            logger.info(f"Webhook data keys: {list(data.keys())}")
             _process_webhook(data)
         except Exception as e:
-            logger.error(f"Webhook error: {e}")
+            logger.error(f"Webhook error: {e}", exc_info=True)
         return JsonResponse({"status": "ok"})
 
     return HttpResponse(status=405)
