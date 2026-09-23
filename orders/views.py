@@ -2660,6 +2660,51 @@ from django.http import HttpResponse
 from django.views.decorators.cache import cache_control
 
 @cache_control(no_cache=True)
+
+@user_passes_test(staff_check)
+def whatsapp_messages_partial(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("")
+    from orders.models import WhatsAppMessage
+    from django.utils import timezone
+    messages = WhatsAppMessage.objects.filter(
+        tenant=tenant,
+    ).filter(
+        Q(from_number=phone) | Q(to_number=phone)
+    ).order_by("created_at").select_related("client")
+    # Mark as read
+    messages.filter(direction="in", read_at__isnull=True).update(
+        read_at=timezone.now(), read_by=request.user
+    )
+    return render(request, "orders/whatsapp_messages_partial.html", {"messages": messages})
+
+
+@user_passes_test(staff_check)
+def whatsapp_unread_count(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("")
+    from orders.models import WhatsAppMessage
+    count = WhatsAppMessage.objects.filter(
+        tenant=tenant,
+        direction="in",
+        read_at__isnull=True
+    ).count()
+    url = reverse_lazy("orders:whatsapp_unread_count")
+    if count > 0:
+        return HttpResponse(
+            f'<span id="wa-unread-badge" '
+            f'hx-get="{url}" hx-trigger="every 30s" hx-swap="outerHTML" '
+            f'class="position-absolute badge rounded-pill bg-danger" '
+            f'style="top:2px;right:2px;font-size:9px;min-width:16px;padding:2px 4px">'
+            f'{count}</span>'
+        )
+    return HttpResponse(
+        f'<span id="wa-unread-badge" '
+        f'hx-get="{url}" hx-trigger="every 30s" hx-swap="outerHTML"></span>'
+    )
+
 def service_worker(request):
     import os
     from django.contrib.staticfiles import finders

@@ -26,8 +26,12 @@
     {% endif %}
   </div>
 
-  {# Messages #}
-  <div class="d-flex flex-column gap-2 mb-3" style="min-height:400px">
+  {# Messages - auto-refresh every 5s #}
+  <div id="messages-container"
+       hx-get="{% url 'orders:whatsapp_messages_partial' contact_phone %}"
+       hx-trigger="every 5s"
+       hx-swap="innerHTML"
+       class="d-flex flex-column gap-2 mb-3" style="min-height:400px">
     {% for msg in messages %}
     <div class="d-flex {% if msg.direction == 'out' %}justify-content-end{% endif %}">
       <div class="rounded p-2 px-3 {% if msg.direction == 'out' %}bg-success text-white{% else %}bg-light border{% endif %}"
