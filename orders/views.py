@@ -2680,6 +2680,57 @@ def whatsapp_messages_partial(request, phone):
     return render(request, "orders/whatsapp_messages_partial.html", {"messages": messages})
 
 
+
+@user_passes_test(staff_check)
+def whatsapp_send_image(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    # Only owner/manager can send
+    try:
+        user_role = request.user.staff_profile.role
+        if user_role not in ("owner", "manager") and not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+    except Exception:
+        if not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+
+    caption = request.POST.get("caption", "").strip()
+    image_file = request.FILES.get("image")
+
+    if not image_file:
+        return HttpResponse("No image provided", status=400)
+
+    # Upload to Cloudinary
+    try:
+        import cloudinary.uploader
+        upload_result = cloudinary.uploader.upload(
+            image_file,
+            folder="whatsapp_sent",
+            resource_type="image"
+        )
+        image_url = upload_result.get("secure_url", "")
+    except Exception as e:
+        return HttpResponse(f"Upload failed: {e}", status=500)
+
+    if not image_url:
+        return HttpResponse("Upload failed", status=500)
+
+    from notifications.whatsapp import send_image
+    from orders.models import Client
+    client = Client.objects.filter(tenant=tenant, phone=phone).first()
+
+    result = send_image(phone, image_url, caption=caption, tenant=tenant, client=client)
+
+    if result and "messages" in result:
+        return HttpResponse("ok")
+
+    return HttpResponse("Failed to send", status=500)
+
 def whatsapp_unread_count(request):
     tenant = getattr(request, "tenant", None)
     if not tenant or not request.user.is_authenticated:

@@ -92,6 +92,35 @@ def _body_params(*values):
     }]
 
 
+def send_image(to, image_url, caption="", tenant=None, client=None):
+    """Send an image via WhatsApp Business API."""
+    to = to.lstrip("+")
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "image",
+        "image": {
+            "link": image_url,
+            "caption": caption,
+        }
+    }
+    result = _post(payload, tenant=tenant, client=client,
+                   message_text=caption or "[Image]", template_name="")
+
+    # Update the saved message with media info
+    if result and "messages" in result:
+        try:
+            from orders.models import WhatsAppMessage
+            wa_msg_id = result["messages"][0].get("id", "")
+            WhatsAppMessage.objects.filter(wa_message_id=wa_msg_id).update(
+                media_url=image_url,
+                media_type="image"
+            )
+        except Exception:
+            pass
+    return result
+
+
 # ── Order lifecycle notifications ──────────────────────────────────────────────
 
 def notify_order_confirmed(client, order):

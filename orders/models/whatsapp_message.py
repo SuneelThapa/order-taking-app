@@ -25,6 +25,8 @@ class WhatsAppMessage(models.Model):
     message     = models.TextField()
     wa_message_id = models.CharField(max_length=100, blank=True, default="", db_index=True)
     template_name = models.CharField(max_length=100, blank=True, default="")
+    media_url     = models.URLField(blank=True, default="", help_text="URL of media file (image/document/video)")
+    media_type    = models.CharField(max_length=20, blank=True, default="", help_text="image/document/video/audio")
     created_at  = models.DateTimeField(auto_now_add=True, db_index=True)
     read_at     = models.DateTimeField(null=True, blank=True)
     read_by     = models.ForeignKey(

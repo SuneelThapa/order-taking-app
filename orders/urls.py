@@ -32,7 +32,7 @@ from .views import (
     scratch_pad_submit,
     scratch_pad_poll,
     whatsapp_inbox, whatsapp_conversation, whatsapp_reply, whatsapp_messages_partial,
-    whatsapp_unread_count,
+    whatsapp_unread_count, whatsapp_send_image,
 )
 from orders.views_onboarding import onboarding_view, onboarding_success_view
 from orders.views_staff import staff_list, staff_add, staff_edit, staff_toggle
@@ -85,6 +85,7 @@ urlpatterns = [
     path("whatsapp/reply/<str:phone>/",        whatsapp_reply,        name="whatsapp_reply"),
     path("whatsapp/messages/<str:phone>/",     whatsapp_messages_partial, name="whatsapp_messages_partial"),
     path("whatsapp/unread/",              whatsapp_unread_count,     name="whatsapp_unread_count"),
+    path("whatsapp/send-image/<str:phone>/", whatsapp_send_image,    name="whatsapp_send_image"),
     path("export-csv/",                   export_csv,             name="export_csv"),
     path("sales/",                        sales_report,           name="sales_report"),
     path("sw.js",                         service_worker,         name="service_worker"),

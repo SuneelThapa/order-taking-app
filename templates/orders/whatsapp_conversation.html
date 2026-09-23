@@ -3,6 +3,22 @@
 
 {% block title %}Conversation - {{ contact_phone }}{% endblock %}
 
+{% block extra_js %}
+<script>
+function previewImage(input) {
+  const preview = document.getElementById('image-preview');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.classList.remove('d-none');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid py-3" style="max-width:700px">
 
@@ -59,6 +75,7 @@
   {# Reply box #}
   {% if can_reply %}
   <div class="border rounded p-3 bg-light">
+    {# Text reply #}
     <form hx-post="{% url 'orders:whatsapp_reply' contact_phone %}"
           hx-target="#reply-status"
           hx-on::after-request="this.reset()">
@@ -71,6 +88,30 @@
         </button>
       </div>
     </form>
+    {# Image send #}
+    <div class="mt-2 border-top pt-2">
+      <form id="image-form"
+            hx-post="{% url 'orders:whatsapp_send_image' contact_phone %}"
+            hx-target="#image-status"
+            hx-encoding="multipart/form-data"
+            hx-on::after-request="this.reset(); document.getElementById('image-preview').src=''; document.getElementById('image-preview').classList.add('d-none')">
+        {% csrf_token %}
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <label class="btn btn-sm btn-outline-secondary mb-0">
+            <i class="bi bi-image me-1"></i>Photo
+            <input type="file" name="image" accept="image/*" class="d-none"
+                   onchange="previewImage(this)">
+          </label>
+          <input type="text" name="caption" class="form-control form-control-sm"
+                 placeholder="Caption (optional)" style="max-width:200px">
+          <button type="submit" class="btn btn-sm btn-success">
+            <i class="bi bi-image me-1"></i>Send Photo
+          </button>
+        </div>
+        <img id="image-preview" src="" class="mt-2 rounded d-none" style="max-height:100px">
+      </form>
+      <div id="image-status" class="mt-1 small text-muted"></div>
+    </div>
     <div id="reply-status" class="mt-1 small text-muted"></div>
   </div>
   {% elif not within_window %}
