@@ -1,8 +1,7 @@
-import json
+﻿import json
 import logging
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from orders.models import Tenant, Client, WhatsAppMessage
 
@@ -37,21 +36,16 @@ def whatsapp_webhook(request):
 
 def _process_webhook(data):
     for entry in data.get("entry", []):
-        waba_id = entry.get("id")
         for change in entry.get("changes", []):
             value = change.get("value", {})
-            messages = value.get("messages", [])
-            for msg in messages:
-                _handle_incoming_message(msg, waba_id, value)
-
-            # Handle status updates
-            statuses = value.get("statuses", [])
-            for status in statuses:
+            for msg in value.get("messages", []):
+                _handle_incoming_message(msg, value)
+            for status in value.get("statuses", []):
                 _handle_status_update(status)
 
 
 def _fetch_media_url(media_id, tenant):
-    """Fetch media download URL from WhatsApp API."""
+    """Fetch media from WhatsApp API and upload to Cloudinary for permanent storage."""
     if not media_id or not tenant:
         return ""
     try:
@@ -65,7 +59,6 @@ def _fetch_media_url(media_id, tenant):
         media_url = data.get("url", "")
         if not media_url:
             return ""
-        # Download and upload to Cloudinary for permanent storage
         img_resp = requests.get(
             media_url,
             headers={"Authorization": f"Bearer {tenant.whatsapp_access_token}"},
@@ -81,32 +74,18 @@ def _fetch_media_url(media_id, tenant):
             )
             return result.get("secure_url", "")
     except Exception as e:
-        logger.error(f"Failed to fetch media: {e}")
+        logger.error(f"Failed to fetch media {media_id}: {e}")
     return ""
 
 
-def _handle_incoming_message(msg, waba_id, value):
+def _handle_incoming_message(msg, value):
     from_number = msg.get("from", "")
     wa_msg_id   = msg.get("id", "")
     msg_type    = msg.get("type", "text")
-    timestamp   = msg.get("timestamp")
 
-    # Extract text
-    if msg_type == "text":
-        text = msg.get("text", {}).get("body", "")
-    elif msg_type == "image":
-        text = "[Image]"
-    elif msg_type == "document":
-        text = "[Document]"
-    elif msg_type == "audio":
-        text = "[Audio message]"
-    else:
-        text = f"[{msg_type}]"
-
-    # Find tenant by phone_number_id from webhook metadata
+    # Find tenant by phone_number_id
     phone_id = value.get("metadata", {}).get("phone_number_id", "")
     tenant = None
-
     if phone_id:
         try:
             tenant = Tenant.objects.get(whatsapp_phone_number_id=phone_id, is_active=True)
@@ -115,7 +94,6 @@ def _handle_incoming_message(msg, waba_id, value):
         except Tenant.MultipleObjectsReturned:
             tenant = Tenant.objects.filter(whatsapp_phone_number_id=phone_id, is_active=True).first()
 
-    # Fallback: use first active tenant with WhatsApp configured
     if not tenant:
         tenant = Tenant.objects.filter(
             whatsapp_phone_number_id__isnull=False,
@@ -123,15 +101,46 @@ def _handle_incoming_message(msg, waba_id, value):
         ).exclude(whatsapp_phone_number_id="").first()
 
     if not tenant:
-        logger.warning(f"No tenant found for webhook message from {from_number} (phone_id={phone_id})")
+        logger.warning(f"No tenant found for webhook message from {from_number}")
         return
 
-    # Find client by phone number
+    # Extract text and media
+    text       = ""
+    media_url  = ""
+    media_type = ""
+
+    if msg_type == "text":
+        text = msg.get("text", {}).get("body", "")
+    elif msg_type == "image":
+        text = msg.get("image", {}).get("caption", "") or "[Image]"
+        media_id = msg.get("image", {}).get("id", "")
+        if media_id:
+            media_url  = _fetch_media_url(media_id, tenant)
+            media_type = "image"
+    elif msg_type == "document":
+        text = msg.get("document", {}).get("filename", "[Document]") or "[Document]"
+        media_id = msg.get("document", {}).get("id", "")
+        if media_id:
+            media_url  = _fetch_media_url(media_id, tenant)
+            media_type = "document"
+    elif msg_type == "audio":
+        text = "[Audio message]"
+        media_id = msg.get("audio", {}).get("id", "")
+        if media_id:
+            media_url  = _fetch_media_url(media_id, tenant)
+            media_type = "audio"
+    elif msg_type == "video":
+        text = msg.get("video", {}).get("caption", "") or "[Video]"
+        media_id = msg.get("video", {}).get("id", "")
+        if media_id:
+            media_url  = _fetch_media_url(media_id, tenant)
+            media_type = "video"
+    else:
+        text = f"[{msg_type}]"
+
+    # Find client by phone
     clean_phone = "+" + from_number.lstrip("+")
-    client = Client.objects.filter(
-        tenant=tenant,
-        phone=clean_phone
-    ).first()
+    client = Client.objects.filter(tenant=tenant, phone=clean_phone).first()
 
     # Save message
     WhatsAppMessage.objects.create(
@@ -154,6 +163,4 @@ def _handle_status_update(status):
     new_status = status.get("status", "")
     if not wa_msg_id or not new_status:
         return
-    WhatsAppMessage.objects.filter(
-        wa_message_id=wa_msg_id
-    ).update(status=new_status)
+    WhatsAppMessage.objects.filter(wa_message_id=wa_msg_id).update(status=new_status)
