@@ -31,6 +31,7 @@ from .views import (
     scratch_pad_tablet,
     scratch_pad_submit,
     scratch_pad_poll,
+    whatsapp_inbox, whatsapp_conversation, whatsapp_reply,
 )
 from orders.views_onboarding import onboarding_view, onboarding_success_view
 from orders.views_staff import staff_list, staff_add, staff_edit, staff_toggle
@@ -78,6 +79,9 @@ urlpatterns = [
     path("payment-row/",                  payment_row,            name="payment_row"),
     path("load-measurement-form/",        load_measurement_form,  name="load_measurement_form"),
     path("whatsapp/webhook/",         whatsapp_webhook,       name="whatsapp_webhook"),
+    path("whatsapp/inbox/",           whatsapp_inbox,         name="whatsapp_inbox"),
+    path("whatsapp/conversation/<str:phone>/", whatsapp_conversation, name="whatsapp_conversation"),
+    path("whatsapp/reply/<str:phone>/",        whatsapp_reply,        name="whatsapp_reply"),
     path("export-csv/",                   export_csv,             name="export_csv"),
     path("sales/",                        sales_report,           name="sales_report"),
     path("sw.js",                         service_worker,         name="service_worker"),

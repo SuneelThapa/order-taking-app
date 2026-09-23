@@ -2886,3 +2886,158 @@ def scratch_pad_poll(request, token):
         "status": session.status,
         "result": session.result if session.status == "processed" else {},
     })
+
+
+# ─────────────────────────────────────────────────────────
+# WhatsApp Inbox
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def whatsapp_inbox(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    from orders.models import WhatsAppMessage
+    from django.db.models import Max, Count, Q
+
+    # Get conversations grouped by from_number (for incoming)
+    # Show latest message per contact
+    conversations = (
+        WhatsAppMessage.objects
+        .filter(tenant=tenant)
+        .values("from_number", "to_number", "client")
+        .annotate(
+            last_message_at=Max("created_at"),
+            message_count=Count("id"),
+            unread_count=Count("id", filter=Q(direction="in", read_at__isnull=True))
+        )
+        .order_by("-last_message_at")
+    )
+
+    # Get latest message text for each conversation
+    conv_list = []
+    seen_contacts = set()
+    all_msgs = WhatsAppMessage.objects.filter(tenant=tenant).order_by("-created_at").select_related("client")
+
+    for msg in all_msgs:
+        contact = msg.from_number if msg.direction == "in" else msg.to_number
+        if contact not in seen_contacts:
+            seen_contacts.add(contact)
+            unread = WhatsAppMessage.objects.filter(
+                tenant=tenant,
+                from_number=contact,
+                direction="in",
+                read_at__isnull=True
+            ).count()
+            conv_list.append({
+                "contact": contact,
+                "client": msg.client,
+                "last_message": msg.message[:60],
+                "last_message_at": msg.created_at,
+                "direction": msg.direction,
+                "unread_count": unread,
+            })
+
+    return render(request, "orders/whatsapp_inbox.html", {
+        "conversations": conv_list,
+        "total_unread": sum(c["unread_count"] for c in conv_list),
+    })
+
+
+@user_passes_test(staff_check)
+def whatsapp_conversation(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    from orders.models import WhatsAppMessage
+    from django.utils import timezone
+
+    # Get all messages with this contact
+    messages = WhatsAppMessage.objects.filter(
+        tenant=tenant,
+    ).filter(
+        Q(from_number=phone) | Q(to_number=phone)
+    ).order_by("created_at").select_related("client", "read_by")
+
+    # Mark incoming messages as read
+    from django.utils import timezone
+    messages.filter(direction="in", read_at__isnull=True).update(
+        read_at=timezone.now(),
+        read_by=request.user
+    )
+
+    # Find client
+    client = None
+    from orders.models import Client
+    try:
+        client = Client.objects.filter(tenant=tenant, phone=phone).first()
+    except Exception:
+        pass
+
+    # Check if can reply (within 24hr window)
+    can_reply = False
+    try:
+        user_role = request.user.staff_profile.role
+        can_reply = user_role in ("owner", "manager")
+    except Exception:
+        can_reply = request.user.is_superuser
+
+    last_incoming = messages.filter(direction="in").last()
+    within_window = False
+    if last_incoming:
+        diff = timezone.now() - last_incoming.created_at
+        within_window = diff.total_seconds() < 86400  # 24 hours
+
+    return render(request, "orders/whatsapp_conversation.html", {
+        "messages": messages,
+        "contact_phone": phone,
+        "client": client,
+        "can_reply": can_reply and within_window,
+        "within_window": within_window,
+    })
+
+
+@user_passes_test(staff_check)
+def whatsapp_reply(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    # Only owner/manager can reply
+    try:
+        user_role = request.user.staff_profile.role
+        if user_role not in ("owner", "manager") and not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+    except Exception:
+        if not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+
+    message_text = request.POST.get("message", "").strip()
+    if not message_text:
+        return HttpResponse("Message cannot be empty", status=400)
+
+    from notifications.whatsapp import send_text
+    from orders.models import Client
+    client = Client.objects.filter(tenant=tenant, phone=phone).first()
+
+    result = send_text(phone, message_text, tenant=tenant)
+
+    if result and "messages" in result:
+        from orders.models import WhatsAppMessage
+        WhatsAppMessage.objects.create(
+            tenant=tenant,
+            client=client,
+            direction="out",
+            status="sent",
+            from_number=tenant.whatsapp_phone_number_id,
+            to_number=phone,
+            message=message_text,
+            wa_message_id=result["messages"][0].get("id", ""),
+        )
+        return HttpResponse("ok")
+
+    return HttpResponse("Failed to send", status=500)
