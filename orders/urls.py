@@ -1,4 +1,5 @@
 from django.urls import path
+from .views_webhook import whatsapp_webhook
 from .views import (
     dashboard, stat_cards, orders_table,
     order_detail, order_delete,
@@ -76,6 +77,7 @@ urlpatterns = [
     path("item-row/",                     order_item_row,         name="order_item_row"),
     path("payment-row/",                  payment_row,            name="payment_row"),
     path("load-measurement-form/",        load_measurement_form,  name="load_measurement_form"),
+    path("whatsapp/webhook/",         whatsapp_webhook,       name="whatsapp_webhook"),
     path("export-csv/",                   export_csv,             name="export_csv"),
     path("sales/",                        sales_report,           name="sales_report"),
     path("sw.js",                         service_worker,         name="service_worker"),

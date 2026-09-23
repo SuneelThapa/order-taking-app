@@ -3,7 +3,7 @@ import requests
 from django.conf import settings
 
 
-def _post(payload, tenant=None):
+def _post(payload, tenant=None, client=None, message_text="", template_name=""):
     """Send a WhatsApp message via Cloud API."""
     if tenant:
         token    = tenant.whatsapp_access_token
@@ -25,9 +25,33 @@ def _post(payload, tenant=None):
         timeout=10,
     )
     try:
-        return resp.json()
+        result = resp.json()
     except Exception:
         return {"error": resp.text}
+
+    # Save outgoing message to database
+    try:
+        from orders.models import WhatsAppMessage
+        to_number = payload.get("to", "")
+        wa_msg_id = ""
+        if result and "messages" in result:
+            wa_msg_id = result["messages"][0].get("id", "")
+        WhatsAppMessage.objects.create(
+            tenant=tenant,
+            client=client,
+            direction="out",
+            status="sent",
+            from_number=phone_id,
+            to_number="+" + to_number.lstrip("+"),
+            message=message_text,
+            wa_message_id=wa_msg_id,
+            template_name=template_name,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Could not save outgoing WhatsApp message: {e}")
+
+    return result
 
 
 def send_text(to, text, tenant=None):
