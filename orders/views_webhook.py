@@ -68,27 +68,27 @@ def _handle_incoming_message(msg, waba_id, value):
     else:
         text = f"[{msg_type}]"
 
-    # Find tenant by WABA ID
-    tenant = None
-    try:
-        tenant = Tenant.objects.get(
-            whatsapp_phone_number_id__isnull=False
-        )
-    except Tenant.MultipleObjectsReturned:
-        pass
-    except Tenant.DoesNotExist:
-        pass
-
-    # Try to find tenant more specifically
+    # Find tenant by phone_number_id from webhook metadata
     phone_id = value.get("metadata", {}).get("phone_number_id", "")
+    tenant = None
+
     if phone_id:
         try:
-            tenant = Tenant.objects.get(whatsapp_phone_number_id=phone_id)
-        except Exception:
+            tenant = Tenant.objects.get(whatsapp_phone_number_id=phone_id, is_active=True)
+        except Tenant.DoesNotExist:
             pass
+        except Tenant.MultipleObjectsReturned:
+            tenant = Tenant.objects.filter(whatsapp_phone_number_id=phone_id, is_active=True).first()
+
+    # Fallback: use first active tenant with WhatsApp configured
+    if not tenant:
+        tenant = Tenant.objects.filter(
+            whatsapp_phone_number_id__isnull=False,
+            is_active=True
+        ).exclude(whatsapp_phone_number_id="").first()
 
     if not tenant:
-        logger.warning(f"No tenant found for webhook message from {from_number}")
+        logger.warning(f"No tenant found for webhook message from {from_number} (phone_id={phone_id})")
         return
 
     # Find client by phone number
