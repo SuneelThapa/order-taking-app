@@ -16,7 +16,7 @@
       {% if client %}{{ client.name|slice:":1"|upper }}{% else %}?{% endif %}
     </div>
     <div>
-      <div class="fw-semibold">{% if client %}{{ client.name }}{% else %}{{ contact_phone }}{% endif %}</div>
+      <div class="fw-semibold">{% if client %}{{ client.name }}{% else %}Unknown Contact{% endif %}</div>
       <small class="text-muted">{{ contact_phone }}</small>
     </div>
     {% if client %}
