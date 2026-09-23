@@ -2680,10 +2680,9 @@ def whatsapp_messages_partial(request, phone):
     return render(request, "orders/whatsapp_messages_partial.html", {"messages": messages})
 
 
-@user_passes_test(staff_check)
 def whatsapp_unread_count(request):
     tenant = getattr(request, "tenant", None)
-    if not tenant:
+    if not tenant or not request.user.is_authenticated:
         return HttpResponse("")
     from orders.models import WhatsAppMessage
     count = WhatsAppMessage.objects.filter(
