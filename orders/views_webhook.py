@@ -50,6 +50,41 @@ def _process_webhook(data):
                 _handle_status_update(status)
 
 
+def _fetch_media_url(media_id, tenant):
+    """Fetch media download URL from WhatsApp API."""
+    if not media_id or not tenant:
+        return ""
+    try:
+        import requests
+        resp = requests.get(
+            f"https://graph.facebook.com/v20.0/{media_id}",
+            headers={"Authorization": f"Bearer {tenant.whatsapp_access_token}"},
+            timeout=10
+        )
+        data = resp.json()
+        media_url = data.get("url", "")
+        if not media_url:
+            return ""
+        # Download and upload to Cloudinary for permanent storage
+        img_resp = requests.get(
+            media_url,
+            headers={"Authorization": f"Bearer {tenant.whatsapp_access_token}"},
+            timeout=30
+        )
+        if img_resp.status_code == 200:
+            import cloudinary.uploader
+            from io import BytesIO
+            result = cloudinary.uploader.upload(
+                BytesIO(img_resp.content),
+                folder="whatsapp_received",
+                resource_type="auto"
+            )
+            return result.get("secure_url", "")
+    except Exception as e:
+        logger.error(f"Failed to fetch media: {e}")
+    return ""
+
+
 def _handle_incoming_message(msg, waba_id, value):
     from_number = msg.get("from", "")
     wa_msg_id   = msg.get("id", "")
@@ -108,6 +143,8 @@ def _handle_incoming_message(msg, waba_id, value):
         to_number=value.get("metadata", {}).get("display_phone_number", ""),
         message=text,
         wa_message_id=wa_msg_id,
+        media_url=media_url,
+        media_type=media_type,
     )
     logger.info(f"Saved incoming WhatsApp from {clean_phone}: {text[:50]}")
 
