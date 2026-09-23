@@ -166,6 +166,7 @@ def notify_fitting_reminder_3hr(client, order):
     return send_template(
         client.phone,
         "fitting_reminder_3hr",
+        language_code="en",
         components=_body_params(client.name, order.order_number),
         tenant=getattr(order, "tenant", None),
     )
@@ -192,6 +193,7 @@ def notify_return_3_months(client, tenant=None):
     return send_template(
         client.phone,
         "return_3_months",
+        language_code="en",
         components=_body_params(client.name, shop_name),
         tenant=tenant,
     )
@@ -211,6 +213,7 @@ def notify_return_6_months(client, tenant=None):
     return send_template(
         client.phone,
         "return_6_months",
+        language_code="en",
         components=_body_params(client.name, shop_name, offer),
         tenant=tenant,
     )
@@ -225,6 +228,7 @@ def notify_birthday(client, tenant=None):
     return send_template(
         client.phone,
         "birthday_greeting",
+        language_code="en",
         components=_body_params(client.name, shop_name),
         tenant=tenant,
     )
