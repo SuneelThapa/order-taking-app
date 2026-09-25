@@ -20,7 +20,7 @@
     <div class="input-group input-group-sm">
       <input type="text" name="q" value="{{ current_q }}"
              class="form-control" placeholder="Search by name or phone...">
-      <input type="hidden" name="label" value="{{ current_label }}">
+      <input type="hidden" name="label" value="{{ current_label|default:'all' }}">
       <button class="btn btn-outline-secondary" type="submit">
         <i class="bi bi-search"></i>
       </button>

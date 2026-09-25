@@ -3079,6 +3079,7 @@ def whatsapp_inbox(request):
         latest_msgs = latest_msgs.filter(from_number__in=replied_contacts)
 
     # Build conversation list
+    conv_list = []
     seen_contacts = set()
     for msg in latest_msgs:
         if label == "autosent":
