@@ -3014,6 +3014,7 @@ def whatsapp_inbox(request):
     if q:
         latest_msgs = latest_msgs.filter(
             Q(from_number__icontains=q) |
+            Q(to_number__icontains=q) |
             Q(client__name__icontains=q)
         )
 
@@ -3034,11 +3035,18 @@ def whatsapp_inbox(request):
         ).values_list("to_number", flat=True).distinct())
         no_reply_numbers = sent_contacts - replied_contacts
         seen = set()
-        for msg in WhatsAppMessage.objects.filter(
+        autosent_qs = WhatsAppMessage.objects.filter(
             tenant=tenant,
             direction="out",
             to_number__in=no_reply_numbers
-        ).order_by("-created_at").select_related("client"):
+        ).order_by("-created_at").select_related("client")
+        # Apply search filter for autosent
+        if q:
+            autosent_qs = autosent_qs.filter(
+                Q(to_number__icontains=q) |
+                Q(client__name__icontains=q)
+            )
+        for msg in autosent_qs:
             if msg.to_number not in seen:
                 seen.add(msg.to_number)
                 label_text = msg.template_name or "[Auto message]"
