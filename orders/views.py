@@ -2475,8 +2475,10 @@ def status_board(request):
 
     # Today's fittings — earlier time first, null times last
     fittings_today = orders.filter(
-        fitting_date=today
+        fitting_date__gte=today,
+        fitting_date__lte=tomorrow
     ).order_by(
+        'fitting_date',
         models.F('fitting_time').asc(nulls_last=True)
     )
 

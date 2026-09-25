@@ -223,7 +223,7 @@
   <div class="panel">
     <div class="panel-header">
       <span class="dot" style="background:var(--blue)"></span>
-      ✂ Today's Fittings
+      ✂ Fittings Today & Tomorrow
       <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ fittings_today|length }}</span>
     </div>
     <div class="panel-body">
@@ -231,6 +231,7 @@
         {% for order in fittings_today %}
         <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
           <div class="order-time">
+            <div style="font-size:0.7rem;color:var(--muted)">{{ order.fitting_date|date:"d M" }}</div>
             {% if order.fitting_time %}
               {{ order.fitting_time|time:"H:i" }}
             {% else %}
