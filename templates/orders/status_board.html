@@ -301,7 +301,7 @@
         <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
           <div>
             <span class="date-badge {% if order.departure_date == today %}today{% else %}tomorrow{% endif %}">
-              {% if order.departure_date == today %}TODAY{% else %}TMW{% endif %}
+              {{ order.departure_date|date:"d M" }}
             </span>
           </div>
           <div style="flex:1;min-width:0">

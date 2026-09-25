@@ -2491,7 +2491,7 @@ def status_board(request):
         Order.objects
         .filter(tenant=tenant)
         .exclude(status__in=['canceled', 'delivered'])
-        .filter(departure_date__in=[today, tomorrow])
+        .filter(departure_date__gte=today, departure_date__lte=today + __import__('datetime').timedelta(days=2))
         .select_related('client')
         .prefetch_related('items__product_type', 'staff_assignments__user')
         .order_by('departure_date', models.F('fitting_time').asc(nulls_last=True))
