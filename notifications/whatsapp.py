@@ -131,6 +131,9 @@ def notify_order_confirmed(client, order):
         "order_confirmed",
         components=_body_params(client.name, order.order_number),
         tenant=getattr(order, "tenant", None),
+        client=client,
+        message_text=f"Order confirmed: #{order.order_number}",
+        template_name="order_confirmed",
     )
 
 
@@ -143,6 +146,9 @@ def notify_order_ready(client, order):
         "order_ready",
         components=_body_params(client.name, order.order_number, shop_name),
         tenant=getattr(order, "tenant", None),
+        client=client,
+        message_text=f"Order ready: #{order.order_number}",
+        template_name="order_ready",
     )
 
 
@@ -157,6 +163,9 @@ def notify_fitting_reminder(client, order):
         "fitting_reminder",
         components=_body_params(client.name, shop_name, fitting_date, fitting_time),
         tenant=getattr(order, "tenant", None),
+        client=client,
+        message_text=f"Fitting reminder: {fitting_date} at {fitting_time}",
+        template_name="fitting_reminder",
     )
 
 
@@ -169,6 +178,9 @@ def notify_fitting_reminder_3hr(client, order):
         language_code="en",
         components=_body_params(client.name, order.order_number),
         tenant=getattr(order, "tenant", None),
+        client=client,
+        message_text=f"Fitting in 3 hours: #{order.order_number}",
+        template_name="fitting_reminder_3hr",
     )
 
 
@@ -181,6 +193,9 @@ def notify_order_delivered(client, order):
         "order_delivered",
         components=_body_params(order.order_number, delivery_date),
         tenant=getattr(order, "tenant", None),
+        client=client,
+        message_text=f"Order delivered: #{order.order_number}",
+        template_name="order_delivered",
     )
 
 
@@ -196,6 +211,9 @@ def notify_return_3_months(client, tenant=None):
         language_code="en",
         components=_body_params(client.name, shop_name),
         tenant=tenant,
+        client=client,
+        message_text=f"3-month return reminder",
+        template_name="return_3_months",
     )
 
 
@@ -216,6 +234,9 @@ def notify_return_6_months(client, tenant=None):
         language_code="en",
         components=_body_params(client.name, shop_name, offer),
         tenant=tenant,
+        client=client,
+        message_text=f"6-month return reminder",
+        template_name="return_6_months",
     )
 
 
@@ -231,4 +252,7 @@ def notify_birthday(client, tenant=None):
         language_code="en",
         components=_body_params(client.name, shop_name),
         tenant=tenant,
+        client=client,
+        message_text=f"Birthday greeting",
+        template_name="birthday_greeting",
     )
