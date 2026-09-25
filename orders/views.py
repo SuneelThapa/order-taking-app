@@ -3026,21 +3026,44 @@ def whatsapp_inbox(request):
         latest_msgs = latest_msgs.filter(from_number__in=unread_contacts)
     elif label == "autosent":
         # Contacts who received outgoing messages but never replied
-        # Outgoing: to_number = client phone
-        # Incoming: from_number = client phone
-        replied_contacts = WhatsAppMessage.objects.filter(
+        replied_contacts = set(WhatsAppMessage.objects.filter(
             tenant=tenant, direction="in"
-        ).values_list("from_number", flat=True).distinct()
-        sent_contacts = WhatsAppMessage.objects.filter(
+        ).values_list("from_number", flat=True).distinct())
+        sent_contacts = set(WhatsAppMessage.objects.filter(
             tenant=tenant, direction="out"
-        ).values_list("to_number", flat=True).distinct()
-        # Show only contacts in sent but NOT in replied
-        no_reply_numbers = set(sent_contacts) - set(replied_contacts)
-        latest_msgs = WhatsAppMessage.objects.filter(
+        ).values_list("to_number", flat=True).distinct())
+        no_reply_numbers = sent_contacts - replied_contacts
+        seen = set()
+        for msg in WhatsAppMessage.objects.filter(
             tenant=tenant,
-            to_number__in=no_reply_numbers,
-            direction="out"
-        ).order_by("to_number", "-created_at").distinct("to_number").select_related("client")
+            direction="out",
+            to_number__in=no_reply_numbers
+        ).order_by("-created_at").select_related("client"):
+            if msg.to_number not in seen:
+                seen.add(msg.to_number)
+                label_text = msg.template_name or "[Auto message]"
+                conv_list.append({
+                    "contact": msg.to_number,
+                    "client": msg.client,
+                    "last_message": msg.message[:60] if msg.message else f"[{label_text}]",
+                    "last_message_at": msg.created_at,
+                    "direction": "out",
+                    "unread_count": 0,
+                    "order_status": None,
+                    "media_type": msg.media_type,
+                })
+        # Skip the main loop for autosent
+        conv_list.sort(key=lambda x: x["last_message_at"], reverse=True)
+        from django.core.paginator import Paginator
+        paginator = Paginator(conv_list, 20)
+        page_obj = paginator.get_page(page_num)
+        return render(request, "orders/whatsapp_inbox.html", {
+            "conversations": page_obj,
+            "page_obj": page_obj,
+            "total_unread": WhatsAppMessage.objects.filter(tenant=tenant, direction="in", read_at__isnull=True).count(),
+            "current_q": q,
+            "current_label": label,
+        })
     elif label == "replied":
         # Only contacts who have replied at least once
         replied_contacts = WhatsAppMessage.objects.filter(
