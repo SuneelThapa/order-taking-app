@@ -64,6 +64,14 @@
        class="btn btn-sm {% if current_label == 'delivered' %}btn-success{% else %}btn-outline-success{% endif %}">
       Delivered
     </a>
+    <a href="?label=autosent{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'autosent' %}btn-dark{% else %}btn-outline-dark{% endif %}">
+      <i class="bi bi-robot me-1"></i>Auto-sent
+    </a>
+    <a href="?label=replied{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'replied' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+      <i class="bi bi-chat me-1"></i>Has Reply
+    </a>
   </div>
 
   {# Conversations list #}

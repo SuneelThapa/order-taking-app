@@ -3017,9 +3017,25 @@ def whatsapp_inbox(request):
             Q(client__name__icontains=q)
         )
 
-    # Apply unread filter
+    # Apply label filters
     if label == "unread":
-        latest_msgs = latest_msgs.filter(direction="in", read_at__isnull=True)
+        # Only contacts with unread incoming messages
+        unread_contacts = WhatsAppMessage.objects.filter(
+            tenant=tenant, direction="in", read_at__isnull=True
+        ).values_list("from_number", flat=True).distinct()
+        latest_msgs = latest_msgs.filter(from_number__in=unread_contacts)
+    elif label == "autosent":
+        # Only contacts where we sent auto messages but they never replied
+        replied_contacts = WhatsAppMessage.objects.filter(
+            tenant=tenant, direction="in"
+        ).values_list("from_number", flat=True).distinct()
+        latest_msgs = latest_msgs.exclude(from_number__in=replied_contacts)
+    elif label == "replied":
+        # Only contacts who have replied at least once
+        replied_contacts = WhatsAppMessage.objects.filter(
+            tenant=tenant, direction="in"
+        ).values_list("from_number", flat=True).distinct()
+        latest_msgs = latest_msgs.filter(from_number__in=replied_contacts)
 
     # Build conversation list
     conv_list = []
