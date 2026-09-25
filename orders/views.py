@@ -3005,8 +3005,7 @@ def whatsapp_inbox(request):
     latest_msgs = (
         WhatsAppMessage.objects
         .filter(tenant=tenant)
-        .order_by("from_number", "-created_at")
-        .distinct("from_number")
+        .order_by("-created_at")
         .select_related("client")
     )
 
@@ -3014,6 +3013,7 @@ def whatsapp_inbox(request):
     if q:
         latest_msgs = latest_msgs.filter(
             Q(from_number__icontains=q) |
+            Q(to_number__icontains=q) |
             Q(client__name__icontains=q)
         )
 
@@ -3034,11 +3034,18 @@ def whatsapp_inbox(request):
         ).values_list("to_number", flat=True).distinct())
         no_reply_numbers = sent_contacts - replied_contacts
         seen = set()
-        for msg in WhatsAppMessage.objects.filter(
+        autosent_qs = WhatsAppMessage.objects.filter(
             tenant=tenant,
             direction="out",
             to_number__in=no_reply_numbers
-        ).order_by("-created_at").select_related("client"):
+        ).order_by("-created_at").select_related("client")
+        # Apply search filter for autosent
+        if q:
+            autosent_qs = autosent_qs.filter(
+                Q(to_number__icontains=q) |
+                Q(client__name__icontains=q)
+            )
+        for msg in autosent_qs:
             if msg.to_number not in seen:
                 seen.add(msg.to_number)
                 label_text = msg.template_name or "[Auto message]"
@@ -3072,12 +3079,15 @@ def whatsapp_inbox(request):
         latest_msgs = latest_msgs.filter(from_number__in=replied_contacts)
 
     # Build conversation list
-    conv_list = []
+    seen_contacts = set()
     for msg in latest_msgs:
         if label == "autosent":
             contact = msg.to_number
         else:
             contact = msg.from_number if msg.direction == "in" else msg.to_number
+        if contact in seen_contacts:
+            continue
+        seen_contacts.add(contact)
 
         unread = WhatsAppMessage.objects.filter(
             tenant=tenant,
