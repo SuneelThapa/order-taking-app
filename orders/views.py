@@ -2992,50 +2992,86 @@ def whatsapp_inbox(request):
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
 
-    from orders.models import WhatsAppMessage
-    from django.db.models import Max, Count, Q
+    from orders.models import WhatsAppMessage, Order
+    from django.db.models import Max, Count, Q, Subquery, OuterRef
+    from django.core.paginator import Paginator
 
-    # Get conversations grouped by from_number (for incoming)
-    # Show latest message per contact
-    conversations = (
+    # Filters
+    q          = request.GET.get("q", "").strip()
+    label      = request.GET.get("label", "all")  # all, unread, new, processing, ready, delivered
+    page_num   = request.GET.get("page", 1)
+
+    # Get latest message per contact efficiently
+    latest_msgs = (
         WhatsAppMessage.objects
         .filter(tenant=tenant)
-        .values("from_number", "to_number", "client")
-        .annotate(
-            last_message_at=Max("created_at"),
-            message_count=Count("id"),
-            unread_count=Count("id", filter=Q(direction="in", read_at__isnull=True))
-        )
-        .order_by("-last_message_at")
+        .order_by("from_number", "-created_at")
+        .distinct("from_number")
+        .select_related("client")
     )
 
-    # Get latest message text for each conversation
-    conv_list = []
-    seen_contacts = set()
-    all_msgs = WhatsAppMessage.objects.filter(tenant=tenant).order_by("-created_at").select_related("client")
+    # Apply search filter
+    if q:
+        latest_msgs = latest_msgs.filter(
+            Q(from_number__icontains=q) |
+            Q(client__name__icontains=q)
+        )
 
-    for msg in all_msgs:
+    # Apply unread filter
+    if label == "unread":
+        latest_msgs = latest_msgs.filter(direction="in", read_at__isnull=True)
+
+    # Build conversation list
+    conv_list = []
+    for msg in latest_msgs:
         contact = msg.from_number if msg.direction == "in" else msg.to_number
-        if contact not in seen_contacts:
-            seen_contacts.add(contact)
-            unread = WhatsAppMessage.objects.filter(
+
+        unread = WhatsAppMessage.objects.filter(
+            tenant=tenant,
+            from_number=contact,
+            direction="in",
+            read_at__isnull=True
+        ).count()
+
+        # Get latest order status for this client
+        order_status = None
+        if msg.client:
+            latest_order = Order.objects.filter(
                 tenant=tenant,
-                from_number=contact,
-                direction="in",
-                read_at__isnull=True
-            ).count()
-            conv_list.append({
-                "contact": contact,
-                "client": msg.client,
-                "last_message": msg.message[:60],
-                "last_message_at": msg.created_at,
-                "direction": msg.direction,
-                "unread_count": unread,
-            })
+                client=msg.client
+            ).order_by("-created_at").first()
+            if latest_order:
+                order_status = latest_order.status
+
+        # Apply order status label filter
+        if label not in ("all", "unread"):
+            if order_status != label:
+                continue
+
+        conv_list.append({
+            "contact": contact,
+            "client": msg.client,
+            "last_message": msg.message[:60],
+            "last_message_at": msg.created_at,
+            "direction": msg.direction,
+            "unread_count": unread,
+            "order_status": order_status,
+            "media_type": msg.media_type,
+        })
+
+    # Sort by latest message
+    conv_list.sort(key=lambda x: x["last_message_at"], reverse=True)
+
+    # Paginate
+    paginator = Paginator(conv_list, 20)
+    page_obj  = paginator.get_page(page_num)
 
     return render(request, "orders/whatsapp_inbox.html", {
-        "conversations": conv_list,
-        "total_unread": sum(c["unread_count"] for c in conv_list),
+        "conversations": page_obj,
+        "page_obj": page_obj,
+        "total_unread": WhatsAppMessage.objects.filter(tenant=tenant, direction="in", read_at__isnull=True).count(),
+        "current_q": q,
+        "current_label": label,
     })
 
 

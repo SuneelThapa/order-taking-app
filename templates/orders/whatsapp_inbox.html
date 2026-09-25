@@ -4,7 +4,9 @@
 {% block title %}WhatsApp Inbox{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3">
+<div class="container-fluid py-3" style="max-width:700px">
+
+  {# Header #}
   <div class="d-flex align-items-center gap-2 mb-3">
     <i class="bi bi-whatsapp text-success fs-4"></i>
     <h4 class="mb-0">WhatsApp Inbox</h4>
@@ -13,11 +15,63 @@
     {% endif %}
   </div>
 
+  {# Search #}
+  <form method="get" class="mb-3">
+    <div class="input-group input-group-sm">
+      <input type="text" name="q" value="{{ current_q }}"
+             class="form-control" placeholder="Search by name or phone...">
+      <input type="hidden" name="label" value="{{ current_label }}">
+      <button class="btn btn-outline-secondary" type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+      {% if current_q %}
+      <a href="?label={{ current_label }}" class="btn btn-outline-secondary">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  {# Label filters #}
+  <div class="d-flex gap-2 flex-wrap mb-3">
+    {% for lbl, icon, color in label_tabs %}
+    <a href="?label={{ lbl }}{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == lbl %}btn-{{ color }}{% else %}btn-outline-{{ color }}{% endif %}">
+      <i class="bi bi-{{ icon }} me-1"></i>{{ lbl|title }}
+    </a>
+    {% endfor %}
+    <a href="?label=all{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'all' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+      All
+    </a>
+    <a href="?label=unread{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'unread' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+      <i class="bi bi-envelope me-1"></i>Unread
+    </a>
+    <a href="?label=new{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'new' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+      New Order
+    </a>
+    <a href="?label=processing{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'processing' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+      Processing
+    </a>
+    <a href="?label=ready{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'ready' %}btn-info{% else %}btn-outline-info{% endif %}">
+      Ready
+    </a>
+    <a href="?label=delivered{% if current_q %}&q={{ current_q }}{% endif %}"
+       class="btn btn-sm {% if current_label == 'delivered' %}btn-success{% else %}btn-outline-success{% endif %}">
+      Delivered
+    </a>
+  </div>
+
+  {# Conversations list #}
   {% if conversations %}
-  <div class="list-group">
+  <div class="list-group mb-3">
     {% for conv in conversations %}
     <a href="{% url 'orders:whatsapp_conversation' conv.contact %}"
-       class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+       class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 {% if conv.unread_count > 0 %}bg-light{% endif %}">
       <div class="flex-shrink-0">
         <div class="rounded-circle bg-success d-flex align-items-center justify-content-center text-white fw-bold"
              style="width:44px;height:44px;font-size:18px">
@@ -26,29 +80,76 @@
       </div>
       <div class="flex-grow-1 min-w-0">
         <div class="d-flex justify-content-between align-items-center">
-          <span class="fw-semibold">
+          <span class="fw-semibold {% if conv.unread_count > 0 %}text-dark{% else %}text-secondary{% endif %}">
             {% if conv.client %}{{ conv.client.name }}{% else %}{{ conv.contact }}{% endif %}
           </span>
           <small class="text-muted">{{ conv.last_message_at|date:"d M, H:i" }}</small>
         </div>
         <div class="text-muted small text-truncate">
+          {% if conv.media_type == "image" %}
+          <i class="bi bi-image me-1"></i>Photo
+          {% else %}
           {% if conv.direction == "out" %}<i class="bi bi-reply me-1"></i>{% endif %}
           {{ conv.last_message }}
+          {% endif %}
         </div>
-        <small class="text-muted">{{ conv.contact }}</small>
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <small class="text-muted">{{ conv.contact }}</small>
+          {% if conv.order_status %}
+          <span class="badge rounded-pill
+            {% if conv.order_status == 'new' %}text-bg-primary
+            {% elif conv.order_status == 'processing' %}text-bg-warning
+            {% elif conv.order_status == 'ready' %}text-bg-info
+            {% elif conv.order_status == 'delivered' %}text-bg-success
+            {% elif conv.order_status == 'canceled' %}text-bg-danger
+            {% else %}text-bg-secondary{% endif %}"
+            style="font-size:10px">
+            {{ conv.order_status|title }}
+          </span>
+          {% endif %}
+        </div>
       </div>
       {% if conv.unread_count > 0 %}
-      <span class="badge text-bg-success rounded-pill">{{ conv.unread_count }}</span>
+      <span class="badge text-bg-danger rounded-pill">{{ conv.unread_count }}</span>
       {% endif %}
     </a>
     {% endfor %}
   </div>
+
+  {# Pagination #}
+  {% if page_obj.has_other_pages %}
+  <nav>
+    <ul class="pagination pagination-sm justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&label={{ current_label }}&q={{ current_q }}">
+          &laquo;
+        </a>
+      </li>
+      {% endif %}
+      <li class="page-item disabled">
+        <span class="page-link">
+          Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+      </li>
+      {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ page_obj.next_page_number }}&label={{ current_label }}&q={{ current_q }}">
+          &raquo;
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+
   {% else %}
   <div class="text-center text-muted py-5">
     <i class="bi bi-whatsapp display-4 d-block mb-3 text-success"></i>
-    <h5>No messages yet</h5>
-    <p>When clients reply to your WhatsApp messages, they will appear here.</p>
+    <h5>No conversations found</h5>
+    <p>{% if current_q %}No results for "{{ current_q }}"{% else %}When clients reply to your WhatsApp messages, they will appear here.{% endif %}</p>
   </div>
   {% endif %}
+
 </div>
 {% endblock %}
