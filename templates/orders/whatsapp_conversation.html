@@ -1,0 +1,130 @@
+﻿{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Conversation - {{ contact_phone }}{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewImage(input) {
+  const preview = document.getElementById('image-preview');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.src = e.target.result;
+      preview.classList.remove('d-none');
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width:700px">
+
+  {# Header #}
+  <div class="d-flex align-items-center gap-3 mb-3">
+    <a href="{% url 'orders:whatsapp_inbox' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <div class="rounded-circle bg-success d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+         style="width:40px;height:40px;font-size:16px">
+      {% if client %}{{ client.name|slice:":1"|upper }}{% else %}?{% endif %}
+    </div>
+    <div>
+      <div class="fw-semibold">{% if client %}{{ client.name }}{% else %}Unknown Contact{% endif %}</div>
+      <small class="text-muted">{{ contact_phone }}</small>
+    </div>
+    {% if client %}
+    <a href="{% url 'orders:dashboard' %}?q={{ client.phone|urlencode }}" class="btn btn-sm btn-outline-primary ms-auto">
+      <i class="bi bi-person me-1"></i>View Orders
+    </a>
+    {% endif %}
+  </div>
+
+  {# Messages - auto-refresh every 5s #}
+  <div id="messages-container"
+       hx-get="{% url 'orders:whatsapp_messages_partial' contact_phone %}"
+       hx-trigger="every 5s"
+       hx-swap="innerHTML"
+       class="d-flex flex-column gap-2 mb-3" style="min-height:400px">
+    {% for msg in messages %}
+    <div class="d-flex {% if msg.direction == 'out' %}justify-content-end{% endif %}">
+      <div class="rounded p-2 px-3 {% if msg.direction == 'out' %}bg-success text-white{% else %}bg-light border{% endif %}"
+           style="max-width:75%">
+        <div style="font-size:14px">{{ msg.message }}</div>
+        <div class="d-flex align-items-center gap-1 mt-1 {% if msg.direction == 'out' %}justify-content-end{% endif %}">
+          <small class="{% if msg.direction == 'out' %}text-white-50{% else %}text-muted{% endif %}" style="font-size:11px">
+            {{ msg.created_at|date:"d M H:i" }}
+          </small>
+          {% if msg.direction == 'out' %}
+          <small class="text-white-50" style="font-size:11px">
+            {% if msg.status == 'read' %}<i class="bi bi-check2-all"></i>
+            {% elif msg.status == 'delivered' %}<i class="bi bi-check2-all"></i>
+            {% else %}<i class="bi bi-check2"></i>{% endif %}
+          </small>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted py-5">No messages yet</div>
+    {% endfor %}
+  </div>
+
+  {# Reply box #}
+  {% if can_reply %}
+  <div class="border rounded p-3 bg-light">
+    {# Text reply #}
+    <form hx-post="{% url 'orders:whatsapp_reply' contact_phone %}"
+          hx-target="#reply-status"
+          hx-on::after-request="this.reset()">
+      {% csrf_token %}
+      <div class="d-flex gap-2">
+        <textarea name="message" class="form-control" rows="2"
+                  placeholder="Type a message..." required></textarea>
+        <button type="submit" class="btn btn-success px-3">
+          <i class="bi bi-send"></i>
+        </button>
+      </div>
+    </form>
+    {# Image send #}
+    <div class="mt-2 border-top pt-2">
+      <form id="image-form"
+            hx-post="{% url 'orders:whatsapp_send_image' contact_phone %}"
+            hx-target="#image-status"
+            hx-encoding="multipart/form-data"
+            hx-on::after-request="this.reset(); document.getElementById('image-preview').src=''; document.getElementById('image-preview').classList.add('d-none')">
+        {% csrf_token %}
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          <label class="btn btn-sm btn-outline-secondary mb-0">
+            <i class="bi bi-image me-1"></i>Photo
+            <input type="file" name="image" accept="image/*" class="d-none"
+                   onchange="previewImage(this)">
+          </label>
+          <input type="text" name="caption" class="form-control form-control-sm"
+                 placeholder="Caption (optional)" style="max-width:200px">
+          <button type="submit" class="btn btn-sm btn-success">
+            <i class="bi bi-image me-1"></i>Send Photo
+          </button>
+        </div>
+        <img id="image-preview" src="" class="mt-2 rounded d-none" style="max-height:100px">
+      </form>
+      <div id="image-status" class="mt-1 small text-muted"></div>
+    </div>
+    <div id="reply-status" class="mt-1 small text-muted"></div>
+  </div>
+  {% elif not within_window %}
+  <div class="alert alert-warning small">
+    <i class="bi bi-clock me-1"></i>
+    The 24-hour reply window has expired. You can only reply using approved WhatsApp templates.
+  </div>
+  {% else %}
+  <div class="alert alert-info small">
+    <i class="bi bi-info-circle me-1"></i>
+    Only owners and managers can reply to messages.
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

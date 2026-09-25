@@ -121,9 +121,15 @@ def _orders_table_context(request, tenant):
             | Q(hotel_name__icontains=q)
         )
     if from_date:
-        orders = orders.filter(created_at__date__gte=from_date)
+        orders = orders.filter(
+            Q(order_date__isnull=False, order_date__gte=from_date) |
+            Q(order_date__isnull=True,  created_at__date__gte=from_date)
+        )
     if to_date:
-        orders = orders.filter(created_at__date__lte=to_date)
+        orders = orders.filter(
+            Q(order_date__isnull=False, order_date__lte=to_date) |
+            Q(order_date__isnull=True,  created_at__date__lte=to_date)
+        )
     if staff_id:
         orders = orders.filter(staff_assignments__user_id=staff_id).distinct()
     if urgent:
@@ -297,7 +303,8 @@ def client_search(request):
     if len(q) >= 2:
         clients = Client.objects.filter(
             Q(name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q),
-            is_active=True
+            is_active=True,
+            tenant=tenant,
         ).order_by("name")[:10]
     return render(request, "orders/partials/_client_results.html",
                   {"clients": clients, "q": q})
@@ -309,7 +316,9 @@ def client_create_inline(request):
         return HttpResponse(status=405)
     form = ClientForm(request.POST)
     if form.is_valid():
-        client = form.save()
+        client = form.save(commit=False)
+        client.tenant = getattr(request, 'tenant', None)
+        client.save()
         response = render(request, "orders/partials/_client_card.html", {"client": client})
         response["HX-Trigger"] = json.dumps({
             "clientSelected": {
@@ -385,7 +394,7 @@ def order_form_view(request, pk=None):
         client_error = None
         if client_id:
             try:
-                client_obj = Client.objects.get(pk=client_id)
+                client_obj = Client.objects.get(pk=client_id, tenant=tenant)
             except (Client.DoesNotExist, ValueError):
                 client_error = "The selected client is invalid. Please search and select again."
         else:
@@ -700,7 +709,7 @@ def order_form_view(request, pk=None):
     elif request.method == "POST":
         cid = request.POST.get("client")
         if cid:
-            selected_client = Client.objects.filter(pk=cid).first()
+            selected_client = Client.objects.filter(pk=cid, tenant=tenant).first()
 
     # ── Pre-fill from catalogue inquiry (Convert button) ──────────
     inquiry_prefill = None
@@ -719,7 +728,8 @@ def order_form_view(request, pk=None):
             # Try to find existing client by phone
             if inq_phone and not selected_client:
                 selected_client = Client.objects.filter(
-                    phone__icontains=inq_phone.replace("+", "").strip()
+                    phone__icontains=inq_phone.replace("+", "").strip(),
+                    tenant=tenant,
                 ).first()
 
     first_error_step = None
@@ -1373,7 +1383,7 @@ def client_edit(request, pk):
     tenant = getattr(request, "tenant", None)
     if not tenant:
         return HttpResponse("Tenant not found", status=404)
-    client = get_object_or_404(Client, pk=pk)
+    client = get_object_or_404(Client, pk=pk, tenant=tenant)
     if request.method != "POST":
         return HttpResponse(status=405)
 
@@ -2392,7 +2402,7 @@ def referred_by_search(request):
         if not q or len(q) < 2:
             return HttpResponse("")
         clients = (
-            Client.objects.filter(is_active=True)
+            Client.objects.filter(is_active=True, tenant=tenant)
             .filter(Q(name__icontains=q) | Q(phone__icontains=q))
             .order_by("name")[:10]
         )
@@ -2576,10 +2586,14 @@ def sales_report(request):
 
     # ── Payments in period ────────────────────────────────────────
     from .models import Payment, OrderStaff
+    # Filter by order's effective date (order_date if set, else created_at)
+    # This ensures historical orders entered from order books appear in
+    # the correct period, not the date they were entered into the system.
+    from django.db.models import Q as DQ
     payments_qs = Payment.objects.filter(
+        DQ(order__order_date__isnull=False, order__order_date__gte=start, order__order_date__lte=end) |
+        DQ(order__order_date__isnull=True,  order__created_at__date__gte=start, order__created_at__date__lte=end),
         order__tenant=tenant,
-        created_at__date__gte=start,
-        created_at__date__lte=end,
         original_amount__gt=0,   # exclude refunds
     ).select_related('order', 'order__client')
 
@@ -2646,6 +2660,101 @@ from django.http import HttpResponse
 from django.views.decorators.cache import cache_control
 
 @cache_control(no_cache=True)
+
+@user_passes_test(staff_check)
+def whatsapp_messages_partial(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("")
+    from orders.models import WhatsAppMessage
+    from django.utils import timezone
+    messages = WhatsAppMessage.objects.filter(
+        tenant=tenant,
+    ).filter(
+        Q(from_number=phone) | Q(to_number=phone)
+    ).order_by("created_at").select_related("client")
+    # Mark as read
+    messages.filter(direction="in", read_at__isnull=True).update(
+        read_at=timezone.now(), read_by=request.user
+    )
+    return render(request, "orders/whatsapp_messages_partial.html", {"messages": messages})
+
+
+
+@user_passes_test(staff_check)
+def whatsapp_send_image(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    # Only owner/manager can send
+    try:
+        user_role = request.user.staff_profile.role
+        if user_role not in ("owner", "manager") and not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+    except Exception:
+        if not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+
+    caption = request.POST.get("caption", "").strip()
+    image_file = request.FILES.get("image")
+
+    if not image_file:
+        return HttpResponse("No image provided", status=400)
+
+    # Upload to Cloudinary
+    try:
+        import cloudinary.uploader
+        upload_result = cloudinary.uploader.upload(
+            image_file,
+            folder="whatsapp_sent",
+            resource_type="image"
+        )
+        image_url = upload_result.get("secure_url", "")
+    except Exception as e:
+        return HttpResponse(f"Upload failed: {e}", status=500)
+
+    if not image_url:
+        return HttpResponse("Upload failed", status=500)
+
+    from notifications.whatsapp import send_image
+    from orders.models import Client
+    client = Client.objects.filter(tenant=tenant, phone=phone).first()
+
+    result = send_image(phone, image_url, caption=caption, tenant=tenant, client=client)
+
+    if result and "messages" in result:
+        return HttpResponse("ok")
+
+    return HttpResponse("Failed to send", status=500)
+
+def whatsapp_unread_count(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant or not request.user.is_authenticated:
+        return HttpResponse("")
+    from orders.models import WhatsAppMessage
+    count = WhatsAppMessage.objects.filter(
+        tenant=tenant,
+        direction="in",
+        read_at__isnull=True
+    ).count()
+    url = reverse_lazy("orders:whatsapp_unread_count")
+    if count > 0:
+        return HttpResponse(
+            f'<span id="wa-unread-badge" '
+            f'hx-get="{url}" hx-trigger="every 30s" hx-swap="outerHTML" '
+            f'class="position-absolute badge rounded-pill bg-danger" '
+            f'style="top:2px;right:2px;font-size:9px;min-width:16px;padding:2px 4px">'
+            f'{count}</span>'
+        )
+    return HttpResponse(
+        f'<span id="wa-unread-badge" '
+        f'hx-get="{url}" hx-trigger="every 30s" hx-swap="outerHTML"></span>'
+    )
+
 def service_worker(request):
     import os
     from django.contrib.staticfiles import finders
@@ -2872,3 +2981,158 @@ def scratch_pad_poll(request, token):
         "status": session.status,
         "result": session.result if session.status == "processed" else {},
     })
+
+
+# ─────────────────────────────────────────────────────────
+# WhatsApp Inbox
+# ─────────────────────────────────────────────────────────
+@user_passes_test(staff_check)
+def whatsapp_inbox(request):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    from orders.models import WhatsAppMessage
+    from django.db.models import Max, Count, Q
+
+    # Get conversations grouped by from_number (for incoming)
+    # Show latest message per contact
+    conversations = (
+        WhatsAppMessage.objects
+        .filter(tenant=tenant)
+        .values("from_number", "to_number", "client")
+        .annotate(
+            last_message_at=Max("created_at"),
+            message_count=Count("id"),
+            unread_count=Count("id", filter=Q(direction="in", read_at__isnull=True))
+        )
+        .order_by("-last_message_at")
+    )
+
+    # Get latest message text for each conversation
+    conv_list = []
+    seen_contacts = set()
+    all_msgs = WhatsAppMessage.objects.filter(tenant=tenant).order_by("-created_at").select_related("client")
+
+    for msg in all_msgs:
+        contact = msg.from_number if msg.direction == "in" else msg.to_number
+        if contact not in seen_contacts:
+            seen_contacts.add(contact)
+            unread = WhatsAppMessage.objects.filter(
+                tenant=tenant,
+                from_number=contact,
+                direction="in",
+                read_at__isnull=True
+            ).count()
+            conv_list.append({
+                "contact": contact,
+                "client": msg.client,
+                "last_message": msg.message[:60],
+                "last_message_at": msg.created_at,
+                "direction": msg.direction,
+                "unread_count": unread,
+            })
+
+    return render(request, "orders/whatsapp_inbox.html", {
+        "conversations": conv_list,
+        "total_unread": sum(c["unread_count"] for c in conv_list),
+    })
+
+
+@user_passes_test(staff_check)
+def whatsapp_conversation(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    from orders.models import WhatsAppMessage
+    from django.utils import timezone
+
+    # Get all messages with this contact
+    messages = WhatsAppMessage.objects.filter(
+        tenant=tenant,
+    ).filter(
+        Q(from_number=phone) | Q(to_number=phone)
+    ).order_by("created_at").select_related("client", "read_by")
+
+    # Mark incoming messages as read
+    from django.utils import timezone
+    messages.filter(direction="in", read_at__isnull=True).update(
+        read_at=timezone.now(),
+        read_by=request.user
+    )
+
+    # Find client
+    client = None
+    from orders.models import Client
+    try:
+        client = Client.objects.filter(tenant=tenant, phone=phone).first()
+    except Exception:
+        pass
+
+    # Check if can reply (within 24hr window)
+    can_reply = False
+    try:
+        user_role = request.user.staff_profile.role
+        can_reply = user_role in ("owner", "manager")
+    except Exception:
+        can_reply = request.user.is_superuser
+
+    last_incoming = messages.filter(direction="in").last()
+    within_window = False
+    if last_incoming:
+        diff = timezone.now() - last_incoming.created_at
+        within_window = diff.total_seconds() < 86400  # 24 hours
+
+    return render(request, "orders/whatsapp_conversation.html", {
+        "messages": messages,
+        "contact_phone": phone,
+        "client": client,
+        "can_reply": can_reply and within_window,
+        "within_window": within_window,
+    })
+
+
+@user_passes_test(staff_check)
+def whatsapp_reply(request, phone):
+    tenant = getattr(request, "tenant", None)
+    if not tenant:
+        return HttpResponse("Tenant not found", status=404)
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    # Only owner/manager can reply
+    try:
+        user_role = request.user.staff_profile.role
+        if user_role not in ("owner", "manager") and not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+    except Exception:
+        if not request.user.is_superuser:
+            return HttpResponse("Permission denied", status=403)
+
+    message_text = request.POST.get("message", "").strip()
+    if not message_text:
+        return HttpResponse("Message cannot be empty", status=400)
+
+    from notifications.whatsapp import send_text
+    from orders.models import Client
+    client = Client.objects.filter(tenant=tenant, phone=phone).first()
+
+    result = send_text(phone, message_text, tenant=tenant)
+
+    if result and "messages" in result:
+        from orders.models import WhatsAppMessage
+        WhatsAppMessage.objects.create(
+            tenant=tenant,
+            client=client,
+            direction="out",
+            status="sent",
+            from_number=tenant.whatsapp_phone_number_id,
+            to_number=phone,
+            message=message_text,
+            wa_message_id=result["messages"][0].get("id", ""),
+        )
+        return HttpResponse("ok")
+
+    return HttpResponse("Failed to send", status=500)

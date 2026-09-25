@@ -1,0 +1,31 @@
+﻿{% for msg in messages %}
+<div class="d-flex {% if msg.direction == "out" %}justify-content-end{% endif %}">
+  <div class="rounded p-2 px-3 {% if msg.direction == "out" %}bg-success text-white{% else %}bg-light border{% endif %}"
+       style="max-width:75%">
+    {% if msg.media_type == "image" and msg.media_url %}
+    <a href="{{ msg.media_url }}" target="_blank">
+      <img src="{{ msg.media_url }}" class="rounded mb-1" style="max-width:200px;max-height:200px;display:block">
+    </a>
+    {% endif %}
+    {% if msg.message and msg.message != "[Image]" %}
+    <div style="font-size:14px">{{ msg.message }}</div>
+    {% elif not msg.media_url %}
+    <div style="font-size:14px">{{ msg.message }}</div>
+    {% endif %}
+    <div class="d-flex align-items-center gap-1 mt-1 {% if msg.direction == "out" %}justify-content-end{% endif %}">
+      <small class="{% if msg.direction == "out" %}text-white-50{% else %}text-muted{% endif %}" style="font-size:11px">
+        {{ msg.created_at|date:"d M H:i" }}
+      </small>
+      {% if msg.direction == "out" %}
+      <small class="text-white-50" style="font-size:11px">
+        {% if msg.status == "read" %}<i class="bi bi-check2-all"></i>
+        {% elif msg.status == "delivered" %}<i class="bi bi-check2-all"></i>
+        {% else %}<i class="bi bi-check2"></i>{% endif %}
+      </small>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="text-center text-muted py-5">No messages yet</div>
+{% endfor %}

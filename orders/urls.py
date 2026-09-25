@@ -1,4 +1,5 @@
 from django.urls import path
+from .views_webhook import whatsapp_webhook
 from .views import (
     dashboard, stat_cards, orders_table,
     order_detail, order_delete,
@@ -30,6 +31,8 @@ from .views import (
     scratch_pad_tablet,
     scratch_pad_submit,
     scratch_pad_poll,
+    whatsapp_inbox, whatsapp_conversation, whatsapp_reply, whatsapp_messages_partial,
+    whatsapp_unread_count, whatsapp_send_image,
 )
 from orders.views_onboarding import onboarding_view, onboarding_success_view
 from orders.views_staff import staff_list, staff_add, staff_edit, staff_toggle
@@ -76,6 +79,13 @@ urlpatterns = [
     path("item-row/",                     order_item_row,         name="order_item_row"),
     path("payment-row/",                  payment_row,            name="payment_row"),
     path("load-measurement-form/",        load_measurement_form,  name="load_measurement_form"),
+    path("whatsapp/webhook/",         whatsapp_webhook,       name="whatsapp_webhook"),
+    path("whatsapp/inbox/",           whatsapp_inbox,         name="whatsapp_inbox"),
+    path("whatsapp/conversation/<str:phone>/", whatsapp_conversation, name="whatsapp_conversation"),
+    path("whatsapp/reply/<str:phone>/",        whatsapp_reply,        name="whatsapp_reply"),
+    path("whatsapp/messages/<str:phone>/",     whatsapp_messages_partial, name="whatsapp_messages_partial"),
+    path("whatsapp/unread/",              whatsapp_unread_count,     name="whatsapp_unread_count"),
+    path("whatsapp/send-image/<str:phone>/", whatsapp_send_image,    name="whatsapp_send_image"),
     path("export-csv/",                   export_csv,             name="export_csv"),
     path("sales/",                        sales_report,           name="sales_report"),
     path("sw.js",                         service_worker,         name="service_worker"),

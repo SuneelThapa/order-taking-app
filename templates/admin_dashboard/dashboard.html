@@ -28,7 +28,7 @@
     <div class="card-body p-0">
       <!-- Table region: loads on page load, and on the custom "refresh" event fired after save/delete -->
       <div id="orders-region"
-           hx-get="{% url 'orders:orders_table' %}"
+           hx-get="{% url 'orders:orders_table' %}{% if request.GET.q %}?q={{ request.GET.q|urlencode }}{% endif %}"
            hx-trigger="load, refresh"
            hx-swap="innerHTML">
         <div class="text-center text-muted py-5">

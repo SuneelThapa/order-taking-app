@@ -1,0 +1,54 @@
+﻿{% extends "base.html" %}
+{% load static %}
+
+{% block title %}WhatsApp Inbox{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <i class="bi bi-whatsapp text-success fs-4"></i>
+    <h4 class="mb-0">WhatsApp Inbox</h4>
+    {% if total_unread > 0 %}
+    <span class="badge text-bg-danger">{{ total_unread }} unread</span>
+    {% endif %}
+  </div>
+
+  {% if conversations %}
+  <div class="list-group">
+    {% for conv in conversations %}
+    <a href="{% url 'orders:whatsapp_conversation' conv.contact %}"
+       class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+      <div class="flex-shrink-0">
+        <div class="rounded-circle bg-success d-flex align-items-center justify-content-center text-white fw-bold"
+             style="width:44px;height:44px;font-size:18px">
+          {% if conv.client %}{{ conv.client.name|slice:":1"|upper }}{% else %}?{% endif %}
+        </div>
+      </div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">
+            {% if conv.client %}{{ conv.client.name }}{% else %}{{ conv.contact }}{% endif %}
+          </span>
+          <small class="text-muted">{{ conv.last_message_at|date:"d M, H:i" }}</small>
+        </div>
+        <div class="text-muted small text-truncate">
+          {% if conv.direction == "out" %}<i class="bi bi-reply me-1"></i>{% endif %}
+          {{ conv.last_message }}
+        </div>
+        <small class="text-muted">{{ conv.contact }}</small>
+      </div>
+      {% if conv.unread_count > 0 %}
+      <span class="badge text-bg-success rounded-pill">{{ conv.unread_count }}</span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-whatsapp display-4 d-block mb-3 text-success"></i>
+    <h5>No messages yet</h5>
+    <p>When clients reply to your WhatsApp messages, they will appear here.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

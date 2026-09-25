@@ -261,6 +261,11 @@
                      hx-include="[name=external_order_number]">
               <div id="external-number-check">{% if order_form.external_order_number.errors %}<div class="text-danger small mt-1">{{ order_form.external_order_number.errors|striptags }}</div>{% endif %}</div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label">Order Date <span class="text-muted fw-normal small">(optional - for historical orders)</span></label>
+              {{ order_form.order_date }}
+              <div class="form-text text-muted">Leave blank to use today. Use this when entering old orders from order books.</div>
+            </div>
           </div>
 
           <div class="row g-3 mb-3">
@@ -300,6 +305,7 @@
                   <button type="button" class="btn-close" @click="open=false"></button>
                 </div>
                 <label class="form-label small">Select the original order this links back to</label>
+                <input type="text" id="parent-order-search" placeholder="Search by order number or client name..." class="form-control form-control-sm mb-2" autocomplete="off">
                 {{ order_form.parent_order }}
                 <div class="mt-3 text-end">
                   <button type="button" class="btn btn-primary btn-sm" @click="open=false">Done</button>
@@ -929,6 +935,38 @@
 
 {% block extra_js %}
 <script>
+// Parent order search filter
+function initParentOrderSearch() {
+  const searchInput = document.getElementById('parent-order-search');
+  if (!searchInput) return;
+
+  const select = document.querySelector('select[name="parent_order"]');
+  if (!select) return;
+
+  searchInput.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+
+    Array.from(select.options).forEach(opt => {
+      if (!opt.value) {
+        opt.style.display = '';
+        return;
+      }
+      const text = opt.text.toLowerCase();
+      opt.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+
+    // Auto-select if only one visible match
+    const visible = Array.from(select.options).filter(o => o.value && o.style.display !== 'none');
+    if (visible.length === 1) select.value = visible[0].value;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initParentOrderSearch);
+document.addEventListener('htmx:afterSwap', initParentOrderSearch);
+</script>
+
+<script>
+
 // â”€â”€ Scratch Pad URL constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window._spCreateUrl = '{% url "orders:scratch_pad_create" %}';
 window._spPollBase  = '{% url "orders:scratch_pad_poll" token="00000000-0000-0000-0000-000000000000" %}';

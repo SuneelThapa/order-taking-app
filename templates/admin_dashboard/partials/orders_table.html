@@ -14,7 +14,7 @@
   {# Filter bar — all inputs include the whole form so filters combine #}
   <form id="orders-filter"
         hx-get="{% url 'orders:orders_table' %}"
-        hx-trigger="change"
+        hx-trigger="change from:[name=from_date], change from:[name=to_date], change, input delay:600ms from:[name=min_amount], input delay:600ms from:[name=max_amount]"
         hx-target="#orders-region"
         hx-swap="innerHTML"
         class="border-bottom pb-3 mb-3">
@@ -268,7 +268,7 @@
           <th>Client</th>
           <th class="d-none d-md-table-cell">Hotel / Departure</th>
           <th class="text-center">Status</th>
-          <th class="text-center d-none d-lg-table-cell">Ready date</th>
+          <th class="text-center d-none d-lg-table-cell">Order date</th>
           <th class="text-center">Urgent</th>
           <th class="text-end">Total</th>
           <th class="text-end">Balance</th>
@@ -319,7 +319,7 @@
           </td>
 
           <td class="text-center d-none d-lg-table-cell small text-muted">
-            {% if order.ready_date %}{{ order.ready_date|date:"d M" }}{% else %}—{% endif %}
+            {% if order.order_date %}{{ order.order_date|date:"d M Y" }}{% else %}{{ order.created_at|date:"d M Y" }}{% endif %}
           </td>
 
           <td class="text-center">
