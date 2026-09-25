@@ -3025,11 +3025,22 @@ def whatsapp_inbox(request):
         ).values_list("from_number", flat=True).distinct()
         latest_msgs = latest_msgs.filter(from_number__in=unread_contacts)
     elif label == "autosent":
-        # Only contacts where we sent auto messages but they never replied
+        # Contacts who received outgoing messages but never replied
+        # Outgoing: to_number = client phone
+        # Incoming: from_number = client phone
         replied_contacts = WhatsAppMessage.objects.filter(
             tenant=tenant, direction="in"
         ).values_list("from_number", flat=True).distinct()
-        latest_msgs = latest_msgs.exclude(from_number__in=replied_contacts)
+        sent_contacts = WhatsAppMessage.objects.filter(
+            tenant=tenant, direction="out"
+        ).values_list("to_number", flat=True).distinct()
+        # Show only contacts in sent but NOT in replied
+        no_reply_numbers = set(sent_contacts) - set(replied_contacts)
+        latest_msgs = WhatsAppMessage.objects.filter(
+            tenant=tenant,
+            to_number__in=no_reply_numbers,
+            direction="out"
+        ).order_by("to_number", "-created_at").distinct("to_number").select_related("client")
     elif label == "replied":
         # Only contacts who have replied at least once
         replied_contacts = WhatsAppMessage.objects.filter(
@@ -3040,7 +3051,10 @@ def whatsapp_inbox(request):
     # Build conversation list
     conv_list = []
     for msg in latest_msgs:
-        contact = msg.from_number if msg.direction == "in" else msg.to_number
+        if label == "autosent":
+            contact = msg.to_number
+        else:
+            contact = msg.from_number if msg.direction == "in" else msg.to_number
 
         unread = WhatsAppMessage.objects.filter(
             tenant=tenant,
