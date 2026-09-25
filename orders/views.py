@@ -3017,6 +3017,9 @@ def whatsapp_inbox(request):
             Q(client__name__icontains=q)
         )
 
+    # Initialize conversation list before any label branch
+    conv_list = []
+
     # Apply label filters
     if label == "unread":
         # Only contacts with unread incoming messages
@@ -3079,7 +3082,6 @@ def whatsapp_inbox(request):
         latest_msgs = latest_msgs.filter(from_number__in=replied_contacts)
 
     # Build conversation list
-    conv_list = []
     seen_contacts = set()
     for msg in latest_msgs:
         if label == "autosent":
