@@ -42,7 +42,7 @@ class Tenant(models.Model):
     )
     catalogue_subdomain      = models.CharField(
         max_length=100, blank=True, default='',
-        help_text='Catalogue subdomain e.g. sukhumvit → sukhumvit.catalogue.emporiumarmani.com'
+        help_text='Catalogue subdomain e.g. sukhumvit → sukhumvit.catalogue.sunnybespoke.com'
     )
 
     # Fabric library

@@ -2475,8 +2475,10 @@ def status_board(request):
 
     # Today's fittings — earlier time first, null times last
     fittings_today = orders.filter(
-        fitting_date=today
+        fitting_date__gte=today,
+        fitting_date__lte=tomorrow
     ).order_by(
+        'fitting_date',
         models.F('fitting_time').asc(nulls_last=True)
     )
 
@@ -2491,7 +2493,7 @@ def status_board(request):
         Order.objects
         .filter(tenant=tenant)
         .exclude(status__in=['canceled', 'delivered'])
-        .filter(departure_date__in=[today, tomorrow])
+        .filter(departure_date__gte=today, departure_date__lte=today + __import__('datetime').timedelta(days=2))
         .select_related('client')
         .prefetch_related('items__product_type', 'staff_assignments__user')
         .order_by('departure_date', models.F('fitting_time').asc(nulls_last=True))
@@ -2802,7 +2804,7 @@ def qr_generator(request):
     try:
         import httpx
         r2 = httpx.get(
-            "https://catalogue.emporiumarmani.com/api/leather-categories/",
+            "https://catalogue.sunnybespoke.com/api/leather-categories/",
             timeout=5,
         )
         if r2.status_code == 200:
