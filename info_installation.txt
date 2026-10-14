@@ -1,5 +1,6 @@
 # Run docker build
 docker-compose up -d --build
+ssh root@143.198.207.146
 
 docker compose down -v
 docker compose up --build
