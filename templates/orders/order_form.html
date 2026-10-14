@@ -1183,7 +1183,7 @@ function orderWizard() {
     },
 
     // Called by _client_results.html @click and by saveClientInline() below
-    selectClient(id, name, phone) {
+    selectClient(id, name, phone, street, city, state, postcode, country) {
       if (this.clientId) return; // guard against double-call
       this.clientId   = String(id);
       this.showCreate = false;
@@ -1193,10 +1193,24 @@ function orderWizard() {
           <div>
             <div class="fw-semibold">${name}</div>
             <div class="small text-muted">${phone}</div>
+            ${street ? `<div class="small text-muted">${street}, ${city}</div>` : ''}
           </div>
           <button type="button" class="btn btn-sm btn-outline-secondary"
                   @click="clearClient()">Change</button>
         </div>`;
+      // Fill address fields in Step 1
+      const fields = {
+        street_address: street || '',
+        city: city || '',
+        state: state || '',
+        postcode: postcode || '',
+        country: country || ''
+      };
+      for (const [fname, val] of Object.entries(fields)) {
+        const el = document.querySelector(`[name="${fname}"]`);
+        if (el && !el.value) el.value = val;
+      }
+      if (typeof updateClientAddressPreview === 'function') updateClientAddressPreview();
     },
 
     async nextStep() {
