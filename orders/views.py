@@ -298,9 +298,10 @@ def order_delete(request, pk):
 # ─────────────────────────────────────────────────────────
 @user_passes_test(staff_check)
 def client_search(request):
+    tenant = getattr(request, "tenant", None)
     q = (request.GET.get("q") or "").strip()
     clients = []
-    if len(q) >= 2:
+    if len(q) >= 2 and tenant:
         clients = Client.objects.filter(
             Q(name__icontains=q) | Q(phone__icontains=q) | Q(email__icontains=q),
             is_active=True,
