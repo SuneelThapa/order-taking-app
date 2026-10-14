@@ -5,7 +5,7 @@
     {% for client in clients %}
     <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
         style="cursor:pointer"
-        onclick="if(_orderWizardRef) _orderWizardRef.selectClient('{{ client.pk }}', '{{ client.name|escapejs }}', '{{ client.phone|escapejs }}')">
+        onclick="if(_orderWizardRef) _orderWizardRef.selectClient('{{ client.pk }}', '{{ client.name|escapejs }}', '{{ client.phone|escapejs }}', '{{ client.street_address|escapejs }}', '{{ client.city|escapejs }}', '{{ client.state|escapejs }}', '{{ client.postcode|escapejs }}', '{{ client.country|escapejs }}')">
       <div>
         <div class="fw-semibold">{{ client.name }}</div>
         <div class="small text-muted">
