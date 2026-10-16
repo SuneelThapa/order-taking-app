@@ -2594,8 +2594,8 @@ def sales_report(request):
     # the correct period, not the date they were entered into the system.
     from django.db.models import Q as DQ
     payments_qs = Payment.objects.filter(
-        DQ(order__order_date__isnull=False, order__order_date__gte=start, order__order_date__lte=end) |
-        DQ(order__order_date__isnull=True,  order__created_at__date__gte=start, order__created_at__date__lte=end),
+        DQ(order__created_at__date__gte=start, order__created_at__date__lte=end)
+    ).filter(
         order__tenant=tenant,
         original_amount__gt=0,   # exclude refunds
     ).select_related('order', 'order__client')
