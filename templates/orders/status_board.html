@@ -303,10 +303,13 @@
       {% if departing %}
         {% for order in departing %}
         <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
-          <div>
-            <span class="date-badge {% if order.departure_date == today %}today{% else %}tomorrow{% endif %}">
-              {% if order.departure_date == today %}TODAY{% else %}TMW{% endif %}
-            </span>
+          <div class="order-time">
+            {% if order.departure_date == today %}
+              <span style="font-size:0.7rem;font-weight:600;color:#22c55e;display:block;line-height:1;">TODAY</span>
+            {% else %}
+              <span style="font-size:0.7rem;font-weight:600;color:#f59e0b;display:block;line-height:1;">TMR</span>
+            {% endif %}
+            <span style="font-size:0.65rem;color:var(--muted);display:block;">{{ order.departure_date|date:"d M" }}</span>
           </div>
           <div style="flex:1;min-width:0">
             <div class="order-num">#{{ order.order_number }}</div>
