@@ -219,11 +219,11 @@
 {# ── Board ── #}
 <div class="board">
 
-  {# Column 1 — Today's fittings #}
+  {# Column 1 — Today's & Tomorrow's fittings #}
   <div class="panel">
     <div class="panel-header">
       <span class="dot" style="background:var(--blue)"></span>
-      ✂ Fittings Today & Tomorrow
+      ✂ Today's &amp; Tomorrow's Fittings
       <span style="margin-left:auto;color:var(--muted);font-weight:400;">{{ fittings_today|length }}</span>
     </div>
     <div class="panel-body">
@@ -231,12 +231,15 @@
         {% for order in fittings_today %}
         <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
           <div class="order-time">
-            <div style="font-size:0.7rem;color:var(--muted)">{{ order.fitting_date|date:"d M" }}</div>
+            {% if order.fitting_date == tomorrow %}
+              <span style="font-size:0.7rem;font-weight:600;color:#f59e0b;display:block;line-height:1;">TMR</span>
+            {% endif %}
             {% if order.fitting_time %}
               {{ order.fitting_time|time:"H:i" }}
             {% else %}
               <span style="font-size:1rem;color:var(--muted);" title="Time not set">🕐 TBD</span>
             {% endif %}
+            <span style="font-size:0.65rem;color:var(--muted);display:block;">{{ order.fitting_date|date:"d M" }}</span>
           </div>
           <div style="flex:1;min-width:0">
             <div class="order-num">#{{ order.order_number }}</div>
@@ -249,7 +252,7 @@
         </div>
         {% endfor %}
       {% else %}
-      <div class="empty">No fittings today</div>
+      <div class="empty">No fittings today or tomorrow</div>
       {% endif %}
     </div>
   </div>
@@ -302,7 +305,7 @@
         <div class="order-row {% if order.is_urgent %}urgent{% endif %}">
           <div>
             <span class="date-badge {% if order.departure_date == today %}today{% else %}tomorrow{% endif %}">
-              {{ order.departure_date|date:"d M" }}
+              {% if order.departure_date == today %}TODAY{% else %}TMW{% endif %}
             </span>
           </div>
           <div style="flex:1;min-width:0">
