@@ -88,10 +88,10 @@
       </div>
       <div class="flex-grow-1 min-w-0">
         <div class="d-flex justify-content-between align-items-center">
-          <span class="fw-semibold {% if conv.unread_count > 0 %}text-dark{% else %}text-secondary{% endif %}">
+          <span class="fw-semibold text-truncate me-2 {% if conv.unread_count > 0 %}text-dark{% else %}text-secondary{% endif %}">
             {% if conv.client %}{{ conv.client.name }}{% else %}{{ conv.contact }}{% endif %}
           </span>
-          <small class="text-muted">{{ conv.last_message_at|date:"d M, H:i" }}</small>
+          <small class="text-muted flex-shrink-0">{{ conv.last_message_at|date:"d M, H:i" }}</small>
         </div>
         <div class="text-muted small text-truncate">
           {% if conv.media_type == "image" %}
