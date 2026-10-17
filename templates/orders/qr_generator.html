@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}QR Code Generator — Emporium Armani{% endblock %}
+{% block title %}QR Code Generator — TailorStudio Demo{% endblock %}
 
 {% block content %}
 <div x-data="{
@@ -54,7 +54,7 @@
   shareQR() {
     if (navigator.share) {
       navigator.share({
-        title: 'Emporium Armani — Bespoke Tailoring Bangkok',
+        title: 'TailorStudio Demo — Bespoke Tailoring Bangkok',
         text:  'Browse our collection and book a consultation.',
         url:   this.qrUrl,
       });
