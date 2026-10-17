@@ -194,4 +194,25 @@ body { background: var(--bg); color: var(--ink); }
 .status-badge-alterations{ background:#e2d9f3; color:#432874; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
 .status-badge-delivered  { background:#d3d3d3; color:#333;    font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
 .status-badge-canceled   { background:#f8d7da; color:#721c24; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; text-decoration:line-through; }
+/* long-slug aliases */
+.status-measurement_taken  { background:#cfe2ff; color:#084298; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-in_production      { background:#d1ecf1; color:#0c5460; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-fitting_scheduled  { background:#fff3cd; color:#664d03; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-ready_for_delivery { background:#d4edda; color:#155724; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-alterations        { background:#e2d9f3; color:#432874; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-delivered          { background:#d3d3d3; color:#333;    font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-canceled           { background:#f8d7da; color:#721c24; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; text-decoration:line-through; }
 [x-cloak] { display: none !important; }
+
+/* ── Long-slug status badges (used in client profile modal) ── */
+.status-measurement_taken  { background:#cfe2ff; color:#084298; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-in_production      { background:#d1ecf1; color:#0c5460; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-fitting_scheduled  { background:#fff3cd; color:#664d03; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-ready_for_delivery { background:#d4edda; color:#155724; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-alterations        { background:#e2d9f3; color:#432874; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-delivered          { background:#d3d3d3; color:#333;    font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-canceled           { background:#f8d7da; color:#721c24; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; text-decoration:line-through; }
+.status-new                { background:#cfe2ff; color:#084298; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-pending            { background:#fff3cd; color:#664d03; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-processing         { background:#d1ecf1; color:#0c5460; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
+.status-ready              { background:#d4edda; color:#155724; font-size:.75rem; padding:.3em .6em; border-radius:.3rem; }
