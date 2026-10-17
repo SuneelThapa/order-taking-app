@@ -3058,7 +3058,7 @@ def whatsapp_inbox(request):
                 conv_list.append({
                     "contact": msg.to_number,
                     "client": msg.client,
-                    "last_message": msg.message[:60] if msg.message else f"[{label_text}]",
+                    "last_message": msg.message[:35] if msg.message else f"[{label_text}]",
                     "last_message_at": msg.created_at,
                     "direction": "out",
                     "unread_count": 0,
@@ -3120,7 +3120,7 @@ def whatsapp_inbox(request):
         conv_list.append({
             "contact": contact,
             "client": msg.client,
-            "last_message": msg.message[:60],
+            "last_message": msg.message[:35],
             "last_message_at": msg.created_at,
             "direction": msg.direction,
             "unread_count": unread,
